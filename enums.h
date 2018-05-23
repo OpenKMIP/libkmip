@@ -28,6 +28,7 @@ enum kmip_version
 
 enum tag
 {
+    KMIP_TAG_DEFAULT                = 0x420000,
     /* KMIP 1.0 */
     KMIP_TAG_PROTOCOL_VERSION       = 0x420069,
     KMIP_TAG_PROTOCOL_VERSION_MAJOR = 0x42006A,

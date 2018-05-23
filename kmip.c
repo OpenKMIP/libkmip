@@ -14,145 +14,30 @@
  * under the License.
  */
 
+#include <openssl/ssl.h>
 #include <stdio.h>
 
 #include "kmip.h"
 
-static int
-encode_protocol_version(struct kmip *ctx, const struct protocol_version *pv)
-{
-    int result;
-    result = encode_integer(ctx, KMIP_TAG_PROTOCOL_VERSION_MAJOR, pv->major);
-    result = encode_integer(ctx, KMIP_TAG_PROTOCOL_VERSION_MINOR, pv->minor);
-    return(result * 0); 
-}
-/*
 int
-encode_integer(enum tag t, int32 value)
+scratch(void)
 {
-    return(0);
-}
-*/
-int
-main2(void)
-{
+    uint8 buffer[40] = {
+        0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,
+        0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,
+        0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,
+        0xFF};
+    
     struct kmip ctx = {0};
-    char buffer[256] = {0};
-    ctx.buffer = buffer;
-    ctx.size = sizeof(buffer);
-    ctx.version = KMIP_1_0;
-    
-    struct protocol_version pv = {0};
-    pv.major = 1;
-    pv.minor = 0;
-    
-    int result = encode_protocol_version(&ctx, &pv);
-    
-    return(result * 0);
-}
-
-struct context
-{
-    uint8 *buffer;
-    uint8 *index;
-    size_t size;
-};
-
-/*
-int
-encode_int32_be(uint8 *buffer, int32 value)
-{
-    *buffer++ = value >> 24;
-    *buffer++ = (value << 8) >> 24;
-    *buffer++ = (value << 16) >> 24;
-    *buffer++ = (value << 24) >> 24;
-    
-    return(0);
-}
-*/
-int
-encode_int32_be(struct context *ctx, int32 value)
-{
-    *ctx->index++ = (value << 0) >> 24;
-    *ctx->index++ = (value << 8) >> 24;
-    *ctx->index++ = (value << 16) >> 24;
-    *ctx->index++ = (value << 24) >> 24;
-    
-    return(0);
-}
-/*
-int
-encode_int(uint8 *buffer, enum tag t, int32 value)
-{
-    encode_int32_be(buffer, (t << 8) | (uint8)KMIP_TYPE_INTEGER);
-    buffer += 4;
-    encode_int32_be(buffer, 4);
-    buffer += 4;
-    encode_int32_be(buffer, value);
-    buffer += 4;
-    encode_int32_be(buffer, 0);
-    buffer += 4;
-    
-    return(0);
-}
-*/
-int
-encode_int(struct context *ctx, enum tag t, int32 value)
-{
-    encode_int32_be(ctx, (t << 8) | (uint8)KMIP_TYPE_INTEGER);
-    encode_int32_be(ctx, 4);
-    encode_int32_be(ctx, value);
-    encode_int32_be(ctx, 0);
-    
-    return(0);
-}
-
-int
-encode_pv(struct context *ctx, const struct protocol_version *pv)
-{
-    encode_int32_be(
-        ctx, (KMIP_TAG_PROTOCOL_VERSION << 8) | (uint8)KMIP_TYPE_STRUCTURE);
-    
-    uint8 *length_index = ctx->index;
-    encode_int32_be(ctx, 0);
-    uint8 *data_index = ctx->index;
-    
-    encode_int(ctx, KMIP_TAG_PROTOCOL_VERSION_MAJOR, pv->major);
-    encode_int(ctx, KMIP_TAG_PROTOCOL_VERSION_MINOR, pv->minor);
-    
-    uint8 *curr_index = ctx->index;
-    int32 size = curr_index - data_index;
-    ctx->index = length_index;
-    encode_int32_be(ctx, size);
-    ctx->index = curr_index;
-    
-    return(0);
-}
-
-int
-main(void)
-{
-    uint8 buffer[40] = {0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF};
-    /*
-    uint8 *b = buffer;
-    uint8 *a = buffer;
-    */
-    int32 value = 0xDEADBEEF;
-    
-    struct context ctx = {0};
     ctx.buffer = buffer;
     ctx.index = ctx.buffer;
-    ctx.size = sizeof(buffer) / sizeof(buffer[0]);
+    ctx.size = ARRAY_LENGTH(buffer);
     
     struct protocol_version pv = {0};
     pv.major = 1;
     pv.minor = 2;
     
-    /*
-    int error = encode_int(&ctx, KMIP_TAG_PROTOCOL_VERSION, value);
-    */
-    
-    int error = encode_pv(&ctx, &pv);
+    int error = encode_protocol_version(&ctx, &pv);
     
     if(error == 0)
     {
@@ -162,41 +47,86 @@ main(void)
     {
         printf("Errors occurred during encoding.\n");
     }
-    /*
-    printf("%p -> 0x%X\n", (void*)a, *a++);
-    printf("%p -> 0x%X\n", (void*)a, *a++);
-    printf("%p -> 0x%X\n", (void*)a, *a++);
-    printf("%p -> 0x%X\n", (void*)a, *a++);
-    printf("%p -> 0x%X\n", (void*)a, *a++);
-    printf("%p -> 0x%X\n", (void*)a, *a++);
-    printf("%p -> 0x%X\n", (void*)a, *a++);
-    printf("%p -> 0x%X\n", (void*)a, *a++);
-    printf("%p -> 0x%X\n", (void*)a, *a++);
-    printf("%p -> 0x%X\n", (void*)a, *a++);
-    printf("%p -> 0x%X\n", (void*)a, *a++);
-    printf("%p -> 0x%X\n", (void*)a, *a++);
-    printf("%p -> 0x%X\n", (void*)a, *a++);
-    printf("%p -> 0x%X\n", (void*)a, *a++);
-    printf("%p -> 0x%X\n", (void*)a, *a++);
-    printf("%p -> 0x%X\n", (void*)a, *a++);
     
-    b = buffer; 
+    return(0);
+}
+
+int
+main(void)
+{
+    SSL_CTX *ctx = NULL;
+    SSL *ssl = NULL;
+    OPENSSL_init_ssl(0, NULL);
+    ctx = SSL_CTX_new(TLS_client_method());
     
-    printf("%p -> b[0]  -> 0x%X\n", (void*)&b[0], b[0]);
-    printf("%p -> b[1]  -> 0x%X\n", (void*)&b[1], b[1]);
-    printf("%p -> b[2]  -> 0x%X\n", (void*)&b[2], b[2]);
-    printf("%p -> b[3]  -> 0x%X\n", (void*)&b[3], b[3]);
-    printf("%p -> b[4]  -> 0x%X\n", (void*)&b[4], b[4]);
-    printf("%p -> b[5]  -> 0x%X\n", (void*)&b[5], b[5]);
-    printf("%p -> b[6]  -> 0x%X\n", (void*)&b[6], b[6]);
-    printf("%p -> b[7]  -> 0x%X\n", (void*)&b[7], b[7]);
-    printf("%p -> b[8]  -> 0x%X\n", (void*)&b[8], b[8]);
-    printf("%p -> b[9]  -> 0x%X\n", (void*)&b[9], b[9]);
-    printf("%p -> b[10] -> 0x%X\n", (void*)&b[10], b[10]);
-    printf("%p -> b[11] -> 0x%X\n", (void*)&b[11], b[11]);
-    printf("%p -> b[12] -> 0x%X\n", (void*)&b[12], b[12]);
-    printf("%p -> b[13] -> 0x%X\n", (void*)&b[13], b[13]);
-    printf("%p -> b[14] -> 0x%X\n", (void*)&b[14], b[14]);
-    printf("%p -> b[15] -> 0x%X\n", (void*)&b[15], b[15]);
-    */
+    /* load certs and keys and coordinate cipher choices for TLS */
+    int result = SSL_CTX_use_certificate_file(
+        ctx,
+        "/etc/pykmip/certs/slugs/client_certificate_john_doe.pem",
+        SSL_FILETYPE_PEM);
+    if(result != 1)
+    {
+        printf("Loading the client certificate failed.\n");
+    }
+    result = SSL_CTX_use_PrivateKey_file(
+        ctx,
+        "/etc/pykmip/certs/slugs/client_key_john_doe.pem",
+        SSL_FILETYPE_PEM);
+    if(result != 1)
+    {
+        printf("Loading the client key failed.\n");
+    }
+    result = SSL_CTX_load_verify_locations(
+        ctx, 
+        "/etc/pykmip/certs/slugs/root_certificate.pem",
+        NULL);
+    if(result != 1)
+    {
+        printf("Loading the CA file failed.\n");
+    }
+    
+    BIO *bio = NULL;
+    bio = BIO_new_ssl_connect(ctx);
+    BIO_get_ssl(bio, &ssl);
+    SSL_set_mode(ssl, SSL_MODE_AUTO_RETRY);
+    BIO_set_conn_hostname(bio, "127.0.0.1");
+    BIO_set_conn_port(bio, "5696");
+    BIO_do_connect(bio);
+    
+    /* Get a SymmetricKey with ID: 1*/
+    uint8 request[120] = {
+        0x42, 0x00, 0x78, 0x01, 0x00, 0x00, 0x00, 0x70,
+        0x42, 0x00, 0x77, 0x01, 0x00, 0x00, 0x00, 0x38,
+        0x42, 0x00, 0x69, 0x01, 0x00, 0x00, 0x00, 0x20,
+        0x42, 0x00, 0x6A, 0x02, 0x00, 0x00, 0x00, 0x04,
+        0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00,
+        0x42, 0x00, 0x6B, 0x02, 0x00, 0x00, 0x00, 0x04,
+        0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00,
+        0x42, 0x00, 0x0D, 0x02, 0x00, 0x00, 0x00, 0x04,
+        0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00,
+        0x42, 0x00, 0x0F, 0x01, 0x00, 0x00, 0x00, 0x48,
+        0x42, 0x00, 0x5C, 0x05, 0x00, 0x00, 0x00, 0x04,
+        0x00, 0x00, 0x00, 0x0A, 0x00, 0x00, 0x00, 0x00,
+        0x42, 0x00, 0x79, 0x01, 0x00, 0x00, 0x00, 0x30,
+        0x42, 0x00, 0x94, 0x07, 0x00, 0x00, 0x00, 0x01,
+        0x31, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+    };
+    uint8 response[300] = {0};
+    
+    BIO_write(bio, request, 120);
+    int recv = BIO_read(bio, response, 300);
+    
+    printf("Received bytes: %d\n", recv);
+    
+    for(int i = 0; i < recv; i++)
+    {
+        if(i % 16 == 0)
+        {
+            printf("\n0x");
+        }
+        printf("%02X", response[i]);
+    }
+    printf("\n");
+    
+    return(0);
 }
