@@ -18,35 +18,9 @@
 #define KMIP_H
 
 #include <stddef.h>
-#include <stdint.h>
 #include <string.h>
 #include "enums.h"
-
-typedef int8_t int8;
-typedef int16_t int16;
-typedef int32_t int32;
-typedef int64_t int64;
-typedef int32 bool32;
-
-typedef uint8_t uint8;
-typedef uint16_t uint16;
-typedef uint32_t uint32;
-typedef uint64_t uint64;
-
-typedef size_t memory_index;
-
-typedef float real32;
-typedef double real64;
-
-#define KMIP_TRUE 1
-#define KMIP_FALSE 0
-
-#define KMIP_UNSET -1
-
-#define KMIP_OK                      0
-#define KMIP_NOT_IMPLEMENTED        -1
-#define KMIP_ERROR_BUFFER_FULL      -2
-#define KMIP_ERROR_ATTR_UNSUPPORTED -3
+#include "structs.h"
 
 #define ARRAY_LENGTH(A) (sizeof((A)) / sizeof((A)[0]))
 #define CHECK_BUFFER_FULL(A, B)                         \
@@ -68,55 +42,6 @@ do                                                      \
     }                                                   \
 } while(0)
 #define TAG_TYPE(A, B) (((A) << 8) | (uint8)(B))
-
-struct error_frame
-{
-    char function[100];
-    int line;
-};
-
-struct kmip
-{
-    uint8 *buffer;
-    uint8 *index;
-    size_t size;
-    enum kmip_version version;
-    struct error_frame errors[20];
-    struct error_frame *frame_index;
-};
-
-struct template_attribute
-{
-    struct name *name;
-    struct attribute *attributes;
-    size_t attribute_count;
-};
-
-struct attribute
-{
-    enum attribute_type type;
-    int32 index;
-    void *value;
-};
-
-struct name
-{
-    char *value;
-    size_t size;
-    enum name_type type;
-};
-
-struct text_string
-{
-    char *value;
-    size_t size;
-};
-
-struct protocol_version
-{
-    int32 major;
-    int32 minor;
-};
 
 void
 kmip_clear_errors(struct kmip *ctx)
@@ -162,7 +87,8 @@ kmip_set_buffer(struct kmip *ctx, uint8 *buffer, size_t buffer_size)
 }
 
 void
-kmip_push_error_frame(struct kmip *ctx, const char *function, const int line)
+kmip_push_error_frame(struct kmip *ctx, const char *function, 
+                      const int line)
 {
     for(size_t i = 0; i < 20; i++)
     {
@@ -276,7 +202,8 @@ encode_bool(struct kmip *ctx, enum tag t, int32 value)
 }
 
 int
-encode_text_string(struct kmip *ctx, enum tag t, const char *value, uint32 length)
+encode_text_string(struct kmip *ctx, enum tag t, const char *value, 
+                   uint32 length)
 {
     uint8 padding = (8 - (length % 8)) % 8;
     CHECK_BUFFER_FULL(ctx, 8 + length + padding);
@@ -297,9 +224,9 @@ encode_text_string(struct kmip *ctx, enum tag t, const char *value, uint32 lengt
 }
 
 int
-encode_byte_string(struct kmip *ctx, enum tag t, const int8 *value, uint32 length)
+encode_byte_string(struct kmip *ctx, enum tag t, const uint8 *value, uint32 length)
 {
-    uint8 padding = 8 - (length % 8);
+    uint8 padding = (8 - (length % 8)) % 8;
     CHECK_BUFFER_FULL(ctx, 8 + length + padding);
     
     encode_int32_be(ctx, TAG_TYPE(t, KMIP_TYPE_BYTE_STRING));
@@ -436,6 +363,8 @@ encode_attribute(struct kmip *ctx, struct attribute *attr)
     /* TODO (peter-hamilton) Check attr == NULL? */
     /* TODO (peter-hamilton) Cehck attr->value == NULL? */
     
+    /* TODO (peter-hamilton) Add CryptographicParameters support? */
+    
     int result = 0;
     result = encode_int32_be(
         ctx, 
@@ -550,4 +479,432 @@ encode_protocol_version(struct kmip *ctx,
     return(KMIP_OK);
 }
 
+int
+encode_cryptographic_parameters(struct kmip *ctx, 
+                                const struct cryptographic_parameters *cp)
+{
+    int result = 0;
+    result = encode_int32_be(
+        ctx, 
+        TAG_TYPE(KMIP_TAG_CRYPTOGRAPHIC_PARAMETERS, KMIP_TYPE_STRUCTURE));
+    CHECK_RESULT(ctx, result);
+    
+    uint8 *length_index = ctx->index;
+    uint8 *value_index = ctx->index += 4;
+    
+    if(cp->block_cipher_mode != 0)
+    {
+        result = encode_enum(
+            ctx,
+            KMIP_TAG_BLOCK_CIPHER_MODE,
+            cp->block_cipher_mode);
+        CHECK_RESULT(ctx, result);
+    }
+    
+    if(cp->padding_method != 0)
+    {
+        result = encode_enum(
+            ctx,
+            KMIP_TAG_PADDING_METHOD,
+            cp->padding_method);
+        CHECK_RESULT(ctx, result);
+    }
+    
+    if(cp->hashing_algorithm != 0)
+    {
+        result = encode_enum(
+            ctx,
+            KMIP_TAG_HASHING_ALGORITHM,
+            cp->hashing_algorithm);
+        CHECK_RESULT(ctx, result);
+    }
+    
+    if(cp->key_role_type != 0)
+    {
+        result = encode_enum(
+            ctx,
+            KMIP_TAG_KEY_ROLE_TYPE,
+            cp->key_role_type);
+        CHECK_RESULT(ctx, result);
+    }
+    
+    uint8 *curr_index = ctx->index;
+    ctx->index = length_index;
+    
+    encode_int32_be(ctx, curr_index - value_index);
+    
+    ctx->index = curr_index;
+    
+    return(KMIP_OK);
+}
+
+int
+encode_encryption_key_information(struct kmip *ctx, 
+                                  const struct encryption_key_information *eki)
+{
+    int result = 0;
+    result = encode_int32_be(
+        ctx, 
+        TAG_TYPE(KMIP_TAG_ENCRYPTION_KEY_INFORMATION, KMIP_TYPE_STRUCTURE));
+    CHECK_RESULT(ctx, result);
+    
+    uint8 *length_index = ctx->index;
+    uint8 *value_index = ctx->index += 4;
+    
+    result = encode_text_string(
+        ctx, KMIP_TAG_UNIQUE_IDENTIFIER, 
+        eki->unique_identifier->value,
+        eki->unique_identifier->size);
+    CHECK_RESULT(ctx, result);
+    
+    if(eki->cryptographic_parameters != 0)
+    {
+        result = encode_cryptographic_parameters(
+            ctx, 
+            eki->cryptographic_parameters);
+        CHECK_RESULT(ctx, result);
+    }
+    
+    uint8 *curr_index = ctx->index;
+    ctx->index = length_index;
+    
+    encode_int32_be(ctx, curr_index - value_index);
+    
+    ctx->index = curr_index;
+    
+    return(KMIP_OK);
+}
+
+int
+encode_mac_signature_key_information(struct kmip *ctx, 
+                                     const struct mac_signature_key_information *mski)
+{
+    int result = 0;
+    result = encode_int32_be(
+        ctx, 
+        TAG_TYPE(KMIP_TAG_MAC_SIGNATURE_KEY_INFORMATION, KMIP_TYPE_STRUCTURE));
+    CHECK_RESULT(ctx, result);
+    
+    uint8 *length_index = ctx->index;
+    uint8 *value_index = ctx->index += 4;
+    
+    result = encode_text_string(
+        ctx, KMIP_TAG_UNIQUE_IDENTIFIER, 
+        mski->unique_identifier->value,
+        mski->unique_identifier->size);
+    CHECK_RESULT(ctx, result);
+    
+    if(mski->cryptographic_parameters != 0)
+    {
+        result = encode_cryptographic_parameters(
+            ctx, 
+            mski->cryptographic_parameters);
+        CHECK_RESULT(ctx, result);
+    }
+    
+    uint8 *curr_index = ctx->index;
+    ctx->index = length_index;
+    
+    encode_int32_be(ctx, curr_index - value_index);
+    
+    ctx->index = curr_index;
+    
+    return(KMIP_OK);
+}
+
+int
+encode_key_wrapping_data(struct kmip *ctx, 
+                         const struct key_wrapping_data *kwd)
+{
+    int result = 0;
+    result = encode_int32_be(
+        ctx, 
+        TAG_TYPE(KMIP_TAG_KEY_WRAPPING_DATA, KMIP_TYPE_STRUCTURE));
+    CHECK_RESULT(ctx, result);
+    
+    uint8 *length_index = ctx->index;
+    uint8 *value_index = ctx->index += 4;
+    
+    result = encode_enum(ctx, KMIP_TAG_WRAPPING_METHOD, kwd->wrapping_method);
+    CHECK_RESULT(ctx, result);
+    
+    if(kwd->encryption_key_info != NULL)
+    {
+        result = encode_encryption_key_information(
+            ctx, 
+            kwd->encryption_key_info);
+        CHECK_RESULT(ctx, result);
+    }
+    
+    if(kwd->mac_signature_key_info != NULL)
+    {
+        result = encode_mac_signature_key_information(
+            ctx, 
+            kwd->mac_signature_key_info);
+        CHECK_RESULT(ctx, result);
+    }
+    
+    if(kwd->mac_signature != NULL)
+    {
+        result = encode_byte_string(
+            ctx, KMIP_TAG_MAC_SIGNATURE, 
+            kwd->mac_signature->value,
+            kwd->mac_signature->size);
+        CHECK_RESULT(ctx, result);
+    }
+    
+    if(kwd->iv_counter_nonce != NULL)
+    {
+        result = encode_byte_string(
+            ctx, KMIP_TAG_IV_COUNTER_NONCE, 
+            kwd->iv_counter_nonce->value,
+            kwd->iv_counter_nonce->size);
+        CHECK_RESULT(ctx, result);
+    }
+    
+    if(ctx->version >= KMIP_1_1)
+    {
+        result = encode_enum(
+            ctx,
+            KMIP_TAG_ENCODING_OPTION,
+            kwd->encoding_option);
+        CHECK_RESULT(ctx, result);
+    }
+    
+    uint8 *curr_index = ctx->index;
+    ctx->index = length_index;
+    
+    encode_int32_be(ctx, curr_index - value_index);
+    
+    ctx->index = curr_index;
+    
+    return(KMIP_OK);
+}
+
+int
+encode_transparent_symmetric_key(struct kmip *ctx,
+                                 const struct transparent_symmetric_key *tsk)
+{
+    int result = 0;
+    
+    result = encode_int32_be(
+        ctx,
+        TAG_TYPE(KMIP_TAG_KEY_MATERIAL, KMIP_TYPE_STRUCTURE));
+    CHECK_RESULT(ctx, result);
+    
+    uint8 *length_index = ctx->index;
+    uint8 *value_index = ctx->index += 4;
+    
+    result = encode_byte_string(
+        ctx,
+        KMIP_TAG_KEY,
+        tsk->key->value,
+        tsk->key->size);
+    CHECK_RESULT(ctx, result);
+    
+    uint8 *curr_index = ctx->index;
+    ctx->index = length_index;
+    
+    encode_int32_be(ctx, curr_index - value_index);
+    
+    ctx->index = curr_index;
+    
+    return(KMIP_OK);
+}
+
+int
+encode_key_material(struct kmip *ctx, enum key_format_type format, const void *km)
+{
+    int result = 0;
+    
+    switch(format)
+    {
+        case KMIP_KEYFORMAT_RAW:
+        case KMIP_KEYFORMAT_OPAQUE:
+        case KMIP_KEYFORMAT_PKCS1:
+        case KMIP_KEYFORMAT_PKCS8:
+        case KMIP_KEYFORMAT_EC_PRIVATE_KEY:
+        result = encode_byte_string(
+            ctx,
+            KMIP_TAG_KEY_MATERIAL,
+            ((struct byte_string*)km)->value,
+            ((struct byte_string*)km)->size);
+        CHECK_RESULT(ctx, result);
+        return(KMIP_OK);
+        break;
+        default:
+        break;
+    };
+    
+    switch(format)
+    {
+        case KMIP_KEYFORMAT_TRANS_SYMMETRIC_KEY:
+        result = encode_transparent_symmetric_key(
+            ctx,
+            (struct transparent_symmetric_key*)km);
+        CHECK_RESULT(ctx, result);
+        break;
+        
+        /* TODO (peter-hamilton) The rest require BigInteger support. */
+        
+        case KMIP_KEYFORMAT_TRANS_DSA_PRIVATE_KEY:
+        kmip_push_error_frame(ctx, __func__, __LINE__);
+        return(KMIP_NOT_IMPLEMENTED);
+        break;
+        case KMIP_KEYFORMAT_TRANS_DSA_PUBLIC_KEY:
+        kmip_push_error_frame(ctx, __func__, __LINE__);
+        return(KMIP_NOT_IMPLEMENTED);
+        break;
+        case KMIP_KEYFORMAT_TRANS_RSA_PRIVATE_KEY:
+        kmip_push_error_frame(ctx, __func__, __LINE__);
+        return(KMIP_NOT_IMPLEMENTED);
+        break;
+        case KMIP_KEYFORMAT_TRANS_RSA_PUBLIC_KEY:
+        kmip_push_error_frame(ctx, __func__, __LINE__);
+        return(KMIP_NOT_IMPLEMENTED);
+        break;
+        case KMIP_KEYFORMAT_TRANS_DH_PRIVATE_KEY:
+        kmip_push_error_frame(ctx, __func__, __LINE__);
+        return(KMIP_NOT_IMPLEMENTED);
+        break;
+        case KMIP_KEYFORMAT_TRANS_DH_PUBLIC_KEY:
+        kmip_push_error_frame(ctx, __func__, __LINE__);
+        return(KMIP_NOT_IMPLEMENTED);
+        break;
+        case KMIP_KEYFORMAT_TRANS_ECDSA_PRIVATE_KEY:
+        kmip_push_error_frame(ctx, __func__, __LINE__);
+        return(KMIP_NOT_IMPLEMENTED);
+        break;
+        case KMIP_KEYFORMAT_TRANS_ECDSA_PUBLIC_KEY:
+        kmip_push_error_frame(ctx, __func__, __LINE__);
+        return(KMIP_NOT_IMPLEMENTED);
+        break;
+        case KMIP_KEYFORMAT_TRANS_ECDH_PRIVATE_KEY:
+        kmip_push_error_frame(ctx, __func__, __LINE__);
+        return(KMIP_NOT_IMPLEMENTED);
+        break;
+        case KMIP_KEYFORMAT_TRANS_ECDH_PUBLIC_KEY:
+        kmip_push_error_frame(ctx, __func__, __LINE__);
+        return(KMIP_NOT_IMPLEMENTED);
+        break;
+        case KMIP_KEYFORMAT_TRANS_ECMQV_PRIVATE_KEY:
+        kmip_push_error_frame(ctx, __func__, __LINE__);
+        return(KMIP_NOT_IMPLEMENTED);
+        break;
+        case KMIP_KEYFORMAT_TRANS_ECMQV_PUBLIC_KEY:
+        kmip_push_error_frame(ctx, __func__, __LINE__);
+        return(KMIP_NOT_IMPLEMENTED);
+        break;
+        default:
+        kmip_push_error_frame(ctx, __func__, __LINE__);
+        return(KMIP_NOT_IMPLEMENTED);
+        break;
+    };
+    
+    return(KMIP_OK);
+}
+
+int
+encode_key_value(struct kmip *ctx, enum key_format_type format,
+                 const struct key_value *kv)
+{
+    int result = 0;
+    result = encode_int32_be(
+        ctx, 
+        TAG_TYPE(KMIP_TAG_KEY_VALUE, KMIP_TYPE_STRUCTURE));
+    CHECK_RESULT(ctx, result);
+    
+    uint8 *length_index = ctx->index;
+    uint8 *value_index = ctx->index += 4;
+    
+    result = encode_key_material(ctx, format, kv->key_material);
+    CHECK_RESULT(ctx, result);
+    
+    for(size_t i = 0; i < kv->attribute_count; i++)
+    {
+        struct attribute attr = kv->attributes[i];
+        result = encode_attribute(ctx, &attr);
+        CHECK_RESULT(ctx, result);
+    }
+    
+    uint8 *curr_index = ctx->index;
+    ctx->index = length_index;
+    
+    encode_int32_be(ctx, curr_index - value_index);
+    
+    ctx->index = curr_index;
+    
+    return(KMIP_OK);
+}
+
+/*
+int
+encode_key_block(struct kmip *ctx, const struct key_block *kb)
+{
+int result = 0;
+result = encode_int32_be(
+ctx, 
+TAG_TYPE(KMIP_TAG_KEY_BLOCK, KMIP_TYPE_STRUCTURE));
+CHECK_RESULT(ctx, result);
+
+uint8 *length_index = ctx->index;
+uint8 *value_index = ctx->index += 4;
+
+result = encode_enum(ctx, KMIP_TAG_KEY_FORMAT_TYPE, kb->key_format_type);
+CHECK_RESULT(ctx, result);
+
+if(kb->key_compression_type != 0)
+{
+result = encode_enum(
+ctx,
+KMIP_TAG_KEY_COMPRESSION_TYPE,
+kb->key_compression_type);
+CHECK_RESULT(ctx, result);
+}
+
+if(kwd->mac_signature_key_info != NULL)
+{
+result = encode_mac_signature_key_information(
+ctx, 
+kwd->mac_signature_key_info);
+CHECK_RESULT(ctx, result);
+}
+
+if(kwd->mac_signature != NULL)
+{
+result = encode_byte_string(
+ctx, KMIP_TAG_MAC_SIGNATURE, 
+kwd->mac_signature->value,
+kwd->mac_signature->size);
+CHECK_RESULT(ctx, result);
+}
+
+if(kwd->iv_counter_nonce != NULL)
+{
+result = encode_byte_string(
+ctx, KMIP_TAG_IV_COUNTER_NONCE, 
+kwd->iv_counter_nonce->value,
+kwd->iv_counter_nonce->size);
+CHECK_RESULT(ctx, result);
+}
+
+if(ctx->version >= KMIP_1_1)
+{
+result = encode_enum(
+ctx,
+KMIP_TAG_ENCODING_OPTION,
+kwd->encoding_option);
+CHECK_RESULT(ctx, result);
+}
+
+uint8 *curr_index = ctx->index;
+ctx->index = length_index;
+
+encode_int32_be(ctx, curr_index - value_index);
+
+ctx->index = curr_index;
+
+return(KMIP_OK);
+}
+*/
 #endif /* KMIP_H */

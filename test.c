@@ -35,8 +35,8 @@ print_error_frames(struct kmip *ctx, const char *prefix)
 }
 
 int
-report_test_result(struct kmip *ctx, const uint8 *expected, const uint8 *observed,
-                   int result, const char *function)
+report_test_result(struct kmip *ctx, const uint8 *expected,
+                   const uint8 *observed, int result, const char *function)
 {
     if(result == KMIP_OK)
     {
@@ -45,11 +45,11 @@ report_test_result(struct kmip *ctx, const uint8 *expected, const uint8 *observe
             if(expected[i] != observed[i])
             {
                 printf("FAIL - %s\n", function);
-                printf("- byte mismatch at: %zu (exp: %o, obs: %o)\n",
+                printf("- byte mismatch at: %zu (exp: %X, obs: %X)\n",
                        i, expected[i], observed[i]);
                 for(size_t j = 0; j < ctx->size; j++)
                 {
-                    printf("- %zu: %o - %o\n", j, expected[j], observed[j]);
+                    printf("- %zu: %X - %X\n", j, expected[j], observed[j]);
                 }
                 return(1);
             }
@@ -64,6 +64,45 @@ report_test_result(struct kmip *ctx, const uint8 *expected, const uint8 *observe
         if(result == KMIP_ERROR_BUFFER_FULL)
             printf("- context buffer is full\n");
         print_error_frames(ctx, "- ");
+        return(1);
+    }
+}
+
+int
+test_buffer_full_and_resize(void)
+{
+    uint8 expected[40] = {
+        0x42, 0x00, 0x69, 0x01, 0x00, 0x00, 0x00, 0x20,
+        0x42, 0x00, 0x6A, 0x02, 0x00, 0x00, 0x00, 0x04,
+        0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00,
+        0x42, 0x00, 0x6B, 0x02, 0x00, 0x00, 0x00, 0x04,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+    };
+    
+    uint8 too_small[30] = {0};
+    uint8 large_enough[40] = {0};
+    struct kmip ctx = {0};
+    kmip_init(&ctx, too_small, ARRAY_LENGTH(too_small), KMIP_1_0);
+    
+    struct protocol_version pv = {0};
+    pv.major = 1;
+    pv.minor = 0;
+    
+    int result = encode_protocol_version(&ctx, &pv);
+    
+    if(result == KMIP_ERROR_BUFFER_FULL)
+    {
+        kmip_reset(&ctx);
+        kmip_set_buffer(&ctx, large_enough, ARRAY_LENGTH(large_enough));
+        
+        result = encode_protocol_version(&ctx, &pv);
+        return(report_test_result(&ctx, expected, large_enough, result, 
+                                  __func__));
+    }
+    else
+    {
+        printf("FAIL - %s\n", __func__);
+        printf("- expected buffer full");
         return(1);
     }
 }
@@ -128,7 +167,7 @@ test_encode_byte_string(void)
     uint8 observed[16] = {0};
     struct kmip ctx = {0};
     kmip_init(&ctx, observed, ARRAY_LENGTH(observed), KMIP_1_0);
-    int8 str[3] = {0x01, 0x02, 0x03};
+    uint8 str[3] = {0x01, 0x02, 0x03};
     
     int result = encode_byte_string(&ctx, KMIP_TAG_DEFAULT, str, 3);
     return(report_test_result(&ctx, expected, observed, result, __func__));
@@ -444,48 +483,352 @@ test_encode_protocol_version(void)
 }
 
 int
-test_buffer_full_and_resize(void)
+test_encode_cryptographic_parameters(void)
 {
-    uint8 expected[40] = {
-        0x42, 0x00, 0x69, 0x01, 0x00, 0x00, 0x00, 0x20,
-        0x42, 0x00, 0x6A, 0x02, 0x00, 0x00, 0x00, 0x04,
+    uint8 expected[72] = {
+        0x42, 0x00, 0x2B, 0x01, 0x00, 0x00, 0x00, 0x40,
+        0x42, 0x00, 0x11, 0x05, 0x00, 0x00, 0x00, 0x04,
         0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00,
-        0x42, 0x00, 0x6B, 0x02, 0x00, 0x00, 0x00, 0x04,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+        0x42, 0x00, 0x5F, 0x05, 0x00, 0x00, 0x00, 0x04,
+        0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x00,
+        0x42, 0x00, 0x38, 0x05, 0x00, 0x00, 0x00, 0x04,
+        0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00,
+        0x42, 0x00, 0x83, 0x05, 0x00, 0x00, 0x00, 0x04,
+        0x00, 0x00, 0x00, 0x0B, 0x00, 0x00, 0x00, 0x00
     };
     
-    uint8 too_small[30] = {0};
-    uint8 large_enough[40] = {0};
+    uint8 observed[72] = {0};
     struct kmip ctx = {0};
-    kmip_init(&ctx, too_small, ARRAY_LENGTH(too_small), KMIP_1_0);
+    kmip_init(&ctx, observed, ARRAY_LENGTH(observed), KMIP_1_0);
     
-    struct protocol_version pv = {0};
-    pv.major = 1;
-    pv.minor = 0;
+    struct cryptographic_parameters cp = {0};
+    cp.block_cipher_mode = KMIP_BLOCK_CBC;
+    cp.padding_method = KMIP_PAD_PKCS5;
+    cp.hashing_algorithm = KMIP_HASH_SHA1;
+    cp.key_role_type = KMIP_ROLE_KEK;
     
-    int result = encode_protocol_version(&ctx, &pv);
+    int result = encode_cryptographic_parameters(&ctx, &cp);
+    return(report_test_result(&ctx, expected, observed, result, __func__));
+}
+
+int
+test_encode_encryption_key_information(void)
+{
+    uint8 expected[80] = {
+        0x42, 0x00, 0x36, 0x01, 0x00, 0x00, 0x00, 0x48,
+        0x42, 0x00, 0x94, 0x07, 0x00, 0x00, 0x00, 0x24,
+        0x31, 0x30, 0x30, 0x31, 0x38, 0x32, 0x64, 0x35,
+        0x2D, 0x37, 0x32, 0x62, 0x38, 0x2D, 0x34, 0x37, 
+        0x61, 0x61, 0x2D, 0x38, 0x33, 0x38, 0x33, 0x2D,
+        0x34, 0x64, 0x39, 0x37, 0x64, 0x35, 0x31, 0x32, 
+        0x65, 0x39, 0x38, 0x61, 0x00, 0x00, 0x00, 0x00,
+        0x42, 0x00, 0x2B, 0x01, 0x00, 0x00, 0x00, 0x10, 
+        0x42, 0x00, 0x11, 0x05, 0x00, 0x00, 0x00, 0x04,
+        0x00, 0x00, 0x00, 0x0D, 0x00, 0x00, 0x00, 0x00
+    };
     
-    if(result == KMIP_ERROR_BUFFER_FULL)
-    {
-        kmip_reset(&ctx);
-        kmip_set_buffer(&ctx, large_enough, ARRAY_LENGTH(large_enough));
-        
-        result = encode_protocol_version(&ctx, &pv);
-        return(report_test_result(&ctx, expected, large_enough, result, 
-                                  __func__));
-    }
-    else
-    {
-        printf("FAIL - %s\n", __func__);
-        printf("- expected buffer full");
-        return(1);
-    }
+    uint8 observed[80] = {0};
+    struct kmip ctx = {0};
+    kmip_init(&ctx, observed, ARRAY_LENGTH(observed), KMIP_1_0);
+    
+    char *id = "100182d5-72b8-47aa-8383-4d97d512e98a";
+    struct text_string uuid = {0};
+    uuid.value = id;
+    uuid.size = 36;
+    struct cryptographic_parameters cp = {0};
+    cp.block_cipher_mode = KMIP_BLOCK_NIST_KEY_WRAP;
+    struct encryption_key_information eki = {0};
+    eki.unique_identifier = &uuid;
+    eki.cryptographic_parameters = &cp;
+    
+    int result = encode_encryption_key_information(&ctx, &eki);
+    return(report_test_result(&ctx, expected, observed, result, __func__));
+}
+
+int
+test_encode_mac_signature_key_information(void)
+{
+    uint8 expected[80] = {
+        0x42, 0x00, 0x4E, 0x01, 0x00, 0x00, 0x00, 0x48,
+        0x42, 0x00, 0x94, 0x07, 0x00, 0x00, 0x00, 0x24,
+        0x31, 0x30, 0x30, 0x31, 0x38, 0x32, 0x64, 0x35,
+        0x2D, 0x37, 0x32, 0x62, 0x38, 0x2D, 0x34, 0x37, 
+        0x61, 0x61, 0x2D, 0x38, 0x33, 0x38, 0x33, 0x2D,
+        0x34, 0x64, 0x39, 0x37, 0x64, 0x35, 0x31, 0x32, 
+        0x65, 0x39, 0x38, 0x61, 0x00, 0x00, 0x00, 0x00,
+        0x42, 0x00, 0x2B, 0x01, 0x00, 0x00, 0x00, 0x10, 
+        0x42, 0x00, 0x11, 0x05, 0x00, 0x00, 0x00, 0x04,
+        0x00, 0x00, 0x00, 0x0D, 0x00, 0x00, 0x00, 0x00
+    };
+    
+    uint8 observed[80] = {0};
+    struct kmip ctx = {0};
+    kmip_init(&ctx, observed, ARRAY_LENGTH(observed), KMIP_1_0);
+    
+    char *id = "100182d5-72b8-47aa-8383-4d97d512e98a";
+    struct text_string uuid = {0};
+    uuid.value = id;
+    uuid.size = 36;
+    struct cryptographic_parameters cp = {0};
+    cp.block_cipher_mode = KMIP_BLOCK_NIST_KEY_WRAP;
+    struct mac_signature_key_information mski = {0};
+    mski.unique_identifier = &uuid;
+    mski.cryptographic_parameters = &cp;
+    
+    int result = encode_mac_signature_key_information(&ctx, &mski);
+    return(report_test_result(&ctx, expected, observed, result, __func__));
+}
+
+int
+test_encode_key_wrapping_data_v1_0(void)
+{
+    uint8 expected[104] = {
+        0x42, 0x00, 0x46, 0x01, 0x00, 0x00, 0x00, 0x60, 
+        0x42, 0x00, 0x9E, 0x05, 0x00, 0x00, 0x00, 0x04, 
+        0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 
+        0x42, 0x00, 0x36, 0x01, 0x00, 0x00, 0x00, 0x48, 
+        0x42, 0x00, 0x94, 0x07, 0x00, 0x00, 0x00, 0x24, 
+        0x31, 0x30, 0x30, 0x31, 0x38, 0x32, 0x64, 0x35,
+        0x2D, 0x37, 0x32, 0x62, 0x38, 0x2D, 0x34, 0x37, 
+        0x61, 0x61, 0x2D, 0x38, 0x33, 0x38, 0x33, 0x2D, 
+        0x34, 0x64, 0x39, 0x37, 0x64, 0x35, 0x31, 0x32, 
+        0x65, 0x39, 0x38, 0x61, 0x00, 0x00, 0x00, 0x00, 
+        0x42, 0x00, 0x2B, 0x01, 0x00, 0x00, 0x00, 0x10,
+        0x42, 0x00, 0x11, 0x05, 0x00, 0x00, 0x00, 0x04,
+        0x00, 0x00, 0x00, 0x0D, 0x00, 0x00, 0x00, 0x00
+    };
+    
+    uint8 observed[104] = {0};
+    struct kmip ctx = {0};
+    kmip_init(&ctx, observed, ARRAY_LENGTH(observed), KMIP_1_0);
+    
+    char *id = "100182d5-72b8-47aa-8383-4d97d512e98a";
+    struct text_string uuid = {0};
+    uuid.value = id;
+    uuid.size = 36;
+    struct cryptographic_parameters cp = {0};
+    cp.block_cipher_mode = KMIP_BLOCK_NIST_KEY_WRAP;
+    struct encryption_key_information eki = {0};
+    eki.unique_identifier = &uuid;
+    eki.cryptographic_parameters = &cp;
+    struct key_wrapping_data kwd = {0};
+    kwd.wrapping_method = KMIP_WRAP_ENCRYPT;
+    kwd.encryption_key_info = &eki;
+    
+    int result = encode_key_wrapping_data(&ctx, &kwd);
+    return(report_test_result(&ctx, expected, observed, result, __func__));
+}
+
+int
+test_encode_key_wrapping_data_v1_1(void)
+{
+    uint8 expected[120] = {
+        0x42, 0x00, 0x46, 0x01, 0x00, 0x00, 0x00, 0x70, 
+        0x42, 0x00, 0x9E, 0x05, 0x00, 0x00, 0x00, 0x04, 
+        0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 
+        0x42, 0x00, 0x36, 0x01, 0x00, 0x00, 0x00, 0x48, 
+        0x42, 0x00, 0x94, 0x07, 0x00, 0x00, 0x00, 0x24, 
+        0x31, 0x30, 0x30, 0x31, 0x38, 0x32, 0x64, 0x35,
+        0x2D, 0x37, 0x32, 0x62, 0x38, 0x2D, 0x34, 0x37, 
+        0x61, 0x61, 0x2D, 0x38, 0x33, 0x38, 0x33, 0x2D, 
+        0x34, 0x64, 0x39, 0x37, 0x64, 0x35, 0x31, 0x32, 
+        0x65, 0x39, 0x38, 0x61, 0x00, 0x00, 0x00, 0x00, 
+        0x42, 0x00, 0x2B, 0x01, 0x00, 0x00, 0x00, 0x10,
+        0x42, 0x00, 0x11, 0x05, 0x00, 0x00, 0x00, 0x04,
+        0x00, 0x00, 0x00, 0x0D, 0x00, 0x00, 0x00, 0x00,
+        0x42, 0x00, 0xA3, 0x05, 0x00, 0x00, 0x00, 0x04,
+        0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00
+    };
+    
+    uint8 observed[120] = {0};
+    struct kmip ctx = {0};
+    kmip_init(&ctx, observed, ARRAY_LENGTH(observed), KMIP_1_1);
+    
+    char *id = "100182d5-72b8-47aa-8383-4d97d512e98a";
+    struct text_string uuid = {0};
+    uuid.value = id;
+    uuid.size = 36;
+    struct cryptographic_parameters cp = {0};
+    cp.block_cipher_mode = KMIP_BLOCK_NIST_KEY_WRAP;
+    struct encryption_key_information eki = {0};
+    eki.unique_identifier = &uuid;
+    eki.cryptographic_parameters = &cp;
+    struct key_wrapping_data kwd = {0};
+    kwd.wrapping_method = KMIP_WRAP_ENCRYPT;
+    kwd.encryption_key_info = &eki;
+    kwd.encoding_option = KMIP_ENCODE_NO_ENCODING;
+    
+    int result = encode_key_wrapping_data(&ctx, &kwd);
+    return(report_test_result(&ctx, expected, observed, result, __func__));
+}
+
+/*
+18.2 - 0 - key block with attributes in key value struct
+14.1 - 2 - wrapped key in a key block
+42004001000000C84200420500000004000000010000000042004508000000181FA68B0A8112B447AEF34BD8FB5A7B829D3E862371D2CFE54200280500000004000000030000000042002A02000000040000008000000000420046010000007042009E050000000400000001000000004200360100000048420094070000002431303031383264352D373262382D343761612D383338332D3464393764353132653938610000000042002B010000001042001105000000040000000D00000000
+*/
+
+int
+test_encode_key_material_byte_string(void)
+{
+    uint8 expected[24] = {
+        0x42, 0x00, 0x43, 0x08, 0x00, 0x00, 0x00, 0x10,
+        0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77,
+        0x88, 0x99, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF
+    };
+    
+    uint8 observed[24] = {0};
+    struct kmip ctx = {0};
+    kmip_init(&ctx, observed, ARRAY_LENGTH(observed), KMIP_1_0);
+    
+    uint8 value[16] = {
+        0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77,
+        0x88, 0x99, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF
+    };
+    struct byte_string key = {0};
+    key.value = value;
+    key.size = ARRAY_LENGTH(value);
+    
+    int result = encode_key_material(&ctx, KMIP_KEYFORMAT_RAW, &key);
+    return(report_test_result(&ctx, expected, observed, result, __func__));
+}
+
+int
+test_encode_key_material_transparent_symmetric_key(void)
+{
+    uint8 expected[48] = {
+        0x42, 0x00, 0x43, 0x01, 0x00, 0x00, 0x00, 0x28, 
+        0x42, 0x00, 0x3F, 0x08, 0x00, 0x00, 0x00, 0x20, 
+        0x00, 0x00, 0x11, 0x11, 0x22, 0x22, 0x33, 0x33, 
+        0x44, 0x44, 0x55, 0x55, 0x66, 0x66, 0x77, 0x77,
+        0x88, 0x88, 0x99, 0x99, 0xAA, 0xAA, 0xBB, 0xBB,
+        0xCC, 0xCC, 0xDD, 0xDD, 0xEE, 0xEE, 0xFF, 0xFF
+    };
+    
+    uint8 observed[48] = {0};
+    struct kmip ctx = {0};
+    kmip_init(&ctx, observed, ARRAY_LENGTH(observed), KMIP_1_0);
+    
+    uint8 value[32] = {
+        0x00, 0x00, 0x11, 0x11, 0x22, 0x22, 0x33, 0x33, 
+        0x44, 0x44, 0x55, 0x55, 0x66, 0x66, 0x77, 0x77,
+        0x88, 0x88, 0x99, 0x99, 0xAA, 0xAA, 0xBB, 0xBB,
+        0xCC, 0xCC, 0xDD, 0xDD, 0xEE, 0xEE, 0xFF, 0xFF
+    };
+    struct byte_string key = {0};
+    key.value = value;
+    key.size = ARRAY_LENGTH(value);
+    struct transparent_symmetric_key tsk = {0};
+    tsk.key = &key;
+    
+    int result = encode_key_material(
+        &ctx,
+        KMIP_KEYFORMAT_TRANS_SYMMETRIC_KEY,
+        &tsk);
+    return(report_test_result(&ctx, expected, observed, result, __func__));
+}
+
+int
+test_encode_key_value(void)
+{
+    uint8 expected[32] = {
+        0x42, 0x00, 0x45, 0x01, 0x00, 0x00, 0x00, 0x18,
+        0x42, 0x00, 0x43, 0x08, 0x00, 0x00, 0x00, 0x10,
+        0xD3, 0x51, 0x91, 0x0F, 0x1D, 0x79, 0x34, 0xD6,
+        0xE2, 0xAE, 0x17, 0x57, 0x65, 0x64, 0xE2, 0xBC
+    };
+    
+    uint8 observed[32] = {0};
+    struct kmip ctx = {0};
+    kmip_init(&ctx, observed, ARRAY_LENGTH(observed), KMIP_1_0);
+    
+    uint8 value[16] = {
+        0xD3, 0x51, 0x91, 0x0F, 0x1D, 0x79, 0x34, 0xD6,
+        0xE2, 0xAE, 0x17, 0x57, 0x65, 0x64, 0xE2, 0xBC
+    };
+    struct byte_string key = {0};
+    key.value = value;
+    key.size = ARRAY_LENGTH(value);
+    
+    struct key_value kv = {0};
+    kv.key_material = &key;
+    
+    int result = encode_key_value(
+        &ctx,
+        KMIP_KEYFORMAT_RAW,
+        &kv);
+    return(report_test_result(&ctx, expected, observed, result, __func__));
+}
+
+int
+test_encode_key_value_with_attributes(void)
+{
+    uint8 expected[144] = {
+        0x42, 0x00, 0x45, 0x01, 0x00, 0x00, 0x00, 0x88, 
+        0x42, 0x00, 0x43, 0x08, 0x00, 0x00, 0x00, 0x10, 
+        0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77,
+        0x88, 0x99, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF,
+        0x42, 0x00, 0x08, 0x01, 0x00, 0x00, 0x00, 0x30, 
+        0x42, 0x00, 0x0A, 0x07, 0x00, 0x00, 0x00, 0x17, 
+        0x43, 0x72, 0x79, 0x70, 0x74, 0x6F, 0x67, 0x72, 
+        0x61, 0x70, 0x68, 0x69, 0x63, 0x20, 0x41, 0x6C, 
+        0x67, 0x6F, 0x72, 0x69, 0x74, 0x68, 0x6D, 0x00, 
+        0x42, 0x00, 0x0B, 0x05, 0x00, 0x00, 0x00, 0x04,
+        0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x00, 
+        0x42, 0x00, 0x08, 0x01, 0x00, 0x00, 0x00, 0x30, 
+        0x42, 0x00, 0x0A, 0x07, 0x00, 0x00, 0x00, 0x14,
+        0x43, 0x72, 0x79, 0x70, 0x74, 0x6F, 0x67, 0x72, 
+        0x61, 0x70, 0x68, 0x69, 0x63, 0x20, 0x4C, 0x65, 
+        0x6E, 0x67, 0x74, 0x68, 0x00, 0x00, 0x00, 0x00, 
+        0x42, 0x00, 0x0B, 0x02, 0x00, 0x00, 0x00, 0x04,
+        0x00, 0x00, 0x00, 0x80, 0x00, 0x00, 0x00, 0x00
+    };
+    
+    uint8 observed[144] = {0};
+    struct kmip ctx = {0};
+    kmip_init(&ctx, observed, ARRAY_LENGTH(observed), KMIP_1_0);
+    
+    uint8 value[16] = {
+        0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77,
+        0x88, 0x99, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF
+    };
+    struct byte_string key = {0};
+    key.value = value;
+    key.size = ARRAY_LENGTH(value);
+    
+    struct attribute attributes[2] = {0};
+    enum cryptographic_algorithm ca = KMIP_CRYPTOALG_AES;
+    int length = 128;
+    attributes[0].type = KMIP_ATTR_CRYPTOGRAPHIC_ALGORITHM;
+    attributes[0].index = KMIP_UNSET;
+    attributes[0].value = &ca;
+    attributes[1].type = KMIP_ATTR_CRYPTOGRAPHIC_LENGTH;
+    attributes[1].index = KMIP_UNSET;
+    attributes[1].value = &length;
+    
+    struct key_value kv = {0};
+    kv.key_material = &key;
+    kv.attributes = attributes;
+    kv.attribute_count = ARRAY_LENGTH(attributes);
+    
+    int result = encode_key_value(
+        &ctx,
+        KMIP_KEYFORMAT_RAW,
+        &kv);
+    return(report_test_result(&ctx, expected, observed, result, __func__));
+}
+
+
+int
+test_encode_key_block(void)
+{
+    return(0);
 }
 
 int
 main(void)
 {
-    int num_tests = 17;
+    int num_tests = 26;
     int num_failures = 0;
     
     printf("Tests\n");
@@ -508,6 +851,15 @@ main(void)
     num_failures += test_encode_attribute_cryptographic_usage_mask();
     num_failures += test_encode_attribute_state();
     num_failures += test_encode_protocol_version();
+    num_failures += test_encode_cryptographic_parameters();
+    num_failures += test_encode_encryption_key_information();
+    num_failures += test_encode_mac_signature_key_information();
+    num_failures += test_encode_key_wrapping_data_v1_0();
+    num_failures += test_encode_key_wrapping_data_v1_1();
+    num_failures += test_encode_key_material_byte_string();
+    num_failures += test_encode_key_material_transparent_symmetric_key();
+    num_failures += test_encode_key_value();
+    num_failures += test_encode_key_value_with_attributes();
     
     printf("\nSummary\n");
     printf("==============\n");

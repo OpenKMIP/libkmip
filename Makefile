@@ -11,8 +11,8 @@ kmip: kmip.o
 	$(CC) $(LDFLAGS) -L/usr/local/lib -o kmip kmip.o $(LDLIBS) -lssl -lcrypto
 test: test.o
 	$(CC) $(LDFLAGS) -o test test.o $(LDLIBS)
-kmip.o: kmip.c kmip.h enums.h
-test.o: test.c kmip.h enums.h
+kmip.o: kmip.c kmip.h enums.h structs.h
+test.o: test.c kmip.h enums.h structs.h
 clean:
 	rm -f kmip.o test.o
 
