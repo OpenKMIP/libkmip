@@ -170,4 +170,130 @@ struct private_key
     struct key_block *key_block;
 };
 
+struct key_wrapping_specification
+{
+    /* KMIP 1.0 */
+    enum wrapping_method wrapping_method;
+    struct encryption_key_information *encryption_key_info;
+    struct mac_signature_key_information *mac_signature_key_info;
+    struct text_string *attribute_names;
+    size_t attribute_name_count;
+    /* KMIP 1.1 */
+    enum encoding_option encoding_option;
+};
+
+/* Operation Payloads */
+
+struct create_request_payload
+{
+    enum object_type object_type;
+    struct template_attribute *template_attribute;
+};
+
+struct create_response_payload
+{
+    enum object_type object_type;
+    struct text_string *unique_identifier;
+    struct template_attribute *template_attribute;
+};
+
+struct get_request_payload
+{
+    struct text_string *unique_identifier;
+    enum key_format_type key_format_type;
+    enum key_compression_type key_compression_type;
+    struct key_wrapping_specification *key_wrapping_spec;
+};
+
+struct get_response_payload
+{
+    enum object_type object_type;
+    struct text_string *unique_identifier;
+    void *object;
+};
+
+struct destroy_request_payload
+{
+    struct text_string *unique_identifier;
+};
+
+struct destroy_response_payload
+{
+    struct text_string *unique_identifier;
+};
+
+/* Authentication Structures */
+
+struct credential
+{
+    enum credential_type credential_type;
+    void *credential_value;
+};
+
+struct username_password_credential
+{
+    struct text_string *username;
+    struct text_string *password;
+};
+
+struct authentication
+{
+    void *credential;
+};
+
+/* Message Structures */
+
+struct request_header
+{
+    struct protocol_version *protocol_version;
+    int32 maximum_response_size;
+    bool32 asynchronous_indicator;
+    struct authentication *authentication;
+    enum batch_error_continuation_option batch_error_continuation_option;
+    bool32 batch_order_option;
+    uint64 time_stamp;
+    int32 batch_count;
+};
+
+struct response_header
+{
+    struct protocol_version *protocol_version;
+    uint64 time_stamp;
+    int32 batch_count;
+};
+
+struct request_batch_item
+{
+    enum operation operation;
+    struct byte_string *unique_batch_item_id;
+    void *request_payload;
+    /* NOTE (peter-hamilton) Omitting the message extension field for now. */
+};
+
+struct response_batch_item
+{
+    enum operation operation;
+    struct byte_string *unique_batch_item_id;
+    enum result_status result_status;
+    enum result_reason result_reason;
+    struct text_string *result_message;
+    struct byte_string *asynchronous_correlation_value;
+    void *response_payload;
+    /* NOTE (peter-hamilton) Omitting the message extension field for now. */
+};
+
+struct request_message
+{
+    struct request_header *request_header;
+    struct request_batch_item *batch_items;
+    size_t batch_count;
+};
+
+struct response_message
+{
+    struct response_header *response_header;
+    struct response_batch_item *batch_items;
+    size_t batch_count;
+};
+
 #endif /* ENUMS_H */

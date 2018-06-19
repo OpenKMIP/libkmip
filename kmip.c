@@ -94,6 +94,7 @@ main(void)
     BIO_do_connect(bio);
     
     /* Get a SymmetricKey with ID: 1*/
+    /*
     uint8 request[120] = {
         0x42, 0x00, 0x78, 0x01, 0x00, 0x00, 0x00, 0x70,
         0x42, 0x00, 0x77, 0x01, 0x00, 0x00, 0x00, 0x38,
@@ -111,9 +112,53 @@ main(void)
         0x42, 0x00, 0x94, 0x07, 0x00, 0x00, 0x00, 0x01,
         0x31, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
     };
+    */
+    
+    uint8 observed[1024] = {0};
+    struct kmip kmip_ctx = {0};
+    kmip_init(&kmip_ctx, observed, ARRAY_LENGTH(observed), KMIP_1_0);
+    
+    struct protocol_version pv = {0};
+    pv.major = 1;
+    pv.minor = 0;
+    
+    struct request_header rh = {0};
+    rh.protocol_version = &pv;
+    rh.asynchronous_indicator = KMIP_UNSET;
+    rh.batch_order_option = KMIP_UNSET;
+    rh.batch_count = 1;
+    
+    struct text_string uuid = {0};
+    uuid.value = "1";
+    uuid.size = 1;
+    
+    struct get_request_payload grp = {0};
+    grp.unique_identifier = &uuid;
+    
+    struct request_batch_item rbi = {0};
+    rbi.operation = KMIP_OP_GET;
+    rbi.request_payload = &grp;
+    
+    struct request_message rm = {0};
+    rm.request_header = &rh;
+    rm.batch_items = &rbi;
+    rm.batch_count = 1;
+    
+    int encode_result = encode_request_message(&kmip_ctx, &rm);
+    if(encode_result != KMIP_OK)
+    {
+        printf("Encoding failure detected. Aborting request.");
+        return(encode_result);
+    };
+    
     uint8 response[300] = {0};
     
-    BIO_write(bio, request, 120);
+    /*
+BIO_write(bio, request, 120);
+    int recv = BIO_read(bio, response, 300);
+    */
+    
+    BIO_write(bio, kmip_ctx.buffer, kmip_ctx.index - kmip_ctx.buffer);
     int recv = BIO_read(bio, response, 300);
     
     printf("Received bytes: %d\n", recv);

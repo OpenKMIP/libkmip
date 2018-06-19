@@ -189,7 +189,7 @@ encode_enum(struct kmip *ctx, enum tag t, int32 value)
 }
 
 int
-encode_bool(struct kmip *ctx, enum tag t, int32 value)
+encode_bool(struct kmip *ctx, enum tag t, bool32 value)
 {
     CHECK_BUFFER_FULL(ctx, 16);
     
@@ -723,6 +723,7 @@ encode_key_material(struct kmip *ctx, enum key_format_type format, const void *k
         case KMIP_KEYFORMAT_OPAQUE:
         case KMIP_KEYFORMAT_PKCS1:
         case KMIP_KEYFORMAT_PKCS8:
+        case KMIP_KEYFORMAT_X509:
         case KMIP_KEYFORMAT_EC_PRIVATE_KEY:
         result = encode_byte_string(
             ctx,
@@ -837,74 +838,556 @@ encode_key_value(struct kmip *ctx, enum key_format_type format,
     return(KMIP_OK);
 }
 
-/*
 int
 encode_key_block(struct kmip *ctx, const struct key_block *kb)
 {
-int result = 0;
-result = encode_int32_be(
-ctx, 
-TAG_TYPE(KMIP_TAG_KEY_BLOCK, KMIP_TYPE_STRUCTURE));
-CHECK_RESULT(ctx, result);
+    int result = 0;
+    result = encode_int32_be(
+        ctx, 
+        TAG_TYPE(KMIP_TAG_KEY_BLOCK, KMIP_TYPE_STRUCTURE));
+    CHECK_RESULT(ctx, result);
+    
+    uint8 *length_index = ctx->index;
+    uint8 *value_index = ctx->index += 4;
+    
+    result = encode_enum(ctx, KMIP_TAG_KEY_FORMAT_TYPE, kb->key_format_type);
+    CHECK_RESULT(ctx, result);
+    
+    if(kb->key_compression_type != 0)
+    {
+        result = encode_enum(
+            ctx,
+            KMIP_TAG_KEY_COMPRESSION_TYPE,
+            kb->key_compression_type);
+        CHECK_RESULT(ctx, result);
+    }
+    
+    if(kb->key_wrapping_data != NULL)
+    {
+        result = encode_byte_string(
+            ctx,
+            KMIP_TAG_KEY_VALUE,
+            ((struct byte_string*)kb->key_value)->value,
+            ((struct byte_string*)kb->key_value)->size);
+    }
+    else
+    {
+        result = encode_key_value(
+            ctx,
+            kb->key_format_type,
+            (struct key_value*)kb->key_value);
+    }
+    CHECK_RESULT(ctx, result);
+    
+    if(kb->cryptographic_algorithm != 0)
+    {
+        result = encode_enum(
+            ctx,
+            KMIP_TAG_CRYPTOGRAPHIC_ALGORITHM,
+            kb->cryptographic_algorithm);
+        CHECK_RESULT(ctx, result);
+    }
+    
+    if(kb->cryptographic_length != KMIP_UNSET)
+    {
+        result = encode_integer(
+            ctx,
+            KMIP_TAG_CRYPTOGRAPHIC_LENGTH,
+            kb->cryptographic_length);
+        CHECK_RESULT(ctx, result);
+    }
+    
+    if(kb->key_wrapping_data != NULL)
+    {
+        result = encode_key_wrapping_data(ctx, kb->key_wrapping_data);
+        CHECK_RESULT(ctx, result);
+    }
+    
+    uint8 *curr_index = ctx->index;
+    ctx->index = length_index;
+    
+    encode_int32_be(ctx, curr_index - value_index);
+    
+    ctx->index = curr_index;
+    
+    return(KMIP_OK);
+}
 
-uint8 *length_index = ctx->index;
-uint8 *value_index = ctx->index += 4;
-
-result = encode_enum(ctx, KMIP_TAG_KEY_FORMAT_TYPE, kb->key_format_type);
-CHECK_RESULT(ctx, result);
-
-if(kb->key_compression_type != 0)
+int
+encode_symmetric_key(struct kmip *ctx, const struct symmetric_key *sk)
 {
-result = encode_enum(
-ctx,
-KMIP_TAG_KEY_COMPRESSION_TYPE,
-kb->key_compression_type);
-CHECK_RESULT(ctx, result);
+    int result = 0;
+    result = encode_int32_be(
+        ctx, 
+        TAG_TYPE(KMIP_TAG_SYMMETRIC_KEY, KMIP_TYPE_STRUCTURE));
+    CHECK_RESULT(ctx, result);
+    
+    uint8 *length_index = ctx->index;
+    uint8 *value_index = ctx->index += 4;
+    
+    result = encode_key_block(ctx, sk->key_block);
+    CHECK_RESULT(ctx, result);
+    
+    uint8 *curr_index = ctx->index;
+    ctx->index = length_index;
+    
+    encode_int32_be(ctx, curr_index - value_index);
+    
+    ctx->index = curr_index;
+    
+    return(KMIP_OK);
 }
 
-if(kwd->mac_signature_key_info != NULL)
+int
+encode_public_key(struct kmip *ctx, const struct public_key *pk)
 {
-result = encode_mac_signature_key_information(
-ctx, 
-kwd->mac_signature_key_info);
-CHECK_RESULT(ctx, result);
+    int result = 0;
+    result = encode_int32_be(
+        ctx, 
+        TAG_TYPE(KMIP_TAG_PUBLIC_KEY, KMIP_TYPE_STRUCTURE));
+    CHECK_RESULT(ctx, result);
+    
+    uint8 *length_index = ctx->index;
+    uint8 *value_index = ctx->index += 4;
+    
+    result = encode_key_block(ctx, pk->key_block);
+    CHECK_RESULT(ctx, result);
+    
+    uint8 *curr_index = ctx->index;
+    ctx->index = length_index;
+    
+    encode_int32_be(ctx, curr_index - value_index);
+    
+    ctx->index = curr_index;
+    
+    return(KMIP_OK);
 }
 
-if(kwd->mac_signature != NULL)
+int
+encode_private_key(struct kmip *ctx, const struct private_key *pk)
 {
-result = encode_byte_string(
-ctx, KMIP_TAG_MAC_SIGNATURE, 
-kwd->mac_signature->value,
-kwd->mac_signature->size);
-CHECK_RESULT(ctx, result);
+    int result = 0;
+    result = encode_int32_be(
+        ctx, 
+        TAG_TYPE(KMIP_TAG_PRIVATE_KEY, KMIP_TYPE_STRUCTURE));
+    CHECK_RESULT(ctx, result);
+    
+    uint8 *length_index = ctx->index;
+    uint8 *value_index = ctx->index += 4;
+    
+    result = encode_key_block(ctx, pk->key_block);
+    CHECK_RESULT(ctx, result);
+    
+    uint8 *curr_index = ctx->index;
+    ctx->index = length_index;
+    
+    encode_int32_be(ctx, curr_index - value_index);
+    
+    ctx->index = curr_index;
+    
+    return(KMIP_OK);
 }
 
-if(kwd->iv_counter_nonce != NULL)
+int
+encode_key_wrapping_specification(struct kmip *ctx,
+                                  const struct key_wrapping_specification *kws)
 {
-result = encode_byte_string(
-ctx, KMIP_TAG_IV_COUNTER_NONCE, 
-kwd->iv_counter_nonce->value,
-kwd->iv_counter_nonce->size);
-CHECK_RESULT(ctx, result);
+    int result = 0;
+    result = encode_int32_be(
+        ctx, 
+        TAG_TYPE(KMIP_TAG_KEY_WRAPPING_SPECIFICATION, KMIP_TYPE_STRUCTURE));
+    CHECK_RESULT(ctx, result);
+    
+    uint8 *length_index = ctx->index;
+    uint8 *value_index = ctx->index += 4;
+    
+    result = encode_enum(ctx, KMIP_TAG_WRAPPING_METHOD, kws->wrapping_method);
+    CHECK_RESULT(ctx, result);
+    
+    if(kws->encryption_key_info != NULL)
+    {
+        result = encode_encryption_key_information(
+            ctx,
+            kws->encryption_key_info);
+        CHECK_RESULT(ctx, result);
+    }
+    
+    if(kws->mac_signature_key_info != NULL)
+    {
+        result = encode_mac_signature_key_information(
+            ctx,
+            kws->mac_signature_key_info);
+        CHECK_RESULT(ctx, result);
+    }
+    
+    for(size_t i = 0; i < kws->attribute_name_count; i++)
+    {
+        struct text_string name = kws->attribute_names[i];
+        result = encode_text_string(
+            ctx, KMIP_TAG_ATTRIBUTE_NAME, 
+            name.value,
+            name.size);
+        CHECK_RESULT(ctx, result);
+    }
+    
+    if(ctx->version >= KMIP_1_1)
+    {
+        result = encode_enum(
+            ctx,
+            KMIP_TAG_ENCODING_OPTION,
+            kws->encoding_option);
+        CHECK_RESULT(ctx, result);
+    }
+    
+    uint8 *curr_index = ctx->index;
+    ctx->index = length_index;
+    
+    encode_int32_be(ctx, curr_index - value_index);
+    
+    ctx->index = curr_index;
+    
+    return(KMIP_OK);
 }
 
-if(ctx->version >= KMIP_1_1)
+int
+encode_get_request_payload(struct kmip *ctx,
+                           const struct get_request_payload *grp)
 {
-result = encode_enum(
-ctx,
-KMIP_TAG_ENCODING_OPTION,
-kwd->encoding_option);
-CHECK_RESULT(ctx, result);
+    int result = 0;
+    result = encode_int32_be(
+        ctx, 
+        TAG_TYPE(KMIP_TAG_REQUEST_PAYLOAD, KMIP_TYPE_STRUCTURE));
+    CHECK_RESULT(ctx, result);
+    
+    uint8 *length_index = ctx->index;
+    uint8 *value_index = ctx->index += 4;
+    
+    if(grp->unique_identifier != NULL)
+    {
+        result = encode_text_string(
+            ctx, KMIP_TAG_UNIQUE_IDENTIFIER,
+            grp->unique_identifier->value,
+            grp->unique_identifier->size);
+        CHECK_RESULT(ctx, result);
+    }
+    
+    if(grp->key_format_type != 0)
+    {
+        result = encode_enum(
+            ctx,
+            KMIP_TAG_KEY_FORMAT_TYPE,
+            grp->key_format_type);
+        CHECK_RESULT(ctx, result);
+    }
+    
+    if(grp->key_compression_type != 0)
+    {
+        result = encode_enum(
+            ctx,
+            KMIP_TAG_KEY_COMPRESSION_TYPE,
+            grp->key_compression_type);
+        CHECK_RESULT(ctx, result);
+    }
+    
+    if(grp->key_wrapping_spec != NULL)
+    {
+        result = encode_key_wrapping_specification(
+            ctx,
+            grp->key_wrapping_spec);
+        CHECK_RESULT(ctx, result);
+    }
+    
+    uint8 *curr_index = ctx->index;
+    ctx->index = length_index;
+    
+    encode_int32_be(ctx, curr_index - value_index);
+    
+    ctx->index = curr_index;
+    
+    return(KMIP_OK);
 }
 
-uint8 *curr_index = ctx->index;
-ctx->index = length_index;
-
-encode_int32_be(ctx, curr_index - value_index);
-
-ctx->index = curr_index;
-
-return(KMIP_OK);
+int
+encode_username_password_credential(
+struct kmip *ctx, 
+const struct username_password_credential *upc)
+{
+    int result = 0;
+    result = encode_int32_be(
+        ctx, 
+        TAG_TYPE(KMIP_TAG_CREDENTIAL_VALUE, KMIP_TYPE_STRUCTURE));
+    CHECK_RESULT(ctx, result);
+    
+    uint8 *length_index = ctx->index;
+    uint8 *value_index = ctx->index += 4;
+    
+    result = encode_text_string(
+        ctx, KMIP_TAG_USERNAME,
+        upc->username->value,
+        upc->username->size);
+    CHECK_RESULT(ctx, result);
+    
+    if(upc->password != NULL)
+    {
+        result = encode_text_string(
+            ctx, KMIP_TAG_PASSWORD,
+            upc->password->value,
+            upc->password->size);
+        CHECK_RESULT(ctx, result);
+    }
+    
+    uint8 *curr_index = ctx->index;
+    ctx->index = length_index;
+    
+    encode_int32_be(ctx, curr_index - value_index);
+    
+    ctx->index = curr_index;
+    
+    return(KMIP_OK);
 }
-*/
+
+int
+encode_credential_value(struct kmip *ctx, 
+                        enum credential_type type, 
+                        void *credential_value)
+{
+    int result = 0;
+    
+    switch(type)
+    {
+        case KMIP_CRED_USERNAME_AND_PASSWORD:
+        result = encode_username_password_credential(
+            ctx, 
+            (struct username_password_credential*)credential_value);
+        CHECK_RESULT(ctx, result);
+        break;
+        default:
+        kmip_push_error_frame(ctx, __func__, __LINE__);
+        return(KMIP_NOT_IMPLEMENTED);
+        break;
+    }
+    
+    return(KMIP_OK);
+}
+
+int
+encode_credential(struct kmip *ctx, const struct credential *c)
+{
+    int result = 0;
+    result = encode_int32_be(
+        ctx,
+        TAG_TYPE(KMIP_TAG_CREDENTIAL, KMIP_TYPE_STRUCTURE));
+    CHECK_RESULT(ctx, result);
+    
+    uint8 *length_index = ctx->index;
+    uint8 *value_index = ctx->index += 4;
+    
+    result = encode_enum(ctx, KMIP_TAG_CREDENTIAL_TYPE, c->credential_type);
+    CHECK_RESULT(ctx, result);
+    
+    result = encode_credential_value(
+        ctx,
+        c->credential_type,
+        c->credential_value);
+    CHECK_RESULT(ctx, result);
+    
+    uint8 *curr_index = ctx->index;
+    ctx->index = length_index;
+    
+    encode_int32_be(ctx, curr_index - value_index);
+    
+    ctx->index = curr_index;
+    
+    return(KMIP_OK);
+}
+
+int encode_authentication(struct kmip *ctx, const struct authentication *a)
+{
+    int result = 0;
+    result = encode_int32_be(
+        ctx,
+        TAG_TYPE(KMIP_TAG_AUTHENTICATION, KMIP_TYPE_STRUCTURE));
+    CHECK_RESULT(ctx, result);
+    
+    uint8 *length_index = ctx->index;
+    uint8 *value_index = ctx->index += 4;
+    
+    result = encode_credential(ctx, a->credential);
+    CHECK_RESULT(ctx, result);
+    
+    uint8 *curr_index = ctx->index;
+    ctx->index = length_index;
+    
+    encode_int32_be(ctx, curr_index - value_index);
+    
+    ctx->index = curr_index;
+    
+    return(KMIP_OK);
+}
+
+int
+encode_request_header(struct kmip *ctx, const struct request_header *rh)
+{
+    int result = 0;
+    result = encode_int32_be(
+        ctx,
+        TAG_TYPE(KMIP_TAG_REQUEST_HEADER, KMIP_TYPE_STRUCTURE));
+    CHECK_RESULT(ctx, result);
+    
+    uint8 *length_index = ctx->index;
+    uint8 *value_index = ctx->index += 4;
+    
+    result = encode_protocol_version(ctx, rh->protocol_version);
+    CHECK_RESULT(ctx, result);
+    
+    if(rh->maximum_response_size != 0)
+    {
+        result = encode_integer(
+            ctx,
+            KMIP_TAG_MAXIMUM_RESPONSE_SIZE,
+            rh->maximum_response_size);
+        CHECK_RESULT(ctx, result);
+    }
+    
+    if(rh->asynchronous_indicator != KMIP_UNSET)
+    {
+        result = encode_bool(
+            ctx,
+            KMIP_TAG_ASYNCHRONOUS_INDICATOR,
+            rh->asynchronous_indicator);
+        CHECK_RESULT(ctx, result);
+    }
+    
+    if(rh->authentication != NULL)
+    {
+        result = encode_authentication(ctx, rh->authentication);
+        CHECK_RESULT(ctx, result);
+    }
+    
+    if(rh->batch_error_continuation_option != 0)
+    {
+        result = encode_enum(
+            ctx,
+            KMIP_TAG_BATCH_ERROR_CONTINUATION_OPTION,
+            rh->batch_error_continuation_option);
+        CHECK_RESULT(ctx, result);
+    }
+    
+    if(rh->batch_order_option != KMIP_UNSET)
+    {
+        result = encode_bool(
+            ctx,
+            KMIP_TAG_BATCH_ORDER_OPTION,
+            rh->batch_order_option);
+        CHECK_RESULT(ctx, result);
+    }
+    
+    if(rh->time_stamp != 0)
+    {
+        result = encode_date_time(ctx, KMIP_TAG_TIME_STAMP, rh->time_stamp);
+        CHECK_RESULT(ctx, result);
+    }
+    
+    result = encode_integer(ctx, KMIP_TAG_BATCH_COUNT, rh->batch_count);
+    CHECK_RESULT(ctx, result);
+    
+    uint8 *curr_index = ctx->index;
+    ctx->index = length_index;
+    
+    encode_int32_be(ctx, curr_index - value_index);
+    
+    ctx->index = curr_index;
+    
+    return(KMIP_OK);
+}
+
+int
+encode_request_batch_item(struct kmip *ctx,
+                          const struct request_batch_item *rbi)
+{
+    int result = 0;
+    result = encode_int32_be(
+        ctx,
+        TAG_TYPE(KMIP_TAG_BATCH_ITEM, KMIP_TYPE_STRUCTURE));
+    CHECK_RESULT(ctx, result);
+    
+    uint8 *length_index = ctx->index;
+    uint8 *value_index = ctx->index += 4;
+    
+    result = encode_enum(ctx, KMIP_TAG_OPERATION, rbi->operation);
+    CHECK_RESULT(ctx, result);
+    
+    if(rbi->unique_batch_item_id != NULL)
+    {
+        result = encode_byte_string(
+            ctx,
+            KMIP_TAG_UNIQUE_BATCH_ITEM_ID,
+            rbi->unique_batch_item_id->value,
+            rbi->unique_batch_item_id->size);
+        CHECK_RESULT(ctx, result);
+    }
+    
+    switch(rbi->operation)
+    {
+        case KMIP_OP_CREATE:
+        break;
+        
+        case KMIP_OP_GET:
+        result = encode_get_request_payload(
+            ctx, 
+            (struct get_request_payload*)rbi->request_payload);
+        CHECK_RESULT(ctx, result);
+        break;
+        
+        case KMIP_OP_DESTROY:
+        break;
+        
+        default:
+        kmip_push_error_frame(ctx, __func__, __LINE__);
+        return(KMIP_NOT_IMPLEMENTED);
+        break;
+    };
+    
+    uint8 *curr_index = ctx->index;
+    ctx->index = length_index;
+    
+    encode_int32_be(ctx, curr_index - value_index);
+    
+    ctx->index = curr_index;
+    
+    return(KMIP_OK);
+}
+
+int
+encode_request_message(struct kmip *ctx, const struct request_message *rm)
+{
+    int result = 0;
+    result = encode_int32_be(
+        ctx,
+        TAG_TYPE(KMIP_TAG_REQUEST_MESSAGE, KMIP_TYPE_STRUCTURE));
+    CHECK_RESULT(ctx, result);
+    
+    uint8 *length_index = ctx->index;
+    uint8 *value_index = ctx->index += 4;
+    
+    result = encode_request_header(ctx, rm->request_header);
+    CHECK_RESULT(ctx, result);
+    
+    for(size_t i = 0; i < rm->batch_count; i++)
+    {
+        /*struct batch_item batch_item = rm->batch_items[i];*/
+        result = encode_request_batch_item(ctx, &rm->batch_items[i]);
+        CHECK_RESULT(ctx, result);
+    }
+    
+    uint8 *curr_index = ctx->index;
+    ctx->index = length_index;
+    
+    encode_int32_be(ctx, curr_index - value_index);
+    
+    ctx->index = curr_index;
+    
+    return(KMIP_OK);
+}
+
 #endif /* KMIP_H */
