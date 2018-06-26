@@ -63,7 +63,8 @@ struct kmip
 
 struct template_attribute
 {
-    struct name *name;
+    struct name *names;
+    size_t name_count;
     struct attribute *attributes;
     size_t attribute_count;
 };
@@ -107,6 +108,16 @@ struct cryptographic_parameters
     enum padding_method padding_method;
     enum hashing_algorithm hashing_algorithm;
     enum key_role_type key_role_type;
+    /* KMIP 1.2 */
+    enum digital_signature_algorithm digital_signature_algorithm;
+    enum cryptographic_algorithm cryptographic_algorithm;
+    bool32 random_iv;
+    int32 iv_length;
+    int32 tag_length;
+    int32 fixed_field_length;
+    int32 invocation_field_length;
+    int32 counter_length;
+    int32 initial_counter_value;
 };
 
 struct encryption_key_information
@@ -182,6 +193,12 @@ struct key_wrapping_specification
     enum encoding_option encoding_option;
 };
 
+struct nonce
+{
+    struct byte_string *nonce_id;
+    struct byte_string *nonce_value;
+};
+
 /* Operation Payloads */
 
 struct create_request_payload
@@ -236,8 +253,28 @@ struct username_password_credential
     struct text_string *password;
 };
 
+struct device_credential
+{
+    struct text_string *device_serial_number;
+    struct text_string *password;
+    struct text_string *device_identifier;
+    struct text_string *network_identifier;
+    struct text_string *machine_identifier;
+    struct text_string *media_identifier;
+};
+
+struct attestation_credential
+{
+    struct nonce *nonce;
+    enum attestation_type attestation_type;
+    struct byte_string *attestation_measurement;
+    struct byte_string *attestation_assertion;
+};
+
 struct authentication
 {
+    /* NOTE (peter-hamilton) KMIP 1.2+ supports multiple credentials here. */
+    /* NOTE (peter-hamilton) Polymorphism makes this tricky. Omitting for now. */
     void *credential;
 };
 
@@ -245,6 +282,7 @@ struct authentication
 
 struct request_header
 {
+    /* KMIP 1.0 */
     struct protocol_version *protocol_version;
     int32 maximum_response_size;
     bool32 asynchronous_indicator;
@@ -253,13 +291,22 @@ struct request_header
     bool32 batch_order_option;
     uint64 time_stamp;
     int32 batch_count;
+    /* KMIP 1.2 */
+    bool32 attestation_capable_indicator;
+    enum attestation_type *attestation_types;
+    size_t attestation_type_count;
 };
 
 struct response_header
 {
+    /* KMIP 1.0 */
     struct protocol_version *protocol_version;
     uint64 time_stamp;
     int32 batch_count;
+    /* KMIP 1.2 */
+    struct nonce *nonce;
+    enum attestation_type *attestation_types;
+    size_t attestation_type_count;
 };
 
 struct request_batch_item

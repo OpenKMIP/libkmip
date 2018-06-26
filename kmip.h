@@ -269,13 +269,6 @@ encode_interval(struct kmip *ctx, enum tag t, uint32 value)
     return(KMIP_OK);
 }
 
-/*
-int
-encode_template_attribute(struct kmip *ctx, struct template_attribute *t)
-{
-};
-*/
-
 int
 encode_name(struct kmip *ctx, struct name *n)
 {
@@ -443,6 +436,41 @@ encode_attribute(struct kmip *ctx, struct attribute *attr)
     CHECK_RESULT(ctx, result);
     
     curr_index = ctx->index;
+    ctx->index = length_index;
+    
+    result = encode_int32_be(ctx, curr_index - value_index);
+    CHECK_RESULT(ctx, result);
+    
+    ctx->index = curr_index;
+    
+    return(KMIP_OK);
+}
+
+int
+encode_template_attribute(struct kmip *ctx, struct template_attribute *ta)
+{
+    int result = 0;
+    
+    result = encode_int32_be(
+        ctx, TAG_TYPE(KMIP_TAG_TEMPLATE_ATTRIBUTE, KMIP_TYPE_STRUCTURE));
+    CHECK_RESULT(ctx, result);
+    
+    uint8 *length_index = ctx->index;
+    uint8 *value_index = ctx->index += 4;
+    
+    for(size_t i = 0; i < ta->name_count; i++)
+    {
+        result = encode_name(ctx, &ta->names[i]);
+        CHECK_RESULT(ctx, result);
+    }
+    
+    for(size_t i = 0; i <ta->attribute_count; i++)
+    {
+        result = encode_attribute(ctx, &ta->attributes[i]);
+        CHECK_RESULT(ctx, result);
+    }
+    
+    uint8 *curr_index = ctx->index;
     ctx->index = length_index;
     
     result = encode_int32_be(ctx, curr_index - value_index);
@@ -1050,6 +1078,74 @@ encode_key_wrapping_specification(struct kmip *ctx,
 }
 
 int
+encode_create_request_payload(struct kmip *ctx, 
+                              const struct create_request_payload *value)
+{
+    int result = 0;
+    result = encode_int32_be(
+        ctx, 
+        TAG_TYPE(KMIP_TAG_REQUEST_PAYLOAD, KMIP_TYPE_STRUCTURE));
+    CHECK_RESULT(ctx, result);
+    
+    uint8 *length_index = ctx->index;
+    uint8 *value_index = ctx->index += 4;
+    
+    result = encode_enum(ctx, KMIP_TAG_OBJECT_TYPE, value->object_type);
+    CHECK_RESULT(ctx, result);
+    
+    result = encode_template_attribute(ctx, value->template_attribute);
+    CHECK_RESULT(ctx, result);
+    
+    uint8 *curr_index = ctx->index;
+    ctx->index = length_index;
+    
+    encode_int32_be(ctx, curr_index - value_index);
+    
+    ctx->index = curr_index;
+    
+    return(KMIP_OK);
+}
+
+
+int
+encode_create_response_payload(struct kmip *ctx, 
+                               const struct create_response_payload *value)
+{
+    int result = 0;
+    result = encode_int32_be(
+        ctx,
+        TAG_TYPE(KMIP_TAG_RESPONSE_PAYLOAD, KMIP_TYPE_STRUCTURE));
+    CHECK_RESULT(ctx, result);
+    
+    uint8 *length_index = ctx->index;
+    uint8 *value_index = ctx->index += 4;
+    
+    result = encode_enum(ctx, KMIP_TAG_OBJECT_TYPE, value->object_type);
+    CHECK_RESULT(ctx, result);
+    
+    result = encode_text_string(
+        ctx, KMIP_TAG_UNIQUE_IDENTIFIER,
+        value->unique_identifier->value,
+        value->unique_identifier->size);
+    CHECK_RESULT(ctx, result);
+    
+    if(value->template_attribute != NULL)
+    {
+        result = encode_template_attribute(ctx, value->template_attribute);
+        CHECK_RESULT(ctx, result);
+    }
+    
+    uint8 *curr_index = ctx->index;
+    ctx->index = length_index;
+    
+    encode_int32_be(ctx, curr_index - value_index);
+    
+    ctx->index = curr_index;
+    
+    return(KMIP_OK);
+}
+
+int
 encode_get_request_payload(struct kmip *ctx,
                            const struct get_request_payload *grp)
 {
@@ -1108,6 +1204,161 @@ encode_get_request_payload(struct kmip *ctx,
 }
 
 int
+encode_get_response_payload(struct kmip *ctx,
+                            const struct get_response_payload *value)
+{
+    int result = 0;
+    result = encode_int32_be(
+        ctx, 
+        TAG_TYPE(KMIP_TAG_RESPONSE_PAYLOAD, KMIP_TYPE_STRUCTURE));
+    CHECK_RESULT(ctx, result);
+    
+    uint8 *length_index = ctx->index;
+    uint8 *value_index = ctx->index += 4;
+    
+    result = encode_enum(ctx, KMIP_TAG_OBJECT_TYPE, value->object_type);
+    CHECK_RESULT(ctx, result);
+    
+    result = encode_text_string(
+        ctx, KMIP_TAG_UNIQUE_IDENTIFIER,
+        value->unique_identifier->value,
+        value->unique_identifier->size);
+    CHECK_RESULT(ctx, result);
+    
+    switch(value->object_type)
+    {
+        case KMIP_OBJTYPE_SYMMETRIC_KEY:
+        result = encode_symmetric_key(
+            ctx,
+            (const struct symmetric_key*)value->object);
+        CHECK_RESULT(ctx, result);
+        break;
+        case KMIP_OBJTYPE_PUBLIC_KEY:
+        result = encode_public_key(
+            ctx,
+            (const struct public_key*)value->object);
+        CHECK_RESULT(ctx, result);
+        break;
+        case KMIP_OBJTYPE_PRIVATE_KEY:
+        result = encode_private_key(
+            ctx,
+            (const struct private_key*)value->object);
+        CHECK_RESULT(ctx, result);
+        break;
+        default:
+        kmip_push_error_frame(ctx, __func__, __LINE__);
+        return(KMIP_NOT_IMPLEMENTED);
+        break;
+    };
+    
+    uint8 *curr_index = ctx->index;
+    ctx->index = length_index;
+    
+    encode_int32_be(ctx, curr_index - value_index);
+    
+    ctx->index = curr_index;
+    
+    return(KMIP_OK);
+}
+
+int
+encode_destroy_request_payload(struct kmip *ctx, 
+                               const struct destroy_request_payload *value)
+{
+    int result = 0;
+    result = encode_int32_be(
+        ctx, 
+        TAG_TYPE(KMIP_TAG_REQUEST_PAYLOAD, KMIP_TYPE_STRUCTURE));
+    CHECK_RESULT(ctx, result);
+    
+    uint8 *length_index = ctx->index;
+    uint8 *value_index = ctx->index += 4;
+    
+    if(value->unique_identifier != NULL)
+    {
+        result = encode_text_string(
+            ctx, KMIP_TAG_UNIQUE_IDENTIFIER,
+            value->unique_identifier->value,
+            value->unique_identifier->size);
+        CHECK_RESULT(ctx, result);
+    }
+    
+    uint8 *curr_index = ctx->index;
+    ctx->index = length_index;
+    
+    encode_int32_be(ctx, curr_index - value_index);
+    
+    ctx->index = curr_index;
+    
+    return(KMIP_OK);
+}
+
+int
+encode_destroy_response_payload(struct kmip *ctx, 
+                                const struct destroy_response_payload *value)
+{
+    int result = 0;
+    result = encode_int32_be(
+        ctx, 
+        TAG_TYPE(KMIP_TAG_RESPONSE_PAYLOAD, KMIP_TYPE_STRUCTURE));
+    CHECK_RESULT(ctx, result);
+    
+    uint8 *length_index = ctx->index;
+    uint8 *value_index = ctx->index += 4;
+    
+    result = encode_text_string(
+        ctx, KMIP_TAG_UNIQUE_IDENTIFIER,
+        value->unique_identifier->value,
+        value->unique_identifier->size);
+    CHECK_RESULT(ctx, result);
+    
+    uint8 *curr_index = ctx->index;
+    ctx->index = length_index;
+    
+    encode_int32_be(ctx, curr_index - value_index);
+    
+    ctx->index = curr_index;
+    
+    return(KMIP_OK);
+}
+
+int
+encode_nonce(struct kmip *ctx, const struct nonce *value)
+{
+    int result = 0;
+    result = encode_int32_be(
+        ctx,
+        TAG_TYPE(KMIP_TAG_NONCE, KMIP_TYPE_STRUCTURE));
+    CHECK_RESULT(ctx, result);
+    
+    uint8 *length_index = ctx->index;
+    uint8 *value_index = ctx->index += 4;
+    
+    result = encode_byte_string(
+        ctx,
+        KMIP_TAG_NONCE_ID,
+        value->nonce_id->value,
+        value->nonce_id->size);
+    CHECK_RESULT(ctx, result);
+    
+    result = encode_byte_string(
+        ctx,
+        KMIP_TAG_NONCE_VALUE,
+        value->nonce_value->value,
+        value->nonce_value->size);
+    CHECK_RESULT(ctx, result);
+    
+    uint8 *curr_index = ctx->index;
+    ctx->index = length_index;
+    
+    encode_int32_be(ctx, curr_index - value_index);
+    
+    ctx->index = curr_index;
+    
+    return(KMIP_OK);
+}
+
+int
 encode_username_password_credential(
 struct kmip *ctx, 
 const struct username_password_credential *upc)
@@ -1147,6 +1398,133 @@ const struct username_password_credential *upc)
 }
 
 int
+encode_device_credential(struct kmip *ctx,
+                         const struct device_credential *value)
+{
+    int result = 0;
+    result = encode_int32_be(
+        ctx,
+        TAG_TYPE(KMIP_TAG_CREDENTIAL_VALUE, KMIP_TYPE_STRUCTURE));
+    CHECK_RESULT(ctx, result);
+    
+    uint8 *length_index = ctx->index;
+    uint8 *value_index = ctx->index += 4;
+    
+    if(value->device_serial_number != NULL)
+    {
+        result = encode_text_string(
+            ctx, KMIP_TAG_DEVICE_SERIAL_NUMBER,
+            value->device_serial_number->value,
+            value->device_serial_number->size);
+        CHECK_RESULT(ctx, result);
+    }
+    
+    if(value->password != NULL)
+    {
+        result = encode_text_string(
+            ctx, KMIP_TAG_PASSWORD,
+            value->password->value,
+            value->password->size);
+        CHECK_RESULT(ctx, result);
+    }
+    
+    if(value->device_identifier != NULL)
+    {
+        result = encode_text_string(
+            ctx, KMIP_TAG_DEVICE_IDENTIFIER,
+            value->device_identifier->value,
+            value->device_identifier->size);
+        CHECK_RESULT(ctx, result);
+    }
+    
+    if(value->network_identifier != NULL)
+    {
+        result = encode_text_string(
+            ctx, KMIP_TAG_NETWORK_IDENTIFIER,
+            value->network_identifier->value,
+            value->network_identifier->size);
+        CHECK_RESULT(ctx, result);
+    }
+    
+    if(value->machine_identifier != NULL)
+    {
+        result = encode_text_string(
+            ctx, KMIP_TAG_MACHINE_IDENTIFIER,
+            value->machine_identifier->value,
+            value->machine_identifier->size);
+        CHECK_RESULT(ctx, result);
+    }
+    
+    if(value->media_identifier != NULL)
+    {
+        result = encode_text_string(
+            ctx, KMIP_TAG_MEDIA_IDENTIFIER,
+            value->media_identifier->value,
+            value->media_identifier->size);
+        CHECK_RESULT(ctx, result);
+    }
+    
+    uint8 *curr_index = ctx->index;
+    ctx->index = length_index;
+    
+    encode_int32_be(ctx, curr_index - value_index);
+    
+    ctx->index = curr_index;
+    
+    return(KMIP_OK);
+}
+
+int
+encode_attestation_credential(struct kmip *ctx,
+                              const struct attestation_credential *value)
+{
+    int result = 0;
+    result = encode_int32_be(
+        ctx,
+        TAG_TYPE(KMIP_TAG_CREDENTIAL_VALUE, KMIP_TYPE_STRUCTURE));
+    CHECK_RESULT(ctx, result);
+    
+    uint8 *length_index = ctx->index;
+    uint8 *value_index = ctx->index += 4;
+    
+    result = encode_nonce(ctx, value->nonce);
+    CHECK_RESULT(ctx, result);
+    
+    result = encode_enum(
+        ctx,
+        KMIP_TAG_ATTESTATION_TYPE,
+        value->attestation_type);
+    CHECK_RESULT(ctx, result);
+    
+    if(value->attestation_measurement != NULL)
+    {
+        result = encode_byte_string(
+            ctx, KMIP_TAG_ATTESTATION_MEASUREMENT,
+            value->attestation_measurement->value,
+            value->attestation_measurement->size);
+        CHECK_RESULT(ctx, result);
+    }
+    
+    if(value->attestation_assertion != NULL)
+    {
+        result = encode_byte_string(
+            ctx, KMIP_TAG_ATTESTATION_ASSERTION,
+            value->attestation_assertion->value,
+            value->attestation_assertion->size);
+        CHECK_RESULT(ctx, result);
+    }
+    
+    uint8 *curr_index = ctx->index;
+    ctx->index = length_index;
+    
+    encode_int32_be(ctx, curr_index - value_index);
+    
+    ctx->index = curr_index;
+    
+    return(KMIP_OK);
+}
+
+int
 encode_credential_value(struct kmip *ctx, 
                         enum credential_type type, 
                         void *credential_value)
@@ -1159,13 +1537,26 @@ encode_credential_value(struct kmip *ctx,
         result = encode_username_password_credential(
             ctx, 
             (struct username_password_credential*)credential_value);
-        CHECK_RESULT(ctx, result);
         break;
+        
+        case KMIP_CRED_DEVICE:
+        result = encode_device_credential(
+            ctx,
+            (struct device_credential*)credential_value);
+        break;
+        
+        case KMIP_CRED_ATTESTATION:
+        result = encode_attestation_credential(
+            ctx,
+            (struct attestation_credential*)credential_value);
+        break;
+        
         default:
         kmip_push_error_frame(ctx, __func__, __LINE__);
         return(KMIP_NOT_IMPLEMENTED);
         break;
     }
+    CHECK_RESULT(ctx, result);
     
     return(KMIP_OK);
 }
@@ -1201,7 +1592,8 @@ encode_credential(struct kmip *ctx, const struct credential *c)
     return(KMIP_OK);
 }
 
-int encode_authentication(struct kmip *ctx, const struct authentication *a)
+int
+encode_authentication(struct kmip *ctx, const struct authentication *a)
 {
     int result = 0;
     result = encode_int32_be(
@@ -1258,6 +1650,27 @@ encode_request_header(struct kmip *ctx, const struct request_header *rh)
         CHECK_RESULT(ctx, result);
     }
     
+    if(ctx->version >= KMIP_1_2)
+    {
+        if(rh->attestation_capable_indicator != KMIP_UNSET)
+        {
+            result = encode_bool(
+                ctx,
+                KMIP_TAG_ATTESTATION_CAPABLE_INDICATOR,
+                rh->attestation_capable_indicator);
+            CHECK_RESULT(ctx, result);
+        }
+        
+        for(size_t i = 0; i < rh->attestation_type_count; i++)
+        {
+            result = encode_enum(
+                ctx,
+                KMIP_TAG_ATTESTATION_TYPE,
+                rh->attestation_types[i]);
+            CHECK_RESULT(ctx, result);
+        }
+    }
+    
     if(rh->authentication != NULL)
     {
         result = encode_authentication(ctx, rh->authentication);
@@ -1302,6 +1715,37 @@ encode_request_header(struct kmip *ctx, const struct request_header *rh)
 }
 
 int
+encode_response_header(struct kmip *ctx, const struct response_header *rh)
+{
+    int result = 0;
+    result = encode_int32_be(
+        ctx,
+        TAG_TYPE(KMIP_TAG_RESPONSE_HEADER, KMIP_TYPE_STRUCTURE));
+    CHECK_RESULT(ctx, result);
+    
+    uint8 *length_index = ctx->index;
+    uint8 *value_index = ctx->index += 4;
+    
+    result = encode_protocol_version(ctx, rh->protocol_version);
+    CHECK_RESULT(ctx, result);
+    
+    result = encode_date_time(ctx, KMIP_TAG_TIME_STAMP, rh->time_stamp);
+    CHECK_RESULT(ctx, result);
+    
+    result = encode_integer(ctx, KMIP_TAG_BATCH_COUNT, rh->batch_count);
+    CHECK_RESULT(ctx, result);
+    
+    uint8 *curr_index = ctx->index;
+    ctx->index = length_index;
+    
+    encode_int32_be(ctx, curr_index - value_index);
+    
+    ctx->index = curr_index;
+    
+    return(KMIP_OK);
+}
+
+int
 encode_request_batch_item(struct kmip *ctx,
                           const struct request_batch_item *rbi)
 {
@@ -1330,16 +1774,21 @@ encode_request_batch_item(struct kmip *ctx,
     switch(rbi->operation)
     {
         case KMIP_OP_CREATE:
+        result = encode_create_request_payload(
+            ctx, 
+            (struct create_request_payload*)rbi->request_payload);
         break;
         
         case KMIP_OP_GET:
         result = encode_get_request_payload(
             ctx, 
             (struct get_request_payload*)rbi->request_payload);
-        CHECK_RESULT(ctx, result);
         break;
         
         case KMIP_OP_DESTROY:
+        result = encode_destroy_request_payload(
+            ctx,
+            (struct destroy_request_payload*)rbi->request_payload);
         break;
         
         default:
@@ -1347,6 +1796,102 @@ encode_request_batch_item(struct kmip *ctx,
         return(KMIP_NOT_IMPLEMENTED);
         break;
     };
+    CHECK_RESULT(ctx, result);
+    
+    uint8 *curr_index = ctx->index;
+    ctx->index = length_index;
+    
+    encode_int32_be(ctx, curr_index - value_index);
+    
+    ctx->index = curr_index;
+    
+    return(KMIP_OK);
+}
+
+int
+encode_response_batch_item(struct kmip *ctx,
+                           const struct response_batch_item *value)
+{
+    int result = 0;
+    result = encode_int32_be(
+        ctx,
+        TAG_TYPE(KMIP_TAG_BATCH_ITEM, KMIP_TYPE_STRUCTURE));
+    CHECK_RESULT(ctx, result);
+    
+    uint8 *length_index = ctx->index;
+    uint8 *value_index = ctx->index += 4;
+    
+    result = encode_enum(ctx, KMIP_TAG_OPERATION, value->operation);
+    CHECK_RESULT(ctx, result);
+    
+    if(value->unique_batch_item_id != NULL)
+    {
+        result = encode_byte_string(
+            ctx,
+            KMIP_TAG_UNIQUE_BATCH_ITEM_ID,
+            value->unique_batch_item_id->value,
+            value->unique_batch_item_id->size);
+        CHECK_RESULT(ctx, result);
+    }
+    
+    result = encode_enum(ctx, KMIP_TAG_RESULT_STATUS, value->result_status);
+    CHECK_RESULT(ctx, result);
+    
+    if(value->result_reason != 0)
+    {
+        result = encode_enum(
+            ctx,
+            KMIP_TAG_RESULT_REASON,
+            value->result_reason);
+        CHECK_RESULT(ctx, result);
+    }
+    
+    if(value->result_message != NULL)
+    {
+        result = encode_text_string(
+            ctx,
+            KMIP_TAG_RESULT_MESSAGE,
+            value->result_message->value,
+            value->result_message->size);
+        CHECK_RESULT(ctx, result);
+    }
+    
+    if(value->asynchronous_correlation_value != NULL)
+    {
+        result = encode_byte_string(
+            ctx,
+            KMIP_TAG_ASYNCHRONOUS_CORRELATION_VALUE,
+            value->asynchronous_correlation_value->value,
+            value->asynchronous_correlation_value->size);
+        CHECK_RESULT(ctx, result);
+    }
+    
+    switch(value->operation)
+    {
+        case KMIP_OP_CREATE:
+        result = encode_create_response_payload(
+            ctx,
+            (struct create_response_payload*)value->response_payload);
+        break;
+        
+        case KMIP_OP_GET:
+        result = encode_get_response_payload(
+            ctx, 
+            (struct get_response_payload*)value->response_payload);
+        break;
+        
+        case KMIP_OP_DESTROY:
+        result = encode_destroy_response_payload(
+            ctx,
+            (struct destroy_response_payload*)value->response_payload);
+        break;
+        
+        default:
+        kmip_push_error_frame(ctx, __func__, __LINE__);
+        return(KMIP_NOT_IMPLEMENTED);
+        break;
+    };
+    CHECK_RESULT(ctx, result);
     
     uint8 *curr_index = ctx->index;
     ctx->index = length_index;
@@ -1375,8 +1920,38 @@ encode_request_message(struct kmip *ctx, const struct request_message *rm)
     
     for(size_t i = 0; i < rm->batch_count; i++)
     {
-        /*struct batch_item batch_item = rm->batch_items[i];*/
         result = encode_request_batch_item(ctx, &rm->batch_items[i]);
+        CHECK_RESULT(ctx, result);
+    }
+    
+    uint8 *curr_index = ctx->index;
+    ctx->index = length_index;
+    
+    encode_int32_be(ctx, curr_index - value_index);
+    
+    ctx->index = curr_index;
+    
+    return(KMIP_OK);
+}
+
+int
+encode_response_message(struct kmip *ctx, const struct response_message *value)
+{
+    int result = 0;
+    result = encode_int32_be(
+        ctx,
+        TAG_TYPE(KMIP_TAG_RESPONSE_MESSAGE, KMIP_TYPE_STRUCTURE));
+    CHECK_RESULT(ctx, result);
+    
+    uint8 *length_index = ctx->index;
+    uint8 *value_index = ctx->index += 4;
+    
+    result = encode_response_header(ctx, value->response_header);
+    CHECK_RESULT(ctx, result);
+    
+    for(size_t i = 0; i < value->batch_count; i++)
+    {
+        result = encode_response_batch_item(ctx, &value->batch_items[i]);
         CHECK_RESULT(ctx, result);
     }
     
