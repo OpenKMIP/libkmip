@@ -64,7 +64,9 @@ enum block_cipher_mode
     KMIP_BLOCK_X9102_AESKW          = 0x0E,
     KMIP_BLOCK_X9102_TDKW           = 0x0F,
     KMIP_BLOCK_X9102_AKW1           = 0x10,
-    KMIP_BLOCK_X9102_AKW2           = 0x11
+    KMIP_BLOCK_X9102_AKW2           = 0x11,
+    /* KMIP 1.4 */
+    KMIP_BLOCK_AEAD                 = 0x12
 };
 
 enum credential_type
@@ -80,33 +82,49 @@ enum credential_type
 enum cryptographic_algorithm
 {
     /* KMIP 1.0 */
-    KMIP_CRYPTOALG_DES         = 0x01,
-    KMIP_CRYPTOALG_TRIPLE_DES  = 0x02,
-    KMIP_CRYPTOALG_AES         = 0x03,
-    KMIP_CRYPTOALG_RSA         = 0x04,
-    KMIP_CRYPTOALG_DSA         = 0x05,
-    KMIP_CRYPTOALG_ECDSA       = 0x06,
-    KMIP_CRYPTOALG_HMAC_SHA1   = 0x07,
-    KMIP_CRYPTOALG_HMAC_SHA224 = 0x08,
-    KMIP_CRYPTOALG_HMAC_SHA256 = 0x09,
-    KMIP_CRYPTOALG_HMAC_SHA384 = 0x0A,
-    KMIP_CRYPTOALG_HMAC_SHA512 = 0x0B,
-    KMIP_CRYPTOALG_HMAC_MD5    = 0x0C,
-    KMIP_CRYPTOALG_DH          = 0x0D,
-    KMIP_CRYPTOALG_ECDH        = 0x0E,
-    KMIP_CRYPTOALG_ECMQV       = 0x0F,
-    KMIP_CRYPTOALG_BLOWFISH    = 0x10,
-    KMIP_CRYPTOALG_CAMELLIA    = 0x11,
-    KMIP_CRYPTOALG_CAST5       = 0x12,
-    KMIP_CRYPTOALG_IDEA        = 0x13,
-    KMIP_CRYPTOALG_MARS        = 0x14,
-    KMIP_CRYPTOALG_RC2         = 0x15,
-    KMIP_CRYPTOALG_RC4         = 0x16,
-    KMIP_CRYPTOALG_RC5         = 0x17,
-    KMIP_CRYPTOALG_SKIPJACK    = 0x18,
-    KMIP_CRYPTOALG_TWOFISH     = 0x19,
+    KMIP_CRYPTOALG_DES               = 0x01,
+    KMIP_CRYPTOALG_TRIPLE_DES        = 0x02,
+    KMIP_CRYPTOALG_AES               = 0x03,
+    KMIP_CRYPTOALG_RSA               = 0x04,
+    KMIP_CRYPTOALG_DSA               = 0x05,
+    KMIP_CRYPTOALG_ECDSA             = 0x06,
+    KMIP_CRYPTOALG_HMAC_SHA1         = 0x07,
+    KMIP_CRYPTOALG_HMAC_SHA224       = 0x08,
+    KMIP_CRYPTOALG_HMAC_SHA256       = 0x09,
+    KMIP_CRYPTOALG_HMAC_SHA384       = 0x0A,
+    KMIP_CRYPTOALG_HMAC_SHA512       = 0x0B,
+    KMIP_CRYPTOALG_HMAC_MD5          = 0x0C,
+    KMIP_CRYPTOALG_DH                = 0x0D,
+    KMIP_CRYPTOALG_ECDH              = 0x0E,
+    KMIP_CRYPTOALG_ECMQV             = 0x0F,
+    KMIP_CRYPTOALG_BLOWFISH          = 0x10,
+    KMIP_CRYPTOALG_CAMELLIA          = 0x11,
+    KMIP_CRYPTOALG_CAST5             = 0x12,
+    KMIP_CRYPTOALG_IDEA              = 0x13,
+    KMIP_CRYPTOALG_MARS              = 0x14,
+    KMIP_CRYPTOALG_RC2               = 0x15,
+    KMIP_CRYPTOALG_RC4               = 0x16,
+    KMIP_CRYPTOALG_RC5               = 0x17,
+    KMIP_CRYPTOALG_SKIPJACK          = 0x18,
+    KMIP_CRYPTOALG_TWOFISH           = 0x19,
     /* KMIP 1.2 */
-    KMIP_CRYPTOALG_EC          = 0x1A
+    KMIP_CRYPTOALG_EC                = 0x1A,
+    /* KMIP 1.3 */
+    KMIP_CRYPTOALG_ONE_TIME_PAD      = 0x1B,
+    /* KMIP 1.4 */
+    KMIP_CRYPTOALG_CHACHA20          = 0x1C,
+    KMIP_CRYPTOALG_POLY1305          = 0x1D,
+    KMIP_CRYPTOALG_CHACHA20_POLY1305 = 0x1E,
+    KMIP_CRYPTOALG_SHA3_224          = 0x1F,
+    KMIP_CRYPTOALG_SHA3_256          = 0x20,
+    KMIP_CRYPTOALG_SHA3_384          = 0x21,
+    KMIP_CRYPTOALG_SHA3_512          = 0x22,
+    KMIP_CRYPTOALG_HMAC_SHA3_224     = 0x23,
+    KMIP_CRYPTOALG_HMAC_SHA3_256     = 0x24,
+    KMIP_CRYPTOALG_HMAC_SHA3_384     = 0x25,
+    KMIP_CRYPTOALG_HMAC_SHA3_512     = 0x26,
+    KMIP_CRYPTOALG_HMAC_SHAKE_128    = 0x27,
+    KMIP_CRYPTOALG_HMAC_SHAKE_256    = 0x28
 };
 
 enum cryptographic_usage_mask
@@ -135,6 +153,7 @@ enum cryptographic_usage_mask
 
 enum digital_signature_algorithm
 {
+    /* KMIP 1.1 */
     KMIP_DIGITAL_MD2_WITH_RSA      = 0x01,
     KMIP_DIGITAL_MD5_WITH_RSA      = 0x02,
     KMIP_DIGITAL_SHA1_WITH_RSA     = 0x03,
@@ -150,7 +169,11 @@ enum digital_signature_algorithm
     KMIP_DIGITAL_ECDSA_WITH_SHA224 = 0x0D,
     KMIP_DIGITAL_ECDSA_WITH_SHA256 = 0x0E,
     KMIP_DIGITAL_ECDSA_WITH_SHA384 = 0x0F,
-    KMIP_DIGITAL_ECDSA_WITH_SHA512 = 0x10
+    KMIP_DIGITAL_ECDSA_WITH_SHA512 = 0x10,
+    /* KMIP 1.4 */
+    KMIP_DIGITAL_SHA3_256_WITH_RSA = 0x11,
+    KMIP_DIGITAL_SHA3_384_WITH_RSA = 0x12,
+    KMIP_DIGITAL_SHA3_512_WITH_RSA = 0x13
 };
 
 enum encoding_option
@@ -176,7 +199,12 @@ enum hashing_algorithm
     KMIP_HASH_WHIRLPOOL  = 0x0B,
     /* KMIP 1.2 */
     KMIP_HASH_SHA512_224 = 0x0C,
-    KMIP_HASH_SHA512_256 = 0x0D
+    KMIP_HASH_SHA512_256 = 0x0D,
+    /* KMIP 1.4 */
+    KMIP_HASH_SHA3_224   = 0x0E,
+    KMIP_HASH_SHA3_256   = 0x0F,
+    KMIP_HASH_SHA3_384   = 0x10,
+    KMIP_HASH_SHA3_512   = 0x11
 };
 
 enum key_compression_type
@@ -203,12 +231,17 @@ enum key_format_type
     KMIP_KEYFORMAT_TRANS_RSA_PUBLIC_KEY    = 0x0B,
     KMIP_KEYFORMAT_TRANS_DH_PRIVATE_KEY    = 0x0C,
     KMIP_KEYFORMAT_TRANS_DH_PUBLIC_KEY     = 0x0D,
-    KMIP_KEYFORMAT_TRANS_ECDSA_PRIVATE_KEY = 0x0E,
-    KMIP_KEYFORMAT_TRANS_ECDSA_PUBLIC_KEY  = 0x0F,
-    KMIP_KEYFORMAT_TRANS_ECDH_PRIVATE_KEY  = 0x10,
-    KMIP_KEYFORMAT_TRANS_ECDH_PUBLIC_KEY   = 0x11,
-    KMIP_KEYFORMAT_TRANS_ECMQV_PRIVATE_KEY = 0x12,
-    KMIP_KEYFORMAT_TRANS_ECMQV_PUBLIC_KEY  = 0x13
+    KMIP_KEYFORMAT_TRANS_ECDSA_PRIVATE_KEY = 0x0E, /* Deprecated as of KMIP 1.3 */
+    KMIP_KEYFORMAT_TRANS_ECDSA_PUBLIC_KEY  = 0x0F, /* Deprecated as of KMIP 1.3 */
+    KMIP_KEYFORMAT_TRANS_ECDH_PRIVATE_KEY  = 0x10, /* Deprecated as of KMIP 1.3 */
+    KMIP_KEYFORMAT_TRANS_ECDH_PUBLIC_KEY   = 0x11, /* Deprecated as of KMIP 1.3 */
+    KMIP_KEYFORMAT_TRANS_ECMQV_PRIVATE_KEY = 0x12, /* Deprecated as of KMIP 1.3 */
+    KMIP_KEYFORMAT_TRANS_ECMQV_PUBLIC_KEY  = 0x13, /* Deprecated as of KMIP 1.3 */
+    /* KMIP 1.3 */
+    KMIP_KEYFORMAT_TRANS_EC_PRIVATE_KEY    = 0x14,
+    KMIP_KEYFORMAT_TRANS_EC_PUBLIC_KEY     = 0x15,
+    /* KMIP 1.4 */
+    KMIP_KEYFORMAT_PKCS12                  = 0x16
 };
 
 enum key_role_type
@@ -234,7 +267,18 @@ enum key_role_type
     KMIP_ROLE_ZPK      = 0x12,
     KMIP_ROLE_PVKIBM   = 0x13,
     KMIP_ROLE_PVKPVV   = 0x14,
-    KMIP_ROLE_PVKOTH   = 0x15
+    KMIP_ROLE_PVKOTH   = 0x15,
+    /* KMIP 1.4 */
+    KMIP_ROLE_DUKPT    = 0x16,
+    KMIP_ROLE_IV       = 0x17,
+    KMIP_ROLE_TRKBK    = 0x18
+};
+
+enum key_wrap_type
+{
+    /* KMIP 1.4 */
+    KMIP_WRAPTYPE_NOT_WRAPPED   = 0x01,
+    KMIP_WRAPTYPE_AS_REGISTERED = 0x02
 };
 
 enum kmip_version
@@ -244,6 +288,12 @@ enum kmip_version
     KMIP_1_2,
     KMIP_1_3,
     KMIP_1_4
+};
+
+enum mask_generator
+{
+    /* KMIP 1.4 */
+    KMIP_MASKGEN_MGF1 = 0x01
 };
 
 enum name_type
@@ -260,7 +310,7 @@ enum object_type
     KMIP_OBJTYPE_PUBLIC_KEY    = 0x03,
     KMIP_OBJTYPE_PRIVATE_KEY   = 0x04,
     KMIP_OBJTYPE_SPLIT_KEY     = 0x05,
-    KMIP_OBJTYPE_TEMPLATE      = 0x06,
+    KMIP_OBJTYPE_TEMPLATE      = 0x06, /* Deprecated as of KMIP 1.3 */
     KMIP_OBJTYPE_SECRET_DATA   = 0x07,
     KMIP_OBJTYPE_OPAQUE_OBJECT = 0x08,
     /* KMIP 1.2 */
@@ -315,7 +365,11 @@ enum result_reason
     /* KMIP 1.2 */
     KMIP_REASON_KEY_VALUE_NOT_PRESENT               = 0x0013,
     KMIP_REASON_ATTESTATION_REQUIRED                = 0x0014,
-    KMIP_REASON_ATTESTATION_FAILED                  = 0x0015
+    KMIP_REASON_ATTESTATION_FAILED                  = 0x0015,
+    /* KMIP 1.4 */
+    KMIP_REASON_SENSITIVE                           = 0x0016,
+    KMIP_REASON_NOT_EXTRACTABLE                     = 0x0017,
+    KMIP_REASON_OBJECT_ALREADY_EXISTS               = 0x0018
 };
 
 enum result_status
@@ -338,84 +392,101 @@ enum state
 
 enum tag
 {
-    KMIP_TAG_DEFAULT                         = 0x420000,
+    KMIP_TAG_DEFAULT                          = 0x420000,
     /* KMIP 1.0 */
-    KMIP_TAG_ASYNCHRONOUS_CORRELATION_VALUE  = 0x420006,
-    KMIP_TAG_ASYNCHRONOUS_INDICATOR          = 0x420007,
-    KMIP_TAG_ATTRIBUTE                       = 0x420008,
-    KMIP_TAG_ATTRIBUTE_INDEX                 = 0x420009,
-    KMIP_TAG_ATTRIBUTE_NAME                  = 0x42000A,
-    KMIP_TAG_ATTRIBUTE_VALUE                 = 0x42000B,
-    KMIP_TAG_AUTHENTICATION                  = 0x42000C,
-    KMIP_TAG_BATCH_COUNT                     = 0x42000D,
-    KMIP_TAG_BATCH_ERROR_CONTINUATION_OPTION = 0x42000E,
-    KMIP_TAG_BATCH_ITEM                      = 0x42000F,
-    KMIP_TAG_BATCH_ORDER_OPTION              = 0x420010,
-    KMIP_TAG_BLOCK_CIPHER_MODE               = 0x420011,
-    KMIP_TAG_CREDENTIAL                      = 0x420023,
-    KMIP_TAG_CREDENTIAL_TYPE                 = 0x420024,
-    KMIP_TAG_CREDENTIAL_VALUE                = 0x420025,
-    KMIP_TAG_CRYPTOGRAPHIC_ALGORITHM         = 0x420028,
-    KMIP_TAG_CRYPTOGRAPHIC_LENGTH            = 0x42002A,
-    KMIP_TAG_CRYPTOGRAPHIC_PARAMETERS        = 0x42002B,
-    KMIP_TAG_ENCRYPTION_KEY_INFORMATION      = 0x420036,
-    KMIP_TAG_HASHING_ALGORITHM               = 0x420038,
-    KMIP_TAG_IV_COUNTER_NONCE                = 0x42003D,
-    KMIP_TAG_KEY                             = 0x42003F,
-    KMIP_TAG_KEY_BLOCK                       = 0x420040,
-    KMIP_TAG_KEY_COMPRESSION_TYPE            = 0x420041,
-    KMIP_TAG_KEY_FORMAT_TYPE                 = 0x420042,
-    KMIP_TAG_KEY_MATERIAL                    = 0x420043,
-    KMIP_TAG_KEY_VALUE                       = 0x420045,
-    KMIP_TAG_KEY_WRAPPING_DATA               = 0x420046,
-    KMIP_TAG_KEY_WRAPPING_SPECIFICATION      = 0x420047,
-    KMIP_TAG_MAC_SIGNATURE                   = 0x42004D,
-    KMIP_TAG_MAC_SIGNATURE_KEY_INFORMATION   = 0x42004E,
-    KMIP_TAG_MAXIMUM_RESPONSE_SIZE           = 0x420050,
-    KMIP_TAG_NAME                            = 0x420053,
-    KMIP_TAG_NAME_TYPE                       = 0x420054,
-    KMIP_TAG_NAME_VALUE                      = 0x420055,
-    KMIP_TAG_OBJECT_TYPE                     = 0x420057,
-    KMIP_TAG_OPERATION                       = 0x42005C,
-    KMIP_TAG_PADDING_METHOD                  = 0x42005F,
-    KMIP_TAG_PRIVATE_KEY                     = 0x420064,
-    KMIP_TAG_PROTOCOL_VERSION                = 0x420069,
-    KMIP_TAG_PROTOCOL_VERSION_MAJOR          = 0x42006A,
-    KMIP_TAG_PROTOCOL_VERSION_MINOR          = 0x42006B,
-    KMIP_TAG_PUBLIC_KEY                      = 0x42006D,
-    KMIP_TAG_REQUEST_HEADER                  = 0x420077,
-    KMIP_TAG_REQUEST_MESSAGE                 = 0x420078,
-    KMIP_TAG_REQUEST_PAYLOAD                 = 0x420079,
-    KMIP_TAG_RESPONSE_HEADER                 = 0x42007A,
-    KMIP_TAG_RESPONSE_MESSAGE                = 0x42007B,
-    KMIP_TAG_RESPONSE_PAYLOAD                = 0x42007C,
-    KMIP_TAG_RESULT_MESSAGE                  = 0x42007D,
-    KMIP_TAG_RESULT_REASON                   = 0x42007E,
-    KMIP_TAG_RESULT_STATUS                   = 0x42007F,
-    KMIP_TAG_KEY_ROLE_TYPE                   = 0x420083,
-    KMIP_TAG_SYMMETRIC_KEY                   = 0x42008F,
-    KMIP_TAG_TEMPLATE_ATTRIBUTE              = 0x420091,
-    KMIP_TAG_TIME_STAMP                      = 0x420092,
-    KMIP_TAG_UNIQUE_BATCH_ITEM_ID            = 0x420093,
-    KMIP_TAG_UNIQUE_IDENTIFIER               = 0x420094,
-    KMIP_TAG_USERNAME                        = 0x420099,
-    KMIP_TAG_WRAPPING_METHOD                 = 0x42009E,
-    KMIP_TAG_PASSWORD                        = 0x4200A1,
+    KMIP_TAG_ASYNCHRONOUS_CORRELATION_VALUE   = 0x420006,
+    KMIP_TAG_ASYNCHRONOUS_INDICATOR           = 0x420007,
+    KMIP_TAG_ATTRIBUTE                        = 0x420008,
+    KMIP_TAG_ATTRIBUTE_INDEX                  = 0x420009,
+    KMIP_TAG_ATTRIBUTE_NAME                   = 0x42000A,
+    KMIP_TAG_ATTRIBUTE_VALUE                  = 0x42000B,
+    KMIP_TAG_AUTHENTICATION                   = 0x42000C,
+    KMIP_TAG_BATCH_COUNT                      = 0x42000D,
+    KMIP_TAG_BATCH_ERROR_CONTINUATION_OPTION  = 0x42000E,
+    KMIP_TAG_BATCH_ITEM                       = 0x42000F,
+    KMIP_TAG_BATCH_ORDER_OPTION               = 0x420010,
+    KMIP_TAG_BLOCK_CIPHER_MODE                = 0x420011,
+    KMIP_TAG_CREDENTIAL                       = 0x420023,
+    KMIP_TAG_CREDENTIAL_TYPE                  = 0x420024,
+    KMIP_TAG_CREDENTIAL_VALUE                 = 0x420025,
+    KMIP_TAG_CRYPTOGRAPHIC_ALGORITHM          = 0x420028,
+    KMIP_TAG_CRYPTOGRAPHIC_LENGTH             = 0x42002A,
+    KMIP_TAG_CRYPTOGRAPHIC_PARAMETERS         = 0x42002B,
+    KMIP_TAG_ENCRYPTION_KEY_INFORMATION       = 0x420036,
+    KMIP_TAG_HASHING_ALGORITHM                = 0x420038,
+    KMIP_TAG_IV_COUNTER_NONCE                 = 0x42003D,
+    KMIP_TAG_KEY                              = 0x42003F,
+    KMIP_TAG_KEY_BLOCK                        = 0x420040,
+    KMIP_TAG_KEY_COMPRESSION_TYPE             = 0x420041,
+    KMIP_TAG_KEY_FORMAT_TYPE                  = 0x420042,
+    KMIP_TAG_KEY_MATERIAL                     = 0x420043,
+    KMIP_TAG_KEY_VALUE                        = 0x420045,
+    KMIP_TAG_KEY_WRAPPING_DATA                = 0x420046,
+    KMIP_TAG_KEY_WRAPPING_SPECIFICATION       = 0x420047,
+    KMIP_TAG_MAC_SIGNATURE                    = 0x42004D,
+    KMIP_TAG_MAC_SIGNATURE_KEY_INFORMATION    = 0x42004E,
+    KMIP_TAG_MAXIMUM_RESPONSE_SIZE            = 0x420050,
+    KMIP_TAG_NAME                             = 0x420053,
+    KMIP_TAG_NAME_TYPE                        = 0x420054,
+    KMIP_TAG_NAME_VALUE                       = 0x420055,
+    KMIP_TAG_OBJECT_TYPE                      = 0x420057,
+    KMIP_TAG_OPERATION                        = 0x42005C,
+    KMIP_TAG_PADDING_METHOD                   = 0x42005F,
+    KMIP_TAG_PRIVATE_KEY                      = 0x420064,
+    KMIP_TAG_PROTOCOL_VERSION                 = 0x420069,
+    KMIP_TAG_PROTOCOL_VERSION_MAJOR           = 0x42006A,
+    KMIP_TAG_PROTOCOL_VERSION_MINOR           = 0x42006B,
+    KMIP_TAG_PUBLIC_KEY                       = 0x42006D,
+    KMIP_TAG_REQUEST_HEADER                   = 0x420077,
+    KMIP_TAG_REQUEST_MESSAGE                  = 0x420078,
+    KMIP_TAG_REQUEST_PAYLOAD                  = 0x420079,
+    KMIP_TAG_RESPONSE_HEADER                  = 0x42007A,
+    KMIP_TAG_RESPONSE_MESSAGE                 = 0x42007B,
+    KMIP_TAG_RESPONSE_PAYLOAD                 = 0x42007C,
+    KMIP_TAG_RESULT_MESSAGE                   = 0x42007D,
+    KMIP_TAG_RESULT_REASON                    = 0x42007E,
+    KMIP_TAG_RESULT_STATUS                    = 0x42007F,
+    KMIP_TAG_KEY_ROLE_TYPE                    = 0x420083,
+    KMIP_TAG_SYMMETRIC_KEY                    = 0x42008F,
+    KMIP_TAG_TEMPLATE_ATTRIBUTE               = 0x420091,
+    KMIP_TAG_TIME_STAMP                       = 0x420092,
+    KMIP_TAG_UNIQUE_BATCH_ITEM_ID             = 0x420093,
+    KMIP_TAG_UNIQUE_IDENTIFIER                = 0x420094,
+    KMIP_TAG_USERNAME                         = 0x420099,
+    KMIP_TAG_WRAPPING_METHOD                  = 0x42009E,
+    KMIP_TAG_PASSWORD                         = 0x4200A1,
     /* KMIP 1.1 */
-    KMIP_TAG_DEVICE_IDENTIFIER               = 0x4200A2,
-    KMIP_TAG_ENCODING_OPTION                 = 0x4200A3,
-    KMIP_TAG_MACHINE_IDENTIFIER              = 0x4200A9,
-    KMIP_TAG_MEDIA_IDENTIFIER                = 0x4200AA,
-    KMIP_TAG_NETWORK_IDENTIFIER              = 0x4200AB,
-    KMIP_TAG_DEVICE_SERIAL_NUMBER            = 0x4200B0,
+    KMIP_TAG_DEVICE_IDENTIFIER                = 0x4200A2,
+    KMIP_TAG_ENCODING_OPTION                  = 0x4200A3,
+    KMIP_TAG_MACHINE_IDENTIFIER               = 0x4200A9,
+    KMIP_TAG_MEDIA_IDENTIFIER                 = 0x4200AA,
+    KMIP_TAG_NETWORK_IDENTIFIER               = 0x4200AB,
+    KMIP_TAG_DIGITAL_SIGNATURE_ALGORITHM      = 0x4200AE,
+    KMIP_TAG_DEVICE_SERIAL_NUMBER             = 0x4200B0,
     /* KMIP 1.2 */
-    KMIP_TAG_ATTESTATION_TYPE                = 0x4200C7,
-    KMIP_TAG_NONCE                           = 0x4200C8,
-    KMIP_TAG_NONCE_ID                        = 0x4200C9,
-    KMIP_TAG_NONCE_VALUE                     = 0x4200CA,
-    KMIP_TAG_ATTESTATION_MEASUREMENT         = 0x4200CB,
-    KMIP_TAG_ATTESTATION_ASSERTION           = 0x4200CC,
-    KMIP_TAG_ATTESTATION_CAPABLE_INDICATOR   = 0x4200D3
+    KMIP_TAG_RANDOM_IV                        = 0x4200C5,
+    KMIP_TAG_ATTESTATION_TYPE                 = 0x4200C7,
+    KMIP_TAG_NONCE                            = 0x4200C8,
+    KMIP_TAG_NONCE_ID                         = 0x4200C9,
+    KMIP_TAG_NONCE_VALUE                      = 0x4200CA,
+    KMIP_TAG_ATTESTATION_MEASUREMENT          = 0x4200CB,
+    KMIP_TAG_ATTESTATION_ASSERTION            = 0x4200CC,
+    KMIP_TAG_IV_LENGTH                        = 0x4200CD,
+    KMIP_TAG_TAG_LENGTH                       = 0x4200CE,
+    KMIP_TAG_FIXED_FIELD_LENGTH               = 0x4200CF,
+    KMIP_TAG_COUNTER_LENGTH                   = 0x4200D0,
+    KMIP_TAG_INITIAL_COUNTER_VALUE            = 0x4200D1,
+    KMIP_TAG_INVOCATION_FIELD_LENGTH          = 0x4200D2,
+    KMIP_TAG_ATTESTATION_CAPABLE_INDICATOR    = 0x4200D3,
+    /* KMIP 1.4 */
+    KMIP_TAG_KEY_WRAP_TYPE                    = 0x4200F8,
+    KMIP_TAG_SALT_LENGTH                      = 0x420100,
+    KMIP_TAG_MASK_GENERATOR                   = 0x420101,
+    KMIP_TAG_MASK_GENERATOR_HASHING_ALGORITHM = 0x420102,
+    KMIP_TAG_P_SOURCE                         = 0x420103,
+    KMIP_TAG_TRAILER_FIELD                    = 0x420104,
+    KMIP_TAG_CLIENT_CORRELATION_VALUE         = 0x420105,
+    KMIP_TAG_SERVER_CORRELATION_VALUE         = 0x420106
 };
 
 enum type

@@ -118,6 +118,12 @@ struct cryptographic_parameters
     int32 invocation_field_length;
     int32 counter_length;
     int32 initial_counter_value;
+    /* KMIP 1.4 */
+    int32 salt_length;
+    enum mask_generator mask_generator;
+    enum hashing_algorithm mask_generator_hashing_algorithm;
+    struct byte_string *p_source;
+    int32 trailer_field;
 };
 
 struct encryption_key_information
@@ -216,10 +222,13 @@ struct create_response_payload
 
 struct get_request_payload
 {
+    /* KMIP 1.0 */
     struct text_string *unique_identifier;
     enum key_format_type key_format_type;
     enum key_compression_type key_compression_type;
     struct key_wrapping_specification *key_wrapping_spec;
+    /* KMIP 1.4 */
+    enum key_wrap_type key_wrap_type;
 };
 
 struct get_response_payload
@@ -295,6 +304,9 @@ struct request_header
     bool32 attestation_capable_indicator;
     enum attestation_type *attestation_types;
     size_t attestation_type_count;
+    /* KMIP 1.4 */
+    struct text_string *client_correlation_value;
+    struct text_string *server_correlation_value;
 };
 
 struct response_header
@@ -307,6 +319,9 @@ struct response_header
     struct nonce *nonce;
     enum attestation_type *attestation_types;
     size_t attestation_type_count;
+    /* KMIP 1.4 */
+    struct text_string *client_correlation_value;
+    struct text_string *server_correlation_value;
 };
 
 struct request_batch_item
