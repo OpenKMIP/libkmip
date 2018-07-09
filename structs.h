@@ -90,8 +90,7 @@ struct attribute
 
 struct name
 {
-    char *value;
-    size_t size;
+    struct text_string *value;
     enum name_type type;
 };
 

@@ -265,8 +265,12 @@ test_encode_text_string(void)
     uint8 observed[24] = {0};
     struct kmip ctx = {0};
     kmip_init(&ctx, observed, ARRAY_LENGTH(observed), KMIP_1_0);
+
+    struct text_string example = {0};
+    example.value = "Hello World";
+    example.size = 11;
     
-    int result = encode_text_string(&ctx, KMIP_TAG_DEFAULT, "Hello World", 11);
+    int result = encode_text_string(&ctx, KMIP_TAG_DEFAULT, &example);
     return(report_encoding_test_result(&ctx, expected, observed, result, __func__));
 }
 
@@ -283,7 +287,11 @@ test_encode_byte_string(void)
     kmip_init(&ctx, observed, ARRAY_LENGTH(observed), KMIP_1_0);
     uint8 str[3] = {0x01, 0x02, 0x03};
     
-    int result = encode_byte_string(&ctx, KMIP_TAG_DEFAULT, str, 3);
+    struct byte_string example = {0};
+    example.value = str;
+    example.size = 3;
+    
+    int result = encode_byte_string(&ctx, KMIP_TAG_DEFAULT, &example);
     return(report_encoding_test_result(&ctx, expected, observed, result, __func__));
 }
 
@@ -335,10 +343,12 @@ test_encode_name(void)
     struct kmip ctx = {0};
     kmip_init(&ctx, observed, ARRAY_LENGTH(observed), KMIP_1_0);
     
-    char *value = "Template1";
+    struct text_string value = {0};
+    value.value = "Template1";
+    value.size = 9;
+    
     struct name n = {0};
-    n.value = value;
-    n.size = 9;
+    n.value = &value;
     n.type = KMIP_NAME_UNINTERPRETED_TEXT_STRING;
     
     int result = encode_name(&ctx, &n);
@@ -369,6 +379,7 @@ test_encode_attribute_unique_identifier(void)
     struct text_string uuid = {0};
     uuid.value = "49a1ca88-6bea-4fb2-b450-7e58802c3038";
     uuid.size = 36;
+    
     struct attribute attr = {0};
     attr.type = KMIP_ATTR_UNIQUE_IDENTIFIER;
     attr.index = KMIP_UNSET;
@@ -397,10 +408,12 @@ test_encode_attribute_name(void)
     struct kmip ctx = {0};
     kmip_init(&ctx, observed, ARRAY_LENGTH(observed), KMIP_1_0);
     
-    char *value = "Template1";
+    struct text_string value = {0};
+    value.value = "Template1";
+    value.size = 9;
+    
     struct name n = {0};
-    n.value = value;
-    n.size = 9;
+    n.value = &value;
     n.type = KMIP_NAME_UNINTERPRETED_TEXT_STRING;
     
     struct attribute attr = {0};
@@ -512,6 +525,7 @@ test_encode_attribute_operation_policy_name(void)
     struct text_string policy = {0};
     policy.value = "default";
     policy.size = 7;
+    
     struct attribute attr = {0};
     attr.type = KMIP_ATTR_OPERATION_POLICY_NAME;
     attr.index = KMIP_UNSET;
@@ -645,12 +659,13 @@ test_encode_encryption_key_information(void)
     struct kmip ctx = {0};
     kmip_init(&ctx, observed, ARRAY_LENGTH(observed), KMIP_1_0);
     
-    char *id = "100182d5-72b8-47aa-8383-4d97d512e98a";
     struct text_string uuid = {0};
-    uuid.value = id;
+    uuid.value = "100182d5-72b8-47aa-8383-4d97d512e98a";
     uuid.size = 36;
+    
     struct cryptographic_parameters cp = {0};
     cp.block_cipher_mode = KMIP_BLOCK_NIST_KEY_WRAP;
+    
     struct encryption_key_information eki = {0};
     eki.unique_identifier = &uuid;
     eki.cryptographic_parameters = &cp;
@@ -679,12 +694,13 @@ test_encode_mac_signature_key_information(void)
     struct kmip ctx = {0};
     kmip_init(&ctx, observed, ARRAY_LENGTH(observed), KMIP_1_0);
     
-    char *id = "100182d5-72b8-47aa-8383-4d97d512e98a";
     struct text_string uuid = {0};
-    uuid.value = id;
+    uuid.value = "100182d5-72b8-47aa-8383-4d97d512e98a";
     uuid.size = 36;
+
     struct cryptographic_parameters cp = {0};
     cp.block_cipher_mode = KMIP_BLOCK_NIST_KEY_WRAP;
+
     struct mac_signature_key_information mski = {0};
     mski.unique_identifier = &uuid;
     mski.cryptographic_parameters = &cp;
@@ -716,15 +732,17 @@ test_encode_key_wrapping_data(void)
     struct kmip ctx = {0};
     kmip_init(&ctx, observed, ARRAY_LENGTH(observed), KMIP_1_0);
     
-    char *id = "100182d5-72b8-47aa-8383-4d97d512e98a";
     struct text_string uuid = {0};
-    uuid.value = id;
+    uuid.value = "100182d5-72b8-47aa-8383-4d97d512e98a";
     uuid.size = 36;
+    
     struct cryptographic_parameters cp = {0};
     cp.block_cipher_mode = KMIP_BLOCK_NIST_KEY_WRAP;
+    
     struct encryption_key_information eki = {0};
     eki.unique_identifier = &uuid;
     eki.cryptographic_parameters = &cp;
+    
     struct key_wrapping_data kwd = {0};
     kwd.wrapping_method = KMIP_WRAP_ENCRYPT;
     kwd.encryption_key_info = &eki;
@@ -926,9 +944,8 @@ test_encode_key_block_key_value_byte_string(void)
     key.value = value;
     key.size = ARRAY_LENGTH(value);
     
-    char *id = "100182d5-72b8-47aa-8383-4d97d512e98a";
     struct text_string uuid = {0};
-    uuid.value = id;
+    uuid.value = "100182d5-72b8-47aa-8383-4d97d512e98a";
     uuid.size = 36;
     
     struct cryptographic_parameters cp = {0};
@@ -2433,9 +2450,12 @@ test_encode_template_attribute(void)
     struct kmip ctx = {0};
     kmip_init(&ctx, observed, ARRAY_LENGTH(observed), KMIP_1_0);
     
+    struct text_string v = {0};
+    v.value = "Template1";
+    v.size = 9;
+    
     struct name n = {0};
-    n.value = "Template1";
-    n.size = 9;
+    n.value = &v;
     n.type = KMIP_NAME_UNINTERPRETED_TEXT_STRING;
     
     struct attribute a[4] = {0};
@@ -2457,9 +2477,12 @@ test_encode_template_attribute(void)
     a[2].index = KMIP_UNSET;
     a[2].value = &mask;
     
+    struct text_string value = {0};
+    value.value = "Key1";
+    value.size = 4;
+    
     struct name name = {0};
-    name.value = "Key1";
-    name.size = 4;
+    name.value = &value;
     name.type = KMIP_NAME_UNINTERPRETED_TEXT_STRING;
     a[3].type = KMIP_ATTR_NAME;
     a[3].index = KMIP_UNSET;
