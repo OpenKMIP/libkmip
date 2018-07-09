@@ -44,6 +44,11 @@ typedef double real64;
 #define KMIP_NOT_IMPLEMENTED        -1
 #define KMIP_ERROR_BUFFER_FULL      -2
 #define KMIP_ERROR_ATTR_UNSUPPORTED -3
+#define KMIP_TAG_MISMATCH           -4
+#define KMIP_TYPE_MISMATCH          -5
+#define KMIP_LENGTH_MISMATCH        -6
+#define KMIP_PADDING_MISMATCH       -7
+#define KMIP_BOOLEAN_MISMATCH       -8
 
 struct error_frame
 {
@@ -56,9 +61,16 @@ struct kmip
     uint8 *buffer;
     uint8 *index;
     size_t size;
+    
     enum kmip_version version;
+    
     struct error_frame errors[20];
     struct error_frame *frame_index;
+    
+    void *(*malloc_func)(void *state, size_t size);
+    void *(*memset_func)(void *state, void *ptr, int value, size_t size);
+    void (*free_func)(void *state, void *ptr);
+    void *state;
 };
 
 struct template_attribute

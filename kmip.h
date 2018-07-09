@@ -18,6 +18,7 @@
 #define KMIP_H
 
 #include <stddef.h>
+#include <stdlib.h>
 #include <string.h>
 #include "enums.h"
 #include "structs.h"
@@ -42,6 +43,86 @@ do                                                      \
     }                                                   \
 } while(0)
 #define TAG_TYPE(A, B) (((A) << 8) | (uint8)(B))
+#define CHECK_TAG_TYPE(A, B, C, D)                         \
+do                                                         \
+{                                                          \
+    if((int32)((B) >> 8) != (int32)(C))                    \
+    {                                                      \
+        kmip_push_error_frame((A), __func__, __LINE__);    \
+        return(KMIP_TAG_MISMATCH);                         \
+    }                                                      \
+    else if((int32)(((B) << 24) >> 24) != (int32)(D))      \
+    {                                                      \
+        kmip_push_error_frame((A), __func__, __LINE__);    \
+        return(KMIP_TYPE_MISMATCH);                        \
+    }                                                      \
+} while(0)
+#define CHECK_LENGTH(A, B, C)                           \
+do                                                      \
+{                                                       \
+    if((B) != (C))                                      \
+    {                                                   \
+        kmip_push_error_frame((A), __func__, __LINE__); \
+        return(KMIP_LENGTH_MISMATCH);                   \
+    }                                                   \
+} while(0)
+#define CHECK_PADDING(A, B)                             \
+do                                                      \
+{                                                       \
+    if((B) != 0)                                        \
+    {                                                   \
+        kmip_push_error_frame((A), __func__, __LINE__); \
+        return(KMIP_PADDING_MISMATCH);                  \
+    }                                                   \
+} while(0)
+#define CHECK_BOOLEAN(A, B)                             \
+do                                                      \
+{                                                       \
+    if(((B) != KMIP_TRUE) && ((B) != KMIP_FALSE))       \
+    {                                                   \
+        kmip_push_error_frame((A), __func__, __LINE__); \
+        return(KMIP_BOOLEAN_MISMATCH);                  \
+    }                                                   \
+} while(0)
+
+void *
+kmip_malloc(void *state, size_t size)
+{
+    (void)state;
+    
+    void *ptr = malloc(size);
+    
+    if(ptr != NULL)
+    {
+        uint8* index = (uint8*)ptr;
+        for(size_t i = 0; i < size; i++)
+        {
+            *index++ = 0;
+        }
+    }
+    
+    return(ptr);
+}
+
+void *
+kmip_memset(void *state, void *ptr, int value, size_t size)
+{
+    (void)state;
+    
+    memset(ptr, value, size);
+    
+    return(ptr);
+}
+
+void
+kmip_free(void *state, void *ptr)
+{
+    (void)state;
+    
+    free(ptr);
+    
+    return;
+}
 
 void
 kmip_clear_errors(struct kmip *ctx)
@@ -62,6 +143,18 @@ kmip_init(struct kmip *ctx, uint8 *buffer, size_t buffer_size,
     ctx->size = buffer_size;
     ctx->version = v;
     
+    if(ctx->malloc_func == NULL)
+    {
+        ctx->malloc_func = &kmip_malloc;
+    }
+    if(ctx->memset_func == NULL)
+    {
+        ctx->memset_func = &kmip_memset;
+    }
+    if(ctx->free_func == NULL)
+    {
+        ctx->free_func = &kmip_free;
+    }
     kmip_clear_errors(ctx);
 }
 
@@ -73,6 +166,14 @@ kmip_reset(struct kmip *ctx)
     {
         *index++ = 0;
     }
+    ctx->index = ctx->buffer;
+    
+    kmip_clear_errors(ctx);
+}
+
+void
+kmip_rewind(struct kmip *ctx)
+{
     ctx->index = ctx->buffer;
     
     kmip_clear_errors(ctx);
@@ -113,6 +214,29 @@ encode_int8_be(struct kmip *ctx, int8 value)
 }
 
 int
+decode_int8_be(struct kmip *ctx, int8 *value)
+{
+    CHECK_BUFFER_FULL(ctx, sizeof(int8));
+    
+    
+    *value = 0;
+    *value = *ctx->index++;
+    
+    return(KMIP_OK);
+}
+
+int
+decode_uint8_be(struct kmip *ctx, uint8 *value)
+{
+    CHECK_BUFFER_FULL(ctx, sizeof(uint8));
+    
+    *value = 0;
+    *value = *ctx->index++;
+    
+    return(KMIP_OK);
+}
+
+int
 encode_int32_be(struct kmip *ctx, int32 value)
 {
     CHECK_BUFFER_FULL(ctx, sizeof(int32));
@@ -121,6 +245,34 @@ encode_int32_be(struct kmip *ctx, int32 value)
     *ctx->index++ = (value << 8) >> 24;
     *ctx->index++ = (value << 16) >> 24;
     *ctx->index++ = (value << 24) >> 24;
+    
+    return(KMIP_OK);
+}
+
+int
+decode_int32_be(struct kmip *ctx, int32 *value)
+{
+    CHECK_BUFFER_FULL(ctx, sizeof(int32));
+    
+    *value = 0;
+    *value |= ((int32)*ctx->index++ << 24);
+    *value |= ((int32)*ctx->index++ << 16);
+    *value |= ((int32)*ctx->index++ << 8);
+    *value |= ((int32)*ctx->index++ << 0);
+    
+    return(KMIP_OK);
+}
+
+int
+decode_uint32_be(struct kmip *ctx, uint32 *value)
+{
+    CHECK_BUFFER_FULL(ctx, sizeof(uint32));
+    
+    *value = 0;
+    *value |= ((uint32)*ctx->index++ << 24);
+    *value |= ((uint32)*ctx->index++ << 16);
+    *value |= ((uint32)*ctx->index++ << 8);
+    *value |= ((uint32)*ctx->index++ << 0);
     
     return(KMIP_OK);
 }
@@ -143,6 +295,42 @@ encode_int64_be(struct kmip *ctx, int64 value)
 }
 
 int
+decode_int64_be(struct kmip *ctx, int64 *value)
+{
+    CHECK_BUFFER_FULL(ctx, sizeof(int64));
+    
+    *value = 0;
+    *value |= ((int64)*ctx->index++ << 56);
+    *value |= ((int64)*ctx->index++ << 48);
+    *value |= ((int64)*ctx->index++ << 40);
+    *value |= ((int64)*ctx->index++ << 32);
+    *value |= ((int64)*ctx->index++ << 24);
+    *value |= ((int64)*ctx->index++ << 16);
+    *value |= ((int64)*ctx->index++ << 8);
+    *value |= ((int64)*ctx->index++ << 0);
+    
+    return(KMIP_OK);
+}
+
+int
+decode_uint64_be(struct kmip *ctx, uint64 *value)
+{
+    CHECK_BUFFER_FULL(ctx, sizeof(uint64));
+    
+    *value = 0;
+    *value |= ((uint64)*ctx->index++ << 56);
+    *value |= ((uint64)*ctx->index++ << 48);
+    *value |= ((uint64)*ctx->index++ << 40);
+    *value |= ((uint64)*ctx->index++ << 32);
+    *value |= ((uint64)*ctx->index++ << 24);
+    *value |= ((uint64)*ctx->index++ << 16);
+    *value |= ((uint64)*ctx->index++ << 8);
+    *value |= ((uint64)*ctx->index++ << 0);
+    
+    return(KMIP_OK);
+}
+
+int
 encode_integer(struct kmip *ctx, enum tag t, int32 value)
 {
     CHECK_BUFFER_FULL(ctx, 16);
@@ -151,6 +339,53 @@ encode_integer(struct kmip *ctx, enum tag t, int32 value)
     encode_int32_be(ctx, 4);
     encode_int32_be(ctx, value);
     encode_int32_be(ctx, 0);
+    
+    return(KMIP_OK);
+}
+
+int
+validate_integer(struct kmip *ctx, enum tag t)
+{
+    CHECK_BUFFER_FULL(ctx, 16);
+    
+    int32 tag_type = 0;
+    int32 length = 0;
+    int32 value = 0;
+    int32 padding = 0;
+    
+    decode_int32_be(ctx, &tag_type);
+    CHECK_TAG_TYPE(ctx, tag_type, t, KMIP_TYPE_INTEGER);
+    
+    decode_int32_be(ctx, &length);
+    CHECK_LENGTH(ctx, length, 4);
+    
+    decode_int32_be(ctx, &value);
+    
+    decode_int32_be(ctx, &padding);
+    CHECK_PADDING(ctx, padding);
+    
+    return(KMIP_OK);
+}
+
+int
+decode_integer(struct kmip *ctx, enum tag t, int32 *value)
+{
+    CHECK_BUFFER_FULL(ctx, 16);
+    
+    int32 tag_type = 0;
+    int32 length = 0;
+    int32 padding = 0;
+    
+    decode_int32_be(ctx, &tag_type);
+    CHECK_TAG_TYPE(ctx, tag_type, t, KMIP_TYPE_INTEGER);
+    
+    decode_int32_be(ctx, &length);
+    CHECK_LENGTH(ctx, length, 4);
+    
+    decode_int32_be(ctx, value);
+    
+    decode_int32_be(ctx, &padding);
+    CHECK_PADDING(ctx, padding);
     
     return(KMIP_OK);
 }
@@ -167,13 +402,44 @@ encode_long(struct kmip *ctx, enum tag t, int64 value)
     return(KMIP_OK);
 }
 
-/*
 int
-encode_big(struct kmip *ctx, enum tag t, int8 *value, uint32 length)
+validate_long(struct kmip *ctx, enum tag t)
 {
-    return(KMIP_NOT_IMPLEMENTED);
+    CHECK_BUFFER_FULL(ctx, 16);
+    
+    int32 tag_type = 0;
+    int32 length = 0;
+    int64 value = 0;
+    
+    decode_int32_be(ctx, &tag_type);
+    CHECK_TAG_TYPE(ctx, tag_type, t, KMIP_TYPE_LONG_INTEGER);
+    
+    decode_int32_be(ctx, &length);
+    CHECK_LENGTH(ctx, length, 8);
+    
+    decode_int64_be(ctx, &value);
+    
+    return(KMIP_OK);
 }
-*/
+
+int
+decode_long(struct kmip *ctx, enum tag t, int64 *value)
+{
+    CHECK_BUFFER_FULL(ctx, 16);
+    
+    int32 tag_type = 0;
+    int32 length = 0;
+    
+    decode_int32_be(ctx, &tag_type);
+    CHECK_TAG_TYPE(ctx, tag_type, t, KMIP_TYPE_LONG_INTEGER);
+    
+    decode_int32_be(ctx, &length);
+    CHECK_LENGTH(ctx, length, 8);
+    
+    decode_int64_be(ctx, value);
+    
+    return(KMIP_OK);
+}
 
 int
 encode_enum(struct kmip *ctx, enum tag t, int32 value)
@@ -189,6 +455,54 @@ encode_enum(struct kmip *ctx, enum tag t, int32 value)
 }
 
 int
+validate_enum(struct kmip *ctx, enum tag t)
+{
+    CHECK_BUFFER_FULL(ctx, 16);
+    
+    int32 tag_type = 0;
+    int32 length = 0;
+    int32 value = 0;
+    int32 padding = 0;
+    
+    decode_int32_be(ctx, &tag_type);
+    CHECK_TAG_TYPE(ctx, tag_type, t, KMIP_TYPE_ENUMERATION);
+    
+    decode_int32_be(ctx, &length);
+    CHECK_LENGTH(ctx, length, 4);
+    
+    decode_int32_be(ctx, &value);
+    /* TODO (peter-hamilton) Add validate_enum_value call here. */
+    
+    decode_int32_be(ctx, &padding);
+    CHECK_PADDING(ctx, padding);
+    
+    return(KMIP_OK);
+}
+
+int
+decode_enum(struct kmip *ctx, enum tag t, int32 *value)
+{
+    CHECK_BUFFER_FULL(ctx, 16);
+    
+    int32 tag_type = 0;
+    int32 length = 0;
+    int32 padding = 0;
+    
+    decode_int32_be(ctx, &tag_type);
+    CHECK_TAG_TYPE(ctx, tag_type, t, KMIP_TYPE_ENUMERATION);
+    
+    decode_int32_be(ctx, &length);
+    CHECK_LENGTH(ctx, length, 4);
+    
+    decode_int32_be(ctx, value);
+    
+    decode_int32_be(ctx, &padding);
+    CHECK_PADDING(ctx, padding);
+    
+    return(KMIP_OK);
+}
+
+int
 encode_bool(struct kmip *ctx, enum tag t, bool32 value)
 {
     CHECK_BUFFER_FULL(ctx, 16);
@@ -197,6 +511,31 @@ encode_bool(struct kmip *ctx, enum tag t, bool32 value)
     encode_int32_be(ctx, 8);
     encode_int32_be(ctx, 0);
     encode_int32_be(ctx, value);
+    
+    return(KMIP_OK);
+}
+
+int
+validate_bool(struct kmip *ctx, enum tag t)
+{
+    CHECK_BUFFER_FULL(ctx, 16);
+    
+    int32 tag_type = 0;
+    int32 length = 0;
+    int32 padding = 0;
+    bool32 value = 0;
+    
+    decode_int32_be(ctx, &tag_type);
+    CHECK_TAG_TYPE(ctx, tag_type, t, KMIP_TYPE_BOOLEAN);
+    
+    decode_int32_be(ctx, &length);
+    CHECK_LENGTH(ctx, length, 8);
+    
+    decode_int32_be(ctx, &padding);
+    CHECK_PADDING(ctx, padding);
+    
+    decode_int32_be(ctx, &value);
+    CHECK_BOOLEAN(ctx, value);
     
     return(KMIP_OK);
 }
@@ -224,7 +563,55 @@ encode_text_string(struct kmip *ctx, enum tag t, const char *value,
 }
 
 int
-encode_byte_string(struct kmip *ctx, enum tag t, const uint8 *value, uint32 length)
+decode_text_string(struct kmip *ctx, enum tag t, struct text_string *value)
+{
+    CHECK_BUFFER_FULL(ctx, 8);
+    
+    int32 tag_type = 0;
+    int32 length = 0;
+    int32 padding = 0;
+    int8 spacer = 0;
+    
+    decode_int32_be(ctx, &tag_type);
+    CHECK_TAG_TYPE(ctx, tag_type, t, KMIP_TYPE_TEXT_STRING);
+    
+    decode_int32_be(ctx, &length);
+    padding = (8 - (length % 8)) % 8;
+    CHECK_BUFFER_FULL(ctx, (uint32)(length + padding));
+    
+    value->value = ctx->malloc_func(ctx->state, length);
+    value->size = length;
+    
+    char *index = value->value;
+    
+    for(int32 i = 0; i < length; i++)
+    {
+        decode_int8_be(ctx, (int8*)index++);
+    }
+    for(int32 i = 0; i < padding; i++)
+    {
+        decode_int8_be(ctx, &spacer);
+        CHECK_PADDING(ctx, spacer);
+    }
+    
+    return(KMIP_OK);
+}
+
+int
+free_text_string(struct kmip *ctx, struct text_string *value)
+{
+    ctx->memset_func(ctx->state, value->value, 0, value->size);
+    ctx->free_func(ctx->state, value->value);
+    
+    value->value = NULL;
+    value->size = 0;
+    
+    return(KMIP_OK);
+}
+
+int
+encode_byte_string(struct kmip *ctx, enum tag t, const uint8 *value, 
+                   uint32 length)
 {
     uint8 padding = (8 - (length % 8)) % 8;
     CHECK_BUFFER_FULL(ctx, 8 + length + padding);
@@ -245,6 +632,53 @@ encode_byte_string(struct kmip *ctx, enum tag t, const uint8 *value, uint32 leng
 }
 
 int
+decode_byte_string(struct kmip *ctx, enum tag t, struct byte_string *value)
+{
+    CHECK_BUFFER_FULL(ctx, 8);
+    
+    int32 tag_type = 0;
+    int32 length = 0;
+    int32 padding = 0;
+    int8 spacer = 0;
+    
+    decode_int32_be(ctx, &tag_type);
+    CHECK_TAG_TYPE(ctx, tag_type, t, KMIP_TYPE_BYTE_STRING);
+    
+    decode_int32_be(ctx, &length);
+    padding = (8 - (length % 8)) % 8;
+    CHECK_BUFFER_FULL(ctx, (uint32)(length + padding));
+    
+    value->value = ctx->malloc_func(ctx->state, length);
+    value->size = length;
+    
+    uint8 *index = value->value;
+    
+    for(int32 i = 0; i < length; i++)
+    {
+        decode_uint8_be(ctx, index++);
+    }
+    for(int32 i = 0; i < padding; i++)
+    {
+        decode_int8_be(ctx, &spacer);
+        CHECK_PADDING(ctx, spacer);
+    }
+    
+    return(KMIP_OK);
+}
+
+int
+free_byte_string(struct kmip *ctx, struct byte_string *value)
+{
+    ctx->memset_func(ctx->state, value->value, 0, value->size);
+    ctx->free_func(ctx->state, value->value);
+    
+    value->value = NULL;
+    value->size = 0;
+    
+    return(KMIP_OK);
+}
+
+int
 encode_date_time(struct kmip *ctx, enum tag t, uint64 value)
 {
     CHECK_BUFFER_FULL(ctx, 16);
@@ -252,6 +686,25 @@ encode_date_time(struct kmip *ctx, enum tag t, uint64 value)
     encode_int32_be(ctx, TAG_TYPE(t, KMIP_TYPE_DATE_TIME));
     encode_int32_be(ctx, 8);
     encode_int64_be(ctx, value);
+    
+    return(KMIP_OK);
+}
+
+int
+decode_date_time(struct kmip *ctx, enum tag t, uint64 *value)
+{
+    CHECK_BUFFER_FULL(ctx, 16);
+    
+    int32 tag_type = 0;
+    int32 length = 0;
+    
+    decode_int32_be(ctx, &tag_type);
+    CHECK_TAG_TYPE(ctx, tag_type, t, KMIP_TYPE_DATE_TIME);
+    
+    decode_int32_be(ctx, &length);
+    CHECK_LENGTH(ctx, length, 8);
+    
+    decode_uint64_be(ctx, value);
     
     return(KMIP_OK);
 }
@@ -270,7 +723,30 @@ encode_interval(struct kmip *ctx, enum tag t, uint32 value)
 }
 
 int
-encode_name(struct kmip *ctx, struct name *value)
+decode_interval(struct kmip *ctx, enum tag t, uint32 *value)
+{
+    CHECK_BUFFER_FULL(ctx, 16);
+    
+    int32 tag_type = 0;
+    int32 length = 0;
+    int32 padding = 0;
+    
+    decode_int32_be(ctx, &tag_type);
+    CHECK_TAG_TYPE(ctx, tag_type, t, KMIP_TYPE_INTERVAL);
+    
+    decode_int32_be(ctx, &length);
+    CHECK_LENGTH(ctx, length, 4);
+    
+    decode_uint32_be(ctx, value);
+    
+    decode_int32_be(ctx, &padding);
+    CHECK_PADDING(ctx, padding);
+    
+    return(KMIP_OK);
+}
+
+int
+encode_name(struct kmip *ctx, const struct name *value)
 {
     /* TODO (peter-hamilton) Check for value == NULL? */
     
@@ -300,6 +776,44 @@ encode_name(struct kmip *ctx, struct name *value)
     CHECK_RESULT(ctx, result);
     
     ctx->index = curr_index;
+    
+    return(KMIP_OK);
+}
+
+int
+decode_name(struct kmip *ctx, struct name *value)
+{
+    (void)ctx;
+    (void)value;
+    
+    /*
+    CHECK_BUFFER_FULL(ctx, 8);
+    
+    int32 tag_type = 0;
+    uint32 length = 0;
+    int8 spacer = 0;
+    
+    decode_int32_be(ctx, &tag_type);
+    CHECK_TAG_TYPE(ctx, tag_type, KMIP_TAG_NAME, KMIP_TYPE_STRUCTURE);
+    
+    decode_uint32_be(ctx, &length);
+    CHECK_BUFFER_FULL(ctx, length);
+    
+    value->value = ctx->malloc_func(ctx->state, length);
+    value->size = length;
+    
+    uint8 *index = value->value;
+    
+    for(int32 i = 0; i < length; i++)
+    {
+        decode_uint8_be(ctx, index++);
+    }
+    for(int32 i = 0; i < padding; i++)
+    {
+        decode_int8_be(ctx, &spacer);
+        CHECK_PADDING(ctx, spacer);
+    }
+    */
     
     return(KMIP_OK);
 }
@@ -356,7 +870,7 @@ encode_attribute_name(struct kmip *ctx, enum attribute_type value)
 }
 
 int
-encode_attribute(struct kmip *ctx, struct attribute *value)
+encode_attribute(struct kmip *ctx, const struct attribute *value)
 {
     /* TODO (peter-hamilton) Check value == NULL? */
     /* TODO (peter-hamilton) Cehck value->value == NULL? */
@@ -456,12 +970,14 @@ encode_attribute(struct kmip *ctx, struct attribute *value)
 }
 
 int
-encode_template_attribute(struct kmip *ctx, struct template_attribute *value)
+encode_template_attribute(struct kmip *ctx, 
+                          const struct template_attribute *value)
 {
     int result = 0;
     
     result = encode_int32_be(
-        ctx, TAG_TYPE(KMIP_TAG_TEMPLATE_ATTRIBUTE, KMIP_TYPE_STRUCTURE));
+        ctx, 
+        TAG_TYPE(KMIP_TAG_TEMPLATE_ATTRIBUTE, KMIP_TYPE_STRUCTURE));
     CHECK_RESULT(ctx, result);
     
     uint8 *length_index = ctx->index;
