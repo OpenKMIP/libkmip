@@ -17,6 +17,8 @@
 #ifndef ENUMS_H
 #define ENUMS_H
 
+#include "types.h"
+
 enum attestation_type
 {
     /* KMIP 1.2 */
@@ -40,6 +42,7 @@ enum attribute_type
 
 enum batch_error_continuation_option
 {
+    /* KMIP 1.0 */
     KMIP_BATCH_CONTINUE = 0x01,
     KMIP_BATCH_STOP     = 0x02,
     KMIP_BATCH_UNDO     = 0x03
@@ -129,6 +132,7 @@ enum cryptographic_algorithm
 
 enum cryptographic_usage_mask
 {
+    /* KMIP 1.0 */
     KMIP_CRYPTOMASK_SIGN                = 0x00000001,
     KMIP_CRYPTOMASK_VERIFY              = 0x00000002,
     KMIP_CRYPTOMASK_ENCRYPT             = 0x00000004,
@@ -209,6 +213,7 @@ enum hashing_algorithm
 
 enum key_compression_type
 {
+    /* KMIP 1.0 */
     KMIP_KEYCOMP_EC_PUB_UNCOMPRESSED          = 0x01,
     KMIP_KEYCOMP_EC_PUB_X962_COMPRESSED_PRIME = 0x02,
     KMIP_KEYCOMP_EC_PUB_X962_COMPRESSED_CHAR2 = 0x03,
@@ -283,11 +288,11 @@ enum key_wrap_type
 
 enum kmip_version
 {
-    KMIP_1_0,
-    KMIP_1_1,
-    KMIP_1_2,
-    KMIP_1_3,
-    KMIP_1_4
+    KMIP_1_0 = 10,
+    KMIP_1_1 = 11,
+    KMIP_1_2 = 12,
+    KMIP_1_3 = 13,
+    KMIP_1_4 = 14
 };
 
 enum mask_generator
@@ -298,6 +303,7 @@ enum mask_generator
 
 enum name_type
 {
+    /* KMIP 1.0 */
     KMIP_NAME_UNINTERPRETED_TEXT_STRING = 0x01,
     KMIP_NAME_URI                       = 0x02
 };
@@ -327,6 +333,7 @@ enum operation
 
 enum padding_method
 {
+    /* KMIP 1.0 */
     KMIP_PAD_NONE      = 0x01,
     KMIP_PAD_OAEP      = 0x02,
     KMIP_PAD_PKCS5     = 0x03,
@@ -374,6 +381,7 @@ enum result_reason
 
 enum result_status
 {
+    /* KMIP 1.0 */
     KMIP_STATUS_SUCCESS           = 0x00,
     KMIP_STATUS_OPERATION_FAILED  = 0x01,
     KMIP_STATUS_OPERATION_PENDING = 0x02,
@@ -382,6 +390,7 @@ enum result_status
 
 enum state
 {
+    /* KMIP 1.0 */
     KMIP_STATE_PRE_ACTIVE            = 0x01,
     KMIP_STATE_ACTIVE                = 0x02,
     KMIP_STATE_DEACTIVATED           = 0x03,
@@ -392,6 +401,8 @@ enum state
 
 enum tag
 {
+    KMIP_TAG_TAG                              = 0x000000,
+    KMIP_TAG_TYPE                             = 0x000001,
     KMIP_TAG_DEFAULT                          = 0x420000,
     /* KMIP 1.0 */
     KMIP_TAG_ASYNCHRONOUS_CORRELATION_VALUE   = 0x420006,
@@ -412,6 +423,7 @@ enum tag
     KMIP_TAG_CRYPTOGRAPHIC_ALGORITHM          = 0x420028,
     KMIP_TAG_CRYPTOGRAPHIC_LENGTH             = 0x42002A,
     KMIP_TAG_CRYPTOGRAPHIC_PARAMETERS         = 0x42002B,
+    KMIP_TAG_CRYPTOGRAPHIC_USAGE_MASK         = 0x42002C,
     KMIP_TAG_ENCRYPTION_KEY_INFORMATION       = 0x420036,
     KMIP_TAG_HASHING_ALGORITHM                = 0x420038,
     KMIP_TAG_IV_COUNTER_NONCE                 = 0x42003D,
@@ -447,6 +459,7 @@ enum tag
     KMIP_TAG_RESULT_REASON                    = 0x42007E,
     KMIP_TAG_RESULT_STATUS                    = 0x42007F,
     KMIP_TAG_KEY_ROLE_TYPE                    = 0x420083,
+    KMIP_TAG_STATE                            = 0x42008D,
     KMIP_TAG_SYMMETRIC_KEY                    = 0x42008F,
     KMIP_TAG_TEMPLATE_ATTRIBUTE               = 0x420091,
     KMIP_TAG_TIME_STAMP                       = 0x420092,
@@ -491,6 +504,7 @@ enum tag
 
 enum type
 {
+    /* KMIP 1.0 */
     KMIP_TYPE_STRUCTURE    = 0x01,
     KMIP_TYPE_INTEGER      = 0x02,
     KMIP_TYPE_LONG_INTEGER = 0x03,
@@ -505,11 +519,694 @@ enum type
 
 enum wrapping_method
 {
+    /* KMIP 1.0 */
     KMIP_WRAP_ENCRYPT          = 0x01,
     KMIP_WRAP_MAC_SIGN         = 0x02,
     KMIP_WRAP_ENCRYPT_MAC_SIGN = 0x03,
     KMIP_WRAP_MAC_SIGN_ENCRYPT = 0x04,
     KMIP_WRAP_TR31             = 0x05
 };
+
+int
+validate_enum_value(enum kmip_version version, enum tag t, int value)
+{
+    switch(t)
+    {
+        case KMIP_TAG_ATTESTATION_TYPE:
+        switch(value)
+        {
+            case KMIP_ATTEST_TPM_QUOTE:
+            case KMIP_ATTEST_TCG_INTEGRITY_REPORT:
+            case KMIP_ATTEST_SAML_ASSERTION:
+            if(version >= KMIP_1_2)
+                return(KMIP_OK);
+            else
+                return(KMIP_INVALID_FOR_VERSION);
+            break;
+            
+            default:
+            return(KMIP_ENUM_MISMATCH);
+            break;
+        };
+        break;
+        
+        case KMIP_TAG_BATCH_ERROR_CONTINUATION_OPTION:
+        switch(value)
+        {
+            case KMIP_BATCH_CONTINUE:
+            case KMIP_BATCH_STOP:
+            case KMIP_BATCH_UNDO:
+            return(KMIP_OK);
+            break;
+            
+            default:
+            return(KMIP_ENUM_MISMATCH);
+            break;
+        };
+        break;
+        
+        case KMIP_TAG_BLOCK_CIPHER_MODE:
+        switch(value)
+        {
+            case KMIP_BLOCK_CBC:
+            case KMIP_BLOCK_ECB:
+            case KMIP_BLOCK_PCBC:
+            case KMIP_BLOCK_CFB:
+            case KMIP_BLOCK_OFB:
+            case KMIP_BLOCK_CTR:
+            case KMIP_BLOCK_CMAC:
+            case KMIP_BLOCK_CCM:
+            case KMIP_BLOCK_GCM:
+            case KMIP_BLOCK_CBC_MAC:
+            case KMIP_BLOCK_XTS:
+            case KMIP_BLOCK_AES_KEY_WRAP_PADDING:
+            case KMIP_BLOCK_NIST_KEY_WRAP:
+            case KMIP_BLOCK_X9102_AESKW:
+            case KMIP_BLOCK_X9102_TDKW:
+            case KMIP_BLOCK_X9102_AKW1:
+            case KMIP_BLOCK_X9102_AKW2:
+            return(KMIP_OK);
+            break;
+            
+            case KMIP_BLOCK_AEAD:
+            if(version >= KMIP_1_4)
+                return(KMIP_OK);
+            else
+                return(KMIP_INVALID_FOR_VERSION);
+            break;
+            
+            default:
+            return(KMIP_ENUM_MISMATCH);
+            break;
+        };
+        break;
+        
+        case KMIP_TAG_CREDENTIAL_TYPE:
+        switch(value)
+        {
+            case KMIP_CRED_USERNAME_AND_PASSWORD:
+            return(KMIP_OK);
+            break;
+            
+            case KMIP_CRED_DEVICE:
+            if(version >= KMIP_1_1)
+                return(KMIP_OK);
+            else
+                return(KMIP_INVALID_FOR_VERSION);
+            break;
+            
+            case KMIP_CRED_ATTESTATION:
+            if(version >= KMIP_1_2)
+                return(KMIP_OK);
+            else
+                return(KMIP_INVALID_FOR_VERSION);
+            break;
+            
+            default:
+            return(KMIP_ENUM_MISMATCH);
+            break;
+        };
+        break;
+        
+        case KMIP_TAG_CRYPTOGRAPHIC_ALGORITHM:
+        switch(value)
+        {
+            case KMIP_CRYPTOALG_DES:
+            case KMIP_CRYPTOALG_TRIPLE_DES:
+            case KMIP_CRYPTOALG_AES:
+            case KMIP_CRYPTOALG_RSA:
+            case KMIP_CRYPTOALG_DSA:
+            case KMIP_CRYPTOALG_ECDSA:
+            case KMIP_CRYPTOALG_HMAC_SHA1:
+            case KMIP_CRYPTOALG_HMAC_SHA224:
+            case KMIP_CRYPTOALG_HMAC_SHA256:
+            case KMIP_CRYPTOALG_HMAC_SHA384:
+            case KMIP_CRYPTOALG_HMAC_SHA512:
+            case KMIP_CRYPTOALG_HMAC_MD5:
+            case KMIP_CRYPTOALG_DH:
+            case KMIP_CRYPTOALG_ECDH:
+            case KMIP_CRYPTOALG_ECMQV:
+            case KMIP_CRYPTOALG_BLOWFISH:
+            case KMIP_CRYPTOALG_CAMELLIA:
+            case KMIP_CRYPTOALG_CAST5:
+            case KMIP_CRYPTOALG_IDEA:
+            case KMIP_CRYPTOALG_MARS:
+            case KMIP_CRYPTOALG_RC2:
+            case KMIP_CRYPTOALG_RC4:
+            case KMIP_CRYPTOALG_RC5:
+            case KMIP_CRYPTOALG_SKIPJACK:
+            case KMIP_CRYPTOALG_TWOFISH:
+            return(KMIP_OK);
+            break;
+            
+            case KMIP_CRYPTOALG_EC:
+            if(version >= KMIP_1_2)
+                return(KMIP_OK);
+            else
+                return(KMIP_INVALID_FOR_VERSION);
+            break;
+            
+            case KMIP_CRYPTOALG_ONE_TIME_PAD:
+            if(version >= KMIP_1_3)
+                return(KMIP_OK);
+            else
+                return(KMIP_INVALID_FOR_VERSION);
+            break;
+            
+            case KMIP_CRYPTOALG_CHACHA20:
+            case KMIP_CRYPTOALG_POLY1305:
+            case KMIP_CRYPTOALG_CHACHA20_POLY1305:
+            case KMIP_CRYPTOALG_SHA3_224:
+            case KMIP_CRYPTOALG_SHA3_256:
+            case KMIP_CRYPTOALG_SHA3_384:
+            case KMIP_CRYPTOALG_SHA3_512:
+            case KMIP_CRYPTOALG_HMAC_SHA3_224:
+            case KMIP_CRYPTOALG_HMAC_SHA3_256:
+            case KMIP_CRYPTOALG_HMAC_SHA3_384:
+            case KMIP_CRYPTOALG_HMAC_SHA3_512:
+            case KMIP_CRYPTOALG_HMAC_SHAKE_128:
+            case KMIP_CRYPTOALG_HMAC_SHAKE_256:
+            if(version >= KMIP_1_4)
+                return(KMIP_OK);
+            else
+                return(KMIP_INVALID_FOR_VERSION);
+            break;
+            
+            default:
+            return(KMIP_ENUM_MISMATCH);
+            break;
+        };
+        break;
+        
+        case KMIP_TAG_CRYPTOGRAPHIC_USAGE_MASK:
+        switch(value)
+        {
+            case KMIP_CRYPTOMASK_SIGN:
+            case KMIP_CRYPTOMASK_VERIFY:
+            case KMIP_CRYPTOMASK_ENCRYPT:
+            case KMIP_CRYPTOMASK_DECRYPT:
+            case KMIP_CRYPTOMASK_WRAP_KEY:
+            case KMIP_CRYPTOMASK_UNWRAP_KEY:
+            case KMIP_CRYPTOMASK_EXPORT:
+            case KMIP_CRYPTOMASK_MAC_GENERATE:
+            case KMIP_CRYPTOMASK_MAC_VERIFY:
+            case KMIP_CRYPTOMASK_DERIVE_KEY:
+            case KMIP_CRYPTOMASK_CONTENT_COMMITMENT:
+            case KMIP_CRYPTOMASK_KEY_AGREEMENT:
+            case KMIP_CRYPTOMASK_CERTIFICATE_SIGN:
+            case KMIP_CRYPTOMASK_CRL_SIGN:
+            case KMIP_CRYPTOMASK_GENERATE_CRYPTOGRAM:
+            case KMIP_CRYPTOMASK_VALIDATE_CRYPTOGRAM:
+            case KMIP_CRYPTOMASK_TRANSLATE_ENCRYPT:
+            case KMIP_CRYPTOMASK_TRANSLATE_DECRYPT:
+            case KMIP_CRYPTOMASK_TRANSLATE_WRAP:
+            case KMIP_CRYPTOMASK_TRANSLATE_UNWRAP:
+            return(KMIP_OK);
+            break;
+            
+            default:
+            return(KMIP_ENUM_MISMATCH);
+            break;
+        };
+        break;
+        
+        case KMIP_TAG_DIGITAL_SIGNATURE_ALGORITHM:
+        switch(value)
+        {
+            case KMIP_DIGITAL_MD2_WITH_RSA:
+            case KMIP_DIGITAL_MD5_WITH_RSA:
+            case KMIP_DIGITAL_SHA1_WITH_RSA:
+            case KMIP_DIGITAL_SHA224_WITH_RSA:
+            case KMIP_DIGITAL_SHA256_WITH_RSA:
+            case KMIP_DIGITAL_SHA384_WITH_RSA:
+            case KMIP_DIGITAL_SHA512_WITH_RSA:
+            case KMIP_DIGITAL_RSASSA_PSS:
+            case KMIP_DIGITAL_DSA_WITH_SHA1:
+            case KMIP_DIGITAL_DSA_WITH_SHA224:
+            case KMIP_DIGITAL_DSA_WITH_SHA256:
+            case KMIP_DIGITAL_ECDSA_WITH_SHA1:
+            case KMIP_DIGITAL_ECDSA_WITH_SHA224:
+            case KMIP_DIGITAL_ECDSA_WITH_SHA256:
+            case KMIP_DIGITAL_ECDSA_WITH_SHA384:
+            case KMIP_DIGITAL_ECDSA_WITH_SHA512:
+            if(version >= KMIP_1_1)
+                return(KMIP_OK);
+            else
+                return(KMIP_INVALID_FOR_VERSION);
+            break;
+            
+            case KMIP_DIGITAL_SHA3_256_WITH_RSA:
+            case KMIP_DIGITAL_SHA3_384_WITH_RSA:
+            case KMIP_DIGITAL_SHA3_512_WITH_RSA:
+            if(version >= KMIP_1_4)
+                return(KMIP_OK);
+            else
+                return(KMIP_INVALID_FOR_VERSION);
+            break;
+            
+            default:
+            return(KMIP_ENUM_MISMATCH);
+            break;
+        };
+        break;
+        
+        case KMIP_TAG_ENCODING_OPTION:
+        switch(value)
+        {
+            case KMIP_ENCODE_NO_ENCODING:
+            case KMIP_ENCODE_TTLV_ENCODING:
+            if(version >= KMIP_1_1)
+                return(KMIP_OK);
+            else
+                return(KMIP_INVALID_FOR_VERSION);
+            break;
+            
+            default:
+            return(KMIP_ENUM_MISMATCH);
+            break;
+        };
+        break;
+        
+        case KMIP_TAG_HASHING_ALGORITHM:
+        switch(value)
+        {
+            case KMIP_HASH_MD2:
+            case KMIP_HASH_MD4:
+            case KMIP_HASH_MD5:
+            case KMIP_HASH_SHA1:
+            case KMIP_HASH_SHA224:
+            case KMIP_HASH_SHA256:
+            case KMIP_HASH_SHA384:
+            case KMIP_HASH_SHA512:
+            case KMIP_HASH_RIPEMD160:
+            case KMIP_HASH_TIGER:
+            case KMIP_HASH_WHIRLPOOL:
+            return(KMIP_OK);
+            break;
+            
+            case KMIP_HASH_SHA512_224:
+            case KMIP_HASH_SHA512_256:
+            if(version >= KMIP_1_2)
+                return(KMIP_OK);
+            else
+                return(KMIP_INVALID_FOR_VERSION);
+            break;
+            
+            case KMIP_HASH_SHA3_224:
+            case KMIP_HASH_SHA3_256:
+            case KMIP_HASH_SHA3_384:
+            case KMIP_HASH_SHA3_512:
+            if(version >= KMIP_1_4)
+                return(KMIP_OK);
+            else
+                return(KMIP_INVALID_FOR_VERSION);
+            break;
+            
+            default:
+            return(KMIP_ENUM_MISMATCH);
+            break;
+        };
+        break;
+        
+        case KMIP_TAG_KEY_COMPRESSION_TYPE:
+        switch(value)
+        {
+            case KMIP_KEYCOMP_EC_PUB_UNCOMPRESSED:
+            case KMIP_KEYCOMP_EC_PUB_X962_COMPRESSED_PRIME:
+            case KMIP_KEYCOMP_EC_PUB_X962_COMPRESSED_CHAR2:
+            case KMIP_KEYCOMP_EC_PUB_X962_HYBRID:
+            return(KMIP_OK);
+            break;
+            
+            default:
+            return(KMIP_ENUM_MISMATCH);
+            break;
+        };
+        break;
+        
+        case KMIP_TAG_KEY_FORMAT_TYPE:
+        switch(value)
+        {
+            case KMIP_KEYFORMAT_RAW:
+            case KMIP_KEYFORMAT_OPAQUE:
+            case KMIP_KEYFORMAT_PKCS1:
+            case KMIP_KEYFORMAT_PKCS8:
+            case KMIP_KEYFORMAT_X509:
+            case KMIP_KEYFORMAT_EC_PRIVATE_KEY:
+            case KMIP_KEYFORMAT_TRANS_SYMMETRIC_KEY:
+            case KMIP_KEYFORMAT_TRANS_DSA_PRIVATE_KEY:
+            case KMIP_KEYFORMAT_TRANS_DSA_PUBLIC_KEY:
+            case KMIP_KEYFORMAT_TRANS_RSA_PRIVATE_KEY:
+            case KMIP_KEYFORMAT_TRANS_RSA_PUBLIC_KEY:
+            case KMIP_KEYFORMAT_TRANS_DH_PRIVATE_KEY:
+            case KMIP_KEYFORMAT_TRANS_DH_PUBLIC_KEY:
+            return(KMIP_OK);
+            break;
+            
+            /* The following set is deprecated as of KMIP 1.3 */
+            case KMIP_KEYFORMAT_TRANS_ECDSA_PRIVATE_KEY:
+            case KMIP_KEYFORMAT_TRANS_ECDSA_PUBLIC_KEY:
+            case KMIP_KEYFORMAT_TRANS_ECDH_PRIVATE_KEY:
+            case KMIP_KEYFORMAT_TRANS_ECDH_PUBLIC_KEY:
+            case KMIP_KEYFORMAT_TRANS_ECMQV_PRIVATE_KEY:
+            case KMIP_KEYFORMAT_TRANS_ECMQV_PUBLIC_KEY:
+            /* TODO (peter-hamilton) What should happen if version >= 1.3? */
+            return(KMIP_OK);
+            break;
+            
+            case KMIP_KEYFORMAT_TRANS_EC_PRIVATE_KEY:
+            case KMIP_KEYFORMAT_TRANS_EC_PUBLIC_KEY:
+            if(version >= KMIP_1_3)
+                return(KMIP_OK);
+            else
+                return(KMIP_INVALID_FOR_VERSION);
+            break;
+            
+            case KMIP_KEYFORMAT_PKCS12:
+            if(version >= KMIP_1_4)
+                return(KMIP_OK);
+            else
+                return(KMIP_INVALID_FOR_VERSION);
+            break;
+            
+            default:
+            return(KMIP_ENUM_MISMATCH);
+            break;
+        };
+        break;
+        
+        case KMIP_TAG_KEY_ROLE_TYPE:
+        switch(value)
+        {
+            /* KMIP 1.0 */
+            case KMIP_ROLE_BDK:
+            case KMIP_ROLE_CVK:
+            case KMIP_ROLE_DEK:
+            case KMIP_ROLE_MKAC:
+            case KMIP_ROLE_MKSMC:
+            case KMIP_ROLE_MKSMI:
+            case KMIP_ROLE_MKDAC:
+            case KMIP_ROLE_MKDN:
+            case KMIP_ROLE_MKCP:
+            case KMIP_ROLE_MKOTH:
+            case KMIP_ROLE_KEK:
+            case KMIP_ROLE_MAC16609:
+            case KMIP_ROLE_MAC97971:
+            case KMIP_ROLE_MAC97972:
+            case KMIP_ROLE_MAC97973:
+            case KMIP_ROLE_MAC97974:
+            case KMIP_ROLE_MAC97975:
+            case KMIP_ROLE_ZPK:
+            case KMIP_ROLE_PVKIBM:
+            case KMIP_ROLE_PVKPVV:
+            case KMIP_ROLE_PVKOTH:
+            return(KMIP_OK);
+            break;
+            
+            /* KMIP 1.4 */
+            case KMIP_ROLE_DUKPT:
+            case KMIP_ROLE_IV:
+            case KMIP_ROLE_TRKBK:
+            if(version >= KMIP_1_4)
+                return(KMIP_OK);
+            else
+                return(KMIP_INVALID_FOR_VERSION);
+            break;
+            
+            default:
+            return(KMIP_ENUM_MISMATCH);
+            break;
+        };
+        break;
+        
+        case KMIP_TAG_KEY_WRAP_TYPE:
+        switch(value)
+        {
+            /* KMIP 1.4 */
+            case KMIP_WRAPTYPE_NOT_WRAPPED:
+            case KMIP_WRAPTYPE_AS_REGISTERED:
+            if(version >= KMIP_1_4)
+                return(KMIP_OK);
+            else
+                return(KMIP_INVALID_FOR_VERSION);
+            break;
+            
+            default:
+            return(KMIP_ENUM_MISMATCH);
+            break;
+        };
+        break;
+        
+        case KMIP_TAG_MASK_GENERATOR:
+        switch(value)
+        {
+            /* KMIP 1.4 */
+            case KMIP_MASKGEN_MGF1:
+            if(version >= KMIP_1_4)
+                return(KMIP_OK);
+            else
+                return(KMIP_INVALID_FOR_VERSION);
+            break;
+            
+            default:
+            return(KMIP_ENUM_MISMATCH);
+            break;
+        };
+        break;
+        
+        case KMIP_TAG_NAME_TYPE:
+        switch(value)
+        {
+            /* KMIP 1.0 */
+            case KMIP_NAME_UNINTERPRETED_TEXT_STRING:
+            case KMIP_NAME_URI:
+            return(KMIP_OK);
+            break;
+            
+            default:
+            return(KMIP_ENUM_MISMATCH);
+            break;
+        };
+        break;
+        
+        case KMIP_TAG_OBJECT_TYPE:
+        switch(value)
+        {
+            /* KMIP 1.0 */
+            case KMIP_OBJTYPE_CERTIFICATE:
+            case KMIP_OBJTYPE_SYMMETRIC_KEY:
+            case KMIP_OBJTYPE_PUBLIC_KEY:
+            case KMIP_OBJTYPE_PRIVATE_KEY:
+            case KMIP_OBJTYPE_SPLIT_KEY:
+            case KMIP_OBJTYPE_SECRET_DATA:
+            case KMIP_OBJTYPE_OPAQUE_OBJECT:
+            return(KMIP_OK);
+            break;
+            
+            /* The following set is deprecated as of KMIP 1.3 */
+            case KMIP_OBJTYPE_TEMPLATE:
+            /* TODO (peter-hamilton) What should happen if version >= 1.3? */
+            return(KMIP_OK);
+            break;
+            
+            /* KMIP 1.2 */
+            case KMIP_OBJTYPE_PGP_KEY:
+            if(version >= KMIP_1_2)
+                return(KMIP_OK);
+            else
+                return(KMIP_INVALID_FOR_VERSION);
+            break;
+            
+            default:
+            return(KMIP_ENUM_MISMATCH);
+            break;
+        };
+        break;
+        
+        case KMIP_TAG_OPERATION:
+        switch(value)
+        {
+            /* KMIP 1.0 */
+            case KMIP_OP_CREATE:
+            case KMIP_OP_GET:
+            case KMIP_OP_DESTROY:
+            return(KMIP_OK);
+            break;
+            
+            default:
+            return(KMIP_ENUM_MISMATCH);
+            break;
+        };
+        break;
+        
+        case KMIP_TAG_PADDING_METHOD:
+        switch(value)
+        {
+            /* KMIP 1.0 */
+            case KMIP_PAD_NONE:
+            case KMIP_PAD_OAEP:
+            case KMIP_PAD_PKCS5:
+            case KMIP_PAD_SSL3:
+            case KMIP_PAD_ZEROS:
+            case KMIP_PAD_ANSI_X923:
+            case KMIP_PAD_ISO_10126:
+            case KMIP_PAD_PKCS1v15:
+            case KMIP_PAD_X931:
+            case KMIP_PAD_PSS:
+            return(KMIP_OK);
+            break;
+            
+            default:
+            return(KMIP_ENUM_MISMATCH);
+            break;
+        };
+        break;
+        
+        case KMIP_TAG_RESULT_REASON:
+        switch(value)
+        {
+            /* KMIP 1.0 */
+            case KMIP_REASON_GENERAL_FAILURE:
+            case KMIP_REASON_ITEM_NOT_FOUND:
+            case KMIP_REASON_RESPONSE_TOO_LARGE:
+            case KMIP_REASON_AUTHENTICATION_NOT_SUCCESSFUL:
+            case KMIP_REASON_INVALID_MESSAGE:
+            case KMIP_REASON_OPERATION_NOT_SUPPORTED:
+            case KMIP_REASON_MISSING_DATA:
+            case KMIP_REASON_INVALID_FIELD:
+            case KMIP_REASON_FEATURE_NOT_SUPPORTED:
+            case KMIP_REASON_OPERATION_CANCELED_BY_REQUESTER:
+            case KMIP_REASON_CRYPTOGRAPHIC_FAILURE:
+            case KMIP_REASON_ILLEGAL_OPERATION:
+            case KMIP_REASON_PERMISSION_DENIED:
+            case KMIP_REASON_OBJECT_ARCHIVED:
+            case KMIP_REASON_INDEX_OUT_OF_BOUNDS:
+            case KMIP_REASON_APPLICATION_NAMESPACE_NOT_SUPPORTED:
+            case KMIP_REASON_KEY_FORMAT_TYPE_NOT_SUPPORTED:
+            case KMIP_REASON_KEY_COMPRESSION_TYPE_NOT_SUPPORTED:
+            return(KMIP_OK);
+            break;
+            
+            /* KMIP 1.1 */
+            case KMIP_REASON_ENCODING_OPTION_FAILURE:
+            if(version >= KMIP_1_1)
+                return(KMIP_OK);
+            else
+                return(KMIP_INVALID_FOR_VERSION);
+            break;
+            
+            /* KMIP 1.2 */
+            case KMIP_REASON_KEY_VALUE_NOT_PRESENT:
+            case KMIP_REASON_ATTESTATION_REQUIRED:
+            case KMIP_REASON_ATTESTATION_FAILED:
+            if(version >= KMIP_1_2)
+                return(KMIP_OK);
+            else
+                return(KMIP_INVALID_FOR_VERSION);
+            break;
+            
+            /* KMIP 1.4 */
+            case KMIP_REASON_SENSITIVE:
+            case KMIP_REASON_NOT_EXTRACTABLE:
+            case KMIP_REASON_OBJECT_ALREADY_EXISTS:
+            if(version >= KMIP_1_4)
+                return(KMIP_OK);
+            else
+                return(KMIP_INVALID_FOR_VERSION);
+            break;
+            
+            default:
+            return(KMIP_ENUM_MISMATCH);
+            break;
+        };
+        break;
+        
+        case KMIP_TAG_RESULT_STATUS:
+        switch(value)
+        {
+            /* KMIP 1.0 */
+            case KMIP_STATUS_SUCCESS:
+            case KMIP_STATUS_OPERATION_FAILED:
+            case KMIP_STATUS_OPERATION_PENDING:
+            case KMIP_STATUS_OPERATION_UNDONE:
+            return(KMIP_OK);
+            break;
+            
+            default:
+            return(KMIP_ENUM_MISMATCH);
+            break;
+        };
+        break;
+        
+        case KMIP_TAG_STATE:
+        switch(value)
+        {
+            /* KMIP 1.0 */
+            case KMIP_STATE_PRE_ACTIVE:
+            case KMIP_STATE_ACTIVE:
+            case KMIP_STATE_DEACTIVATED:
+            case KMIP_STATE_COMPROMISED:
+            case KMIP_STATE_DESTROYED:
+            case KMIP_STATE_DESTROYED_COMPROMISED:
+            return(KMIP_OK);
+            break;
+            
+            default:
+            return(KMIP_ENUM_MISMATCH);
+            break;
+        };
+        break;
+        
+        case KMIP_TAG_TAG:
+        /* TODO (peter-hamilton) Fill this in. */
+        return(KMIP_OK);
+        break;
+        
+        case KMIP_TAG_TYPE:
+        switch(value)
+        {
+            /* KMIP 1.0 */
+            case KMIP_TYPE_STRUCTURE:
+            case KMIP_TYPE_INTEGER:
+            case KMIP_TYPE_LONG_INTEGER:
+            case KMIP_TYPE_BIG_INTEGER:
+            case KMIP_TYPE_ENUMERATION:
+            case KMIP_TYPE_BOOLEAN:
+            case KMIP_TYPE_TEXT_STRING:
+            case KMIP_TYPE_BYTE_STRING:
+            case KMIP_TYPE_DATE_TIME:
+            case KMIP_TYPE_INTERVAL:
+            return(KMIP_OK);
+            break;
+            
+            default:
+            return(KMIP_ENUM_MISMATCH);
+            break;
+        };
+        break;
+        
+        case KMIP_TAG_WRAPPING_METHOD:
+        switch(value)
+        {
+            /* KMIP 1.0 */
+            case KMIP_WRAP_ENCRYPT:
+            case KMIP_WRAP_MAC_SIGN:
+            case KMIP_WRAP_ENCRYPT_MAC_SIGN:
+            case KMIP_WRAP_MAC_SIGN_ENCRYPT:
+            case KMIP_WRAP_TR31:
+            return(KMIP_OK);
+            break;
+            
+            default:
+            return(KMIP_ENUM_MISMATCH);
+            break;
+        };
+        break;
+        
+        default:
+        return(KMIP_ENUM_UNSUPPORTED);
+        break;
+    };
+}
 
 #endif /* ENUMS_H */

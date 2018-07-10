@@ -178,6 +178,27 @@ test_decode_int32_be(void)
 }
 
 int
+test_decode_int64_be(void)
+{
+    uint8 encoding[8] = {
+        0x01, 0xB6, 0x9B, 0x4B, 0xA5, 0x74, 0x92, 0x00
+    };
+    
+    struct kmip ctx = {0};
+    kmip_init(&ctx, encoding, ARRAY_LENGTH(encoding), KMIP_1_0);
+    
+    int64 expected = 0x01B69B4BA5749200;
+    int64 observed = 0;
+    
+    int result = decode_int64_be(&ctx, &observed);
+    return(report_decoding_test_result(
+        &ctx,
+        observed == expected,
+        result,
+        __func__));
+}
+
+int
 test_encode_integer(void)
 {
     uint8 expected[16] = {
@@ -254,6 +275,40 @@ test_decode_long(void)
 }
 
 int
+test_encode_enum(void)
+{
+    uint8 expected[16] = {
+        0x42, 0x00, 0x00, 0x05, 0x00, 0x00, 0x00, 0x04,
+        0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x00
+    };
+    
+    uint8 observed[16] = {0};
+    struct kmip ctx = {0};
+    kmip_init(&ctx, observed, ARRAY_LENGTH(observed), KMIP_1_0);
+    
+    int result = encode_enum(&ctx, KMIP_TAG_DEFAULT, KMIP_CRYPTOALG_AES);
+    return(report_encoding_test_result(&ctx, expected, observed, result, __func__));
+}
+
+int
+test_decode_enum(void)
+{
+    uint8 encoding[16] = {
+        0x42, 0x00, 0x00, 0x05, 0x00, 0x00, 0x00, 0x04,
+        0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x00
+    };
+    
+    struct kmip ctx = {0};
+    kmip_init(&ctx, encoding, ARRAY_LENGTH(encoding), KMIP_1_0);
+    
+    enum cryptographic_algorithm expected = KMIP_CRYPTOALG_AES;
+    enum cryptographic_algorithm observed = 0;
+    
+    int result = decode_enum(&ctx, KMIP_TAG_DEFAULT, &observed);
+    return(report_decoding_test_result(&ctx, observed == expected, result, __func__));
+}
+
+int
 test_encode_text_string(void)
 {
     uint8 expected[24] = {
@@ -272,6 +327,53 @@ test_encode_text_string(void)
     
     int result = encode_text_string(&ctx, KMIP_TAG_DEFAULT, &example);
     return(report_encoding_test_result(&ctx, expected, observed, result, __func__));
+}
+
+int
+compare_text_string(const struct text_string *a, const struct text_string *b)
+{
+    if(a->size != b->size)
+    {
+        return(KMIP_FALSE);
+    }
+    
+    for(size_t i = 0; i < a->size; i++)
+    {
+        if(a->value[i] != b->value[i])
+        {
+            return(KMIP_FALSE);
+        }
+    }
+    
+    return(KMIP_TRUE);
+}
+
+int
+test_decode_text_string(void)
+{
+    uint8 encoding[24] = {
+        0x42, 0x00, 0x00, 0x07, 0x00, 0x00, 0x00, 0x0B,
+        0x48, 0x65, 0x6C, 0x6C, 0x6F, 0x20, 0x57, 0x6F,
+        0x72, 0x6C, 0x64, 0x00, 0x00, 0x00, 0x00, 0x00
+    };
+    
+    struct kmip ctx = {0};
+    kmip_init(&ctx, encoding, ARRAY_LENGTH(encoding), KMIP_1_0);
+
+    struct text_string expected = {0};
+    expected.value = "Hello World";
+    expected.size = 11;
+    struct text_string observed = {0};
+    
+    int result = decode_text_string(&ctx, KMIP_TAG_DEFAULT, &observed);
+    int comparison = compare_text_string(&expected, &observed);
+    free_text_string(&ctx, &observed);
+    
+    return(report_decoding_test_result(
+        &ctx,
+        comparison,
+        result,
+        __func__));
 }
 
 int
@@ -3725,7 +3827,7 @@ test_kmip_1_1_test_suite_3_1_3_2_b(void)
 int
 main(void)
 {
-    int num_tests = 72;
+    int num_tests = 76;
     int num_failures = 0;
     
     printf("Tests\n");
@@ -3736,11 +3838,15 @@ main(void)
     num_failures += test_buffer_full_and_resize();
     num_failures += test_decode_int8_be();
     num_failures += test_decode_int32_be();
+    num_failures += test_decode_int64_be();
     num_failures += test_encode_integer();
     num_failures += test_decode_integer();
     num_failures += test_encode_long();
     num_failures += test_decode_long();
+    num_failures += test_encode_enum();
+    num_failures += test_decode_enum();
     num_failures += test_encode_text_string();
+    num_failures += test_decode_text_string();
     num_failures += test_encode_byte_string();
     num_failures += test_encode_date_time();
     num_failures += test_encode_interval();
