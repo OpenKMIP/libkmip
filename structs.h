@@ -34,13 +34,17 @@ struct kmip
     
     enum kmip_version version;
     
+    char *error_message;
+    size_t error_message_size;
     struct error_frame errors[20];
     struct error_frame *frame_index;
     
-    void *(*malloc_func)(void *state, size_t size);
-    void *(*memset_func)(void *state, void *ptr, int value, size_t size);
+    void *(*calloc_func)(void *state, size_t num, size_t size);
+    void *(*realloc_func)(void *state, void *ptr, size_t size);
     void (*free_func)(void *state, void *ptr);
     void *state;
+    
+    void *(*memset_func)(void *ptr, int value, size_t size);
 };
 
 struct template_attribute
