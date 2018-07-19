@@ -135,9 +135,327 @@ test_buffer_full_and_resize(void)
     else
     {
         printf("FAIL - %s\n", __func__);
-        printf("- expected buffer full");
+        printf("- expected buffer full\n");
         return(1);
     }
+}
+
+int
+test_is_tag_next(void)
+{
+    uint8 encoding[3] = {0x42, 0x00, 0x08};
+    
+    struct kmip ctx = {0};
+    kmip_init(&ctx, encoding, ARRAY_LENGTH(encoding), KMIP_1_0);
+    
+    uint8 *before = ctx.index;
+    int result = 0;
+    
+    if(is_tag_next(&ctx, KMIP_TAG_ATTRIBUTE) == KMIP_FALSE)
+    {
+        printf("FAIL - %s\n", __func__);
+        printf("- expected tag is not next\n");
+        result = 1;
+    }
+    
+    uint8 *after = ctx.index;
+    
+    if(before != after)
+    {
+        printf("FAIL - %s\n", __func__);
+        printf("- tag checking modifies context buffer index\n");
+        result = 1;
+    }
+    
+    kmip_destroy(&ctx);
+    
+    if(result == 0)
+    {
+        printf("PASS - %s\n", __func__);
+    }
+    
+    return(result);
+}
+
+int
+test_get_num_items_next(void)
+{
+    uint8 encoding[168] = {
+        0x42, 0x00, 0x08, 0x01, 0x00, 0x00, 0x00, 0x30, 
+        0x42, 0x00, 0x0A, 0x07, 0x00, 0x00, 0x00, 0x17, 
+        0x43, 0x72, 0x79, 0x70, 0x74, 0x6F, 0x67, 0x72, 
+        0x61, 0x70, 0x68, 0x69, 0x63, 0x20, 0x41, 0x6C, 
+        0x67, 0x6F, 0x72, 0x69, 0x74, 0x68, 0x6D, 0x00, 
+        0x42, 0x00, 0x0B, 0x05, 0x00, 0x00, 0x00, 0x04, 
+        0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x00, 
+        0x42, 0x00, 0x08, 0x01, 0x00, 0x00, 0x00, 0x30, 
+        0x42, 0x00, 0x0A, 0x07, 0x00, 0x00, 0x00, 0x14, 
+        0x43, 0x72, 0x79, 0x70, 0x74, 0x6F, 0x67, 0x72, 
+        0x61, 0x70, 0x68, 0x69, 0x63, 0x20, 0x4C, 0x65, 
+        0x6E, 0x67, 0x74, 0x68, 0x00, 0x00, 0x00, 0x00, 
+        0x42, 0x00, 0x0B, 0x02, 0x00, 0x00, 0x00, 0x04, 
+        0x00, 0x00, 0x00, 0x80, 0x00, 0x00, 0x00, 0x00, 
+        0x42, 0x00, 0x08, 0x01, 0x00, 0x00, 0x00, 0x30, 
+        0x42, 0x00, 0x0A, 0x07, 0x00, 0x00, 0x00, 0x18, 
+        0x43, 0x72, 0x79, 0x70, 0x74, 0x6F, 0x67, 0x72, 
+        0x61, 0x70, 0x68, 0x69, 0x63, 0x20, 0x55, 0x73, 
+        0x61, 0x67, 0x65, 0x20, 0x4D, 0x61, 0x73, 0x6B, 
+        0x42, 0x00, 0x0B, 0x02, 0x00, 0x00, 0x00, 0x04, 
+        0x00, 0x00, 0x00, 0x0C, 0x00, 0x00, 0x00, 0x00        
+    };
+
+    struct kmip ctx = {0};
+    kmip_init(&ctx, encoding, ARRAY_LENGTH(encoding), KMIP_1_0);
+    
+    uint8 *before = ctx.index;
+    int result = 0;
+    int count = 0;
+    
+    count = get_num_items_next(&ctx, KMIP_TAG_ATTRIBUTE);
+    if(count != 3)
+    {
+        printf("FAIL - %s\n", __func__);
+        printf("- expected item count not found (exp. 3, obs. %d)\n",
+               count);
+        result = 1;
+    }
+    
+    uint8 *after = ctx.index;
+    
+    if(before != after)
+    {
+        printf("FAIL - %s\n", __func__);
+        printf("- item count checking modifies context buffer index\n");
+        result = 1;
+    }
+    
+    kmip_destroy(&ctx);
+    
+    if(result == 0)
+    {
+        printf("PASS - %s\n", __func__);
+    }
+    
+    return(result);
+}
+
+int
+test_get_num_items_next_with_partial_item(void)
+{
+    uint8 encoding[136] = {
+        0x42, 0x00, 0x08, 0x01, 0x00, 0x00, 0x00, 0x30, 
+        0x42, 0x00, 0x0A, 0x07, 0x00, 0x00, 0x00, 0x14, 
+        0x43, 0x72, 0x79, 0x70, 0x74, 0x6F, 0x67, 0x72, 
+        0x61, 0x70, 0x68, 0x69, 0x63, 0x20, 0x4C, 0x65, 
+        0x6E, 0x67, 0x74, 0x68, 0x00, 0x00, 0x00, 0x00, 
+        0x42, 0x00, 0x0B, 0x02, 0x00, 0x00, 0x00, 0x04, 
+        0x00, 0x00, 0x00, 0x80, 0x00, 0x00, 0x00, 0x00, 
+        0x42, 0x00, 0x08, 0x01, 0x00, 0x00, 0x00, 0x30, 
+        0x42, 0x00, 0x0A, 0x07, 0x00, 0x00, 0x00, 0x18, 
+        0x43, 0x72, 0x79, 0x70, 0x74, 0x6F, 0x67, 0x72, 
+        0x61, 0x70, 0x68, 0x69, 0x63, 0x20, 0x55, 0x73, 
+        0x61, 0x67, 0x65, 0x20, 0x4D, 0x61, 0x73, 0x6B, 
+        0x42, 0x00, 0x0B, 0x02, 0x00, 0x00, 0x00, 0x04, 
+        0x00, 0x00, 0x00, 0x0C, 0x00, 0x00, 0x00, 0x00,
+        0x42, 0x00, 0x08, 0x01, 0x00, 0x00, 0x00, 0x30, 
+        0x42, 0x00, 0x0A, 0x07, 0x00, 0x00, 0x00, 0x18, 
+        0x43, 0x72, 0x79, 0x70, 0x74, 0x6F, 0x67, 0x72 
+    };
+
+    struct kmip ctx = {0};
+    kmip_init(&ctx, encoding, ARRAY_LENGTH(encoding), KMIP_1_0);
+    
+    uint8 *before = ctx.index;
+    int result = 0;
+    int count = 0;
+    
+    count = get_num_items_next(&ctx, KMIP_TAG_ATTRIBUTE);
+    if(count != 2)
+    {
+        printf("FAIL - %s\n", __func__);
+        printf("- expected item count not found (exp. 2, obs. %d)\n",
+               count);
+        result = 1;
+    }
+    
+    uint8 *after = ctx.index;
+    
+    if(before != after)
+    {
+        printf("FAIL - %s\n", __func__);
+        printf("- item count checking modifies context buffer index\n");
+        result = 1;
+    }
+    
+    kmip_destroy(&ctx);
+    
+    if(result == 0)
+    {
+        printf("PASS - %s\n", __func__);
+    }
+    
+    return(result);
+}
+
+int
+test_get_num_items_next_with_mismatch_item(void)
+{
+    uint8 encoding[80] = {
+        0x42, 0x00, 0x08, 0x01, 0x00, 0x00, 0x00, 0x30, 
+        0x42, 0x00, 0x0A, 0x07, 0x00, 0x00, 0x00, 0x18, 
+        0x43, 0x72, 0x79, 0x70, 0x74, 0x6F, 0x67, 0x72, 
+        0x61, 0x70, 0x68, 0x69, 0x63, 0x20, 0x55, 0x73, 
+        0x61, 0x67, 0x65, 0x20, 0x4D, 0x61, 0x73, 0x6B, 
+        0x42, 0x00, 0x0B, 0x02, 0x00, 0x00, 0x00, 0x04, 
+        0x00, 0x00, 0x00, 0x0C, 0x00, 0x00, 0x00, 0x00,
+        0x42, 0x00, 0x20, 0x01, 0x00, 0x00, 0x00, 0x30, 
+        0x42, 0x00, 0x0A, 0x07, 0x00, 0x00, 0x00, 0x18, 
+        0x43, 0x72, 0x79, 0x70, 0x74, 0x6F, 0x67, 0x72 
+    };
+
+    struct kmip ctx = {0};
+    kmip_init(&ctx, encoding, ARRAY_LENGTH(encoding), KMIP_1_0);
+    
+    uint8 *before = ctx.index;
+    int result = 0;
+    int count = 0;
+    
+    count = get_num_items_next(&ctx, KMIP_TAG_ATTRIBUTE);
+    if(count != 1)
+    {
+        printf("FAIL - %s\n", __func__);
+        printf("- expected item count not found (exp. 1, obs. %d)\n",
+               count);
+        result = 1;
+    }
+    
+    uint8 *after = ctx.index;
+    
+    if(before != after)
+    {
+        printf("FAIL - %s\n", __func__);
+        printf("- item count checking modifies context buffer index\n");
+        result = 1;
+    }
+    
+    kmip_destroy(&ctx);
+    
+    if(result == 0)
+    {
+        printf("PASS - %s\n", __func__);
+    }
+    
+    return(result);
+}
+
+int
+test_get_num_items_next_with_no_matches(void)
+{
+    uint8 encoding[80] = {
+        0x42, 0x00, 0x20, 0x01, 0x00, 0x00, 0x00, 0x30, 
+        0x42, 0x00, 0x0A, 0x07, 0x00, 0x00, 0x00, 0x18, 
+        0x43, 0x72, 0x79, 0x70, 0x74, 0x6F, 0x67, 0x72, 
+        0x61, 0x70, 0x68, 0x69, 0x63, 0x20, 0x55, 0x73, 
+        0x61, 0x67, 0x65, 0x20, 0x4D, 0x61, 0x73, 0x6B, 
+        0x42, 0x00, 0x0B, 0x02, 0x00, 0x00, 0x00, 0x04, 
+        0x00, 0x00, 0x00, 0x0C, 0x00, 0x00, 0x00, 0x00,
+        0x42, 0x00, 0x20, 0x01, 0x00, 0x00, 0x00, 0x30, 
+        0x42, 0x00, 0x0A, 0x07, 0x00, 0x00, 0x00, 0x18, 
+        0x43, 0x72, 0x79, 0x70, 0x74, 0x6F, 0x67, 0x72 
+    };
+
+    struct kmip ctx = {0};
+    kmip_init(&ctx, encoding, ARRAY_LENGTH(encoding), KMIP_1_0);
+    
+    uint8 *before = ctx.index;
+    int result = 0;
+    int count = 0;
+    
+    count = get_num_items_next(&ctx, KMIP_TAG_ATTRIBUTE);
+    if(count != 0)
+    {
+        printf("FAIL - %s\n", __func__);
+        printf("- expected item count not found (exp. 0, obs. %d)\n",
+               count);
+        result = 1;
+    }
+    
+    uint8 *after = ctx.index;
+    
+    if(before != after)
+    {
+        printf("FAIL - %s\n", __func__);
+        printf("- item count checking modifies context buffer index\n");
+        result = 1;
+    }
+    
+    kmip_destroy(&ctx);
+    
+    if(result == 0)
+    {
+        printf("PASS - %s\n", __func__);
+    }
+    
+    return(result);
+}
+
+int
+test_get_num_items_next_with_non_structures(void)
+{
+    uint8 encoding[144] = {
+        0x42, 0x00, 0x94, 0x07, 0x00, 0x00, 0x00, 0x26,
+        0x31, 0x30, 0x30, 0x31, 0x38, 0x32, 0x64, 0x35, 
+        0x2D, 0x37, 0x32, 0x62, 0x38, 0x2D, 0x34, 0x37, 
+        0x61, 0x61, 0x2D, 0x38, 0x33, 0x38, 0x33, 0x2D, 
+        0x34, 0x64, 0x39, 0x37, 0x64, 0x35, 0x31, 0x32, 
+        0x65, 0x39, 0x38, 0x61, 0x11, 0x11, 0x00, 0x00, 
+        0x42, 0x00, 0x94, 0x07, 0x00, 0x00, 0x00, 0x25,
+        0x31, 0x30, 0x30, 0x31, 0x38, 0x32, 0x64, 0x35, 
+        0x2D, 0x37, 0x32, 0x62, 0x38, 0x2D, 0x34, 0x37, 
+        0x61, 0x61, 0x2D, 0x38, 0x33, 0x38, 0x33, 0x2D, 
+        0x34, 0x64, 0x39, 0x37, 0x64, 0x35, 0x31, 0x32, 
+        0x65, 0x39, 0x38, 0x61, 0x11, 0x00, 0x00, 0x00, 
+        0x42, 0x00, 0x94, 0x07, 0x00, 0x00, 0x00, 0x24,
+        0x31, 0x30, 0x30, 0x31, 0x38, 0x32, 0x64, 0x35, 
+        0x2D, 0x37, 0x32, 0x62, 0x38, 0x2D, 0x34, 0x37, 
+        0x61, 0x61, 0x2D, 0x38, 0x33, 0x38, 0x33, 0x2D, 
+        0x34, 0x64, 0x39, 0x37, 0x64, 0x35, 0x31, 0x32, 
+        0x65, 0x39, 0x38, 0x61, 0x00, 0x00, 0x00, 0x00
+    };
+
+    struct kmip ctx = {0};
+    kmip_init(&ctx, encoding, ARRAY_LENGTH(encoding), KMIP_1_0);
+    
+    uint8 *before = ctx.index;
+    int result = 0;
+    int count = 0;
+    
+    count = get_num_items_next(&ctx, KMIP_TAG_UNIQUE_IDENTIFIER);
+    if(count != 3)
+    {
+        printf("FAIL - %s\n", __func__);
+        printf("- expected item count not found (exp. 3, obs. %d)\n",
+               count);
+        result = 1;
+    }
+    
+    uint8 *after = ctx.index;
+    
+    if(before != after)
+    {
+        printf("FAIL - %s\n", __func__);
+        printf("- item count checking modifies context buffer index\n");
+        result = 1;
+    }
+    
+    kmip_destroy(&ctx);
+    
+    if(result == 0)
+    {
+        printf("PASS - %s\n", __func__);
+    }
+    
+    return(result);
 }
 
 int
@@ -151,11 +469,13 @@ test_decode_int8_be(void)
     int8 value = 0;
     
     int result = decode_int8_be(&ctx, &value);
-    return(report_decoding_test_result(
+    result = report_decoding_test_result(
         &ctx,
         value == 0x42, 
         result,
-        __func__));
+        __func__);
+    kmip_destroy(&ctx);
+    return(result);
 }
 
 int
@@ -170,11 +490,13 @@ test_decode_int32_be(void)
     int32 observed = 0;
     
     int result = decode_int32_be(&ctx, &observed);
-    return(report_decoding_test_result(
+    result = report_decoding_test_result(
         &ctx,
         observed == expected,
         result,
-        __func__));
+        __func__);
+    kmip_destroy(&ctx);
+    return(result);
 }
 
 int
@@ -191,11 +513,13 @@ test_decode_int64_be(void)
     int64 observed = 0;
     
     int result = decode_int64_be(&ctx, &observed);
-    return(report_decoding_test_result(
+    result = report_decoding_test_result(
         &ctx,
         observed == expected,
         result,
-        __func__));
+        __func__);
+    kmip_destroy(&ctx);
+    return(result);
 }
 
 int
@@ -211,7 +535,14 @@ test_encode_integer(void)
     kmip_init(&ctx, observed, ARRAY_LENGTH(observed), KMIP_1_0);
     
     int result = encode_integer(&ctx, KMIP_TAG_DEFAULT, 8);
-    return(report_encoding_test_result(&ctx, expected, observed, result, __func__));
+    result = report_encoding_test_result(
+        &ctx,
+        expected,
+        observed,
+        result,
+        __func__);
+    kmip_destroy(&ctx);
+    return(result);
 }
 
 int
@@ -229,11 +560,13 @@ test_decode_integer(void)
     int32 observed = 0;
     
     int result = decode_integer(&ctx, KMIP_TAG_DEFAULT, &observed);
-    return(report_decoding_test_result(
+    result = report_decoding_test_result(
         &ctx,
         observed == expected,
         result,
-        __func__));
+        __func__);
+    kmip_destroy(&ctx);
+    return(result);
 }
 
 int
@@ -249,7 +582,14 @@ test_encode_long(void)
     kmip_init(&ctx, observed, ARRAY_LENGTH(observed), KMIP_1_0);
     
     int result = encode_long(&ctx, KMIP_TAG_DEFAULT, 123456789000000000);
-    return(report_encoding_test_result(&ctx, expected, observed, result, __func__));
+    result = report_encoding_test_result(
+        &ctx,
+        expected,
+        observed,
+        result,
+        __func__);
+    kmip_destroy(&ctx);
+    return(result);
 }
 
 int
@@ -267,11 +607,13 @@ test_decode_long(void)
     int64 observed = 0;
     
     int result = decode_long(&ctx, KMIP_TAG_DEFAULT, &observed);
-    return(report_decoding_test_result(
+    result = report_decoding_test_result(
         &ctx,
         observed == expected,
         result,
-        __func__));
+        __func__);
+    kmip_destroy(&ctx);
+    return(result);
 }
 
 int
@@ -287,7 +629,14 @@ test_encode_enum(void)
     kmip_init(&ctx, observed, ARRAY_LENGTH(observed), KMIP_1_0);
     
     int result = encode_enum(&ctx, KMIP_TAG_DEFAULT, KMIP_CRYPTOALG_AES);
-    return(report_encoding_test_result(&ctx, expected, observed, result, __func__));
+    result = report_encoding_test_result(
+        &ctx,
+        expected,
+        observed,
+        result,
+        __func__);
+    kmip_destroy(&ctx);
+    return(result);
 }
 
 int
@@ -305,7 +654,60 @@ test_decode_enum(void)
     enum cryptographic_algorithm observed = 0;
     
     int result = decode_enum(&ctx, KMIP_TAG_DEFAULT, &observed);
-    return(report_decoding_test_result(&ctx, observed == expected, result, __func__));
+    result = report_decoding_test_result(
+        &ctx,
+        observed == expected,
+        result,
+        __func__);
+    kmip_destroy(&ctx);
+    return(result);
+}
+
+int
+test_encode_bool(void)
+{
+    uint8 expected[16] = {
+        0x42, 0x00, 0x00, 0x06, 0x00, 0x00, 0x00, 0x08,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01
+    };
+    
+    uint8 observed[16] = {0};
+    struct kmip ctx = {0};
+    kmip_init(&ctx, observed, ARRAY_LENGTH(observed), KMIP_1_0);
+    
+    int result = encode_bool(&ctx, KMIP_TAG_DEFAULT, KMIP_TRUE);
+    result = report_encoding_test_result(
+        &ctx,
+        expected,
+        observed,
+        result,
+        __func__);
+    kmip_destroy(&ctx);
+    return(result);
+}
+
+int
+test_decode_bool(void)
+{
+    uint8 encoding[16] = {
+        0x42, 0x00, 0x00, 0x06, 0x00, 0x00, 0x00, 0x08,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01
+    };
+    
+    struct kmip ctx = {0};
+    kmip_init(&ctx, encoding, ARRAY_LENGTH(encoding), KMIP_1_0);
+    
+    bool32 expected = KMIP_TRUE;
+    bool32 observed = 0;
+    
+    int result = decode_bool(&ctx, KMIP_TAG_DEFAULT, &observed);
+    result = report_decoding_test_result(
+        &ctx,
+        observed == expected,
+        result,
+        __func__);
+    kmip_destroy(&ctx);
+    return(result);
 }
 
 int
@@ -326,26 +728,14 @@ test_encode_text_string(void)
     example.size = 11;
     
     int result = encode_text_string(&ctx, KMIP_TAG_DEFAULT, &example);
-    return(report_encoding_test_result(&ctx, expected, observed, result, __func__));
-}
-
-int
-compare_text_string(const struct text_string *a, const struct text_string *b)
-{
-    if(a->size != b->size)
-    {
-        return(KMIP_FALSE);
-    }
-    
-    for(size_t i = 0; i < a->size; i++)
-    {
-        if(a->value[i] != b->value[i])
-        {
-            return(KMIP_FALSE);
-        }
-    }
-    
-    return(KMIP_TRUE);
+    result = report_encoding_test_result(
+        &ctx,
+        expected,
+        observed,
+        result,
+        __func__);
+    kmip_destroy(&ctx);
+    return(result);
 }
 
 int
@@ -366,14 +756,14 @@ test_decode_text_string(void)
     struct text_string observed = {0};
     
     int result = decode_text_string(&ctx, KMIP_TAG_DEFAULT, &observed);
-    int comparison = compare_text_string(&expected, &observed);
-    free_text_string(&ctx, &observed);
-    
-    return(report_decoding_test_result(
+    result = report_decoding_test_result(
         &ctx,
-        comparison,
+        compare_text_string(&expected, &observed),
         result,
-        __func__));
+        __func__);
+    free_text_string(&ctx, &observed);
+    kmip_destroy(&ctx);
+    return(result);
 }
 
 int
@@ -394,7 +784,43 @@ test_encode_byte_string(void)
     example.size = 3;
     
     int result = encode_byte_string(&ctx, KMIP_TAG_DEFAULT, &example);
-    return(report_encoding_test_result(&ctx, expected, observed, result, __func__));
+    result = report_encoding_test_result(
+        &ctx,
+        expected,
+        observed,
+        result,
+        __func__);
+    kmip_destroy(&ctx);
+    return(result);
+}
+
+int
+test_decode_byte_string(void)
+{
+    uint8 encoding[16] = {
+        0x42, 0x00, 0x00, 0x08, 0x00, 0x00, 0x00, 0x03,
+        0x01, 0x02, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00
+    };
+    
+    struct kmip ctx = {0};
+    kmip_init(&ctx, encoding, ARRAY_LENGTH(encoding), KMIP_1_0);
+
+    uint8 str[3] = {0x01, 0x02, 0x03};
+    
+    struct byte_string expected = {0};
+    expected.value = str;
+    expected.size = 3;
+    struct byte_string observed = {0};
+    
+    int result = decode_byte_string(&ctx, KMIP_TAG_DEFAULT, &observed);
+    result = report_decoding_test_result(
+        &ctx,
+        compare_byte_string(&expected, &observed),
+        result,
+        __func__);
+    free_byte_string(&ctx, &observed);
+    kmip_destroy(&ctx);
+    return(result);
 }
 
 int
@@ -410,7 +836,38 @@ test_encode_date_time(void)
     kmip_init(&ctx, observed, ARRAY_LENGTH(observed), KMIP_1_0);
     
     int result = encode_date_time(&ctx, KMIP_TAG_DEFAULT, 1205495800);
-    return(report_encoding_test_result(&ctx, expected, observed, result, __func__));
+    result = report_encoding_test_result(
+        &ctx,
+        expected,
+        observed,
+        result,
+        __func__);
+    kmip_destroy(&ctx);
+    return(result);
+}
+
+int
+test_decode_date_time(void)
+{
+    uint8 encoding[16] = {
+        0x42, 0x00, 0x00, 0x09, 0x00, 0x00, 0x00, 0x08,
+        0x00, 0x00, 0x00, 0x00, 0x47, 0xDA, 0x67, 0xF8
+    };
+    
+    struct kmip ctx = {0};
+    kmip_init(&ctx, encoding, ARRAY_LENGTH(encoding), KMIP_1_0);
+    
+    uint64 expected = 1205495800;
+    uint64 observed = 0;
+    
+    int result = decode_date_time(&ctx, KMIP_TAG_DEFAULT, &observed);
+    result = report_decoding_test_result(
+        &ctx,
+        observed == expected,
+        result,
+        __func__);
+    kmip_destroy(&ctx);
+    return(result);
 }
 
 int
@@ -426,7 +883,38 @@ test_encode_interval(void)
     kmip_init(&ctx, observed, ARRAY_LENGTH(observed), KMIP_1_0);
     
     int result = encode_interval(&ctx, KMIP_TAG_DEFAULT, 864000);
-    return(report_encoding_test_result(&ctx, expected, observed, result, __func__));
+    result = report_encoding_test_result(
+        &ctx,
+        expected,
+        observed,
+        result,
+        __func__);
+    kmip_destroy(&ctx);
+    return(result);
+}
+
+int
+test_decode_interval(void)
+{
+    uint8 encoding[16] = {
+        0x42, 0x00, 0x00, 0x0A, 0x00, 0x00, 0x00, 0x04,
+        0x00, 0x0D, 0x2F, 0x00, 0x00, 0x00, 0x00, 0x00
+    };
+    
+    struct kmip ctx = {0};
+    kmip_init(&ctx, encoding, ARRAY_LENGTH(encoding), KMIP_1_0);
+    
+    uint32 expected = 864000;
+    uint32 observed = 0;
+    
+    int result = decode_interval(&ctx, KMIP_TAG_DEFAULT, &observed);
+    result = report_decoding_test_result(
+        &ctx,
+        observed == expected,
+        result,
+        __func__);
+    kmip_destroy(&ctx);
+    return(result);
 }
 
 int
@@ -454,7 +942,49 @@ test_encode_name(void)
     n.type = KMIP_NAME_UNINTERPRETED_TEXT_STRING;
     
     int result = encode_name(&ctx, &n);
-    return(report_encoding_test_result(&ctx, expected, observed, result, __func__));
+    result = report_encoding_test_result(
+        &ctx,
+        expected,
+        observed,
+        result,
+        __func__);
+    kmip_destroy(&ctx);
+    return(result);
+}
+
+int
+test_decode_name(void)
+{
+    uint8 encoding[48] = {
+        0x42, 0x00, 0x53, 0x01, 0x00, 0x00, 0x00, 0x28,
+        0x42, 0x00, 0x55, 0x07, 0x00, 0x00, 0x00, 0x09,
+        0x54, 0x65, 0x6D, 0x70, 0x6C, 0x61, 0x74, 0x65,
+        0x31, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x42, 0x00, 0x54, 0x05, 0x00, 0x00, 0x00, 0x04,
+        0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00
+    };
+    
+    struct kmip ctx = {0};
+    kmip_init(&ctx, encoding, ARRAY_LENGTH(encoding), KMIP_1_0);
+    
+    struct text_string value = {0};
+    value.value = "Template1";
+    value.size = 9;
+    
+    struct name expected = {0};
+    expected.value = &value;
+    expected.type = KMIP_NAME_UNINTERPRETED_TEXT_STRING;
+    struct name observed = {0};
+    
+    int result = decode_name(&ctx, &observed);
+    result = report_decoding_test_result(
+        &ctx,
+        compare_name(&expected, &observed),
+        result,
+        __func__);
+    free_name(&ctx, &observed);
+    kmip_destroy(&ctx);
+    return(result);
 }
 
 int
@@ -488,7 +1018,14 @@ test_encode_attribute_unique_identifier(void)
     attr.value = &uuid;
     
     int result = encode_attribute(&ctx, &attr);
-    return(report_encoding_test_result(&ctx, expected, observed, result, __func__));
+    result = report_encoding_test_result(
+        &ctx,
+        expected,
+        observed,
+        result,
+        __func__);
+    kmip_destroy(&ctx);
+    return(result);
 }
 
 int
@@ -524,7 +1061,14 @@ test_encode_attribute_name(void)
     attr.value = &n;
     
     int result = encode_attribute(&ctx, &attr);
-    return(report_encoding_test_result(&ctx, expected, observed, result, __func__));
+    result = report_encoding_test_result(
+        &ctx,
+        expected,
+        observed,
+        result,
+        __func__);
+    kmip_destroy(&ctx);
+    return(result);
 }
 
 int
@@ -550,7 +1094,14 @@ test_encode_attribute_object_type(void)
     attr.value = &t;
     
     int result = encode_attribute(&ctx, &attr);
-    return(report_encoding_test_result(&ctx, expected, observed, result, __func__));
+    result = report_encoding_test_result(
+        &ctx,
+        expected,
+        observed,
+        result,
+        __func__);
+    kmip_destroy(&ctx);
+    return(result);
 }
 
 int
@@ -577,7 +1128,14 @@ test_encode_attribute_cryptographic_algorithm(void)
     attr.value = &a;
     
     int result = encode_attribute(&ctx, &attr);
-    return(report_encoding_test_result(&ctx, expected, observed, result, __func__));
+    result = report_encoding_test_result(
+        &ctx,
+        expected,
+        observed,
+        result,
+        __func__);
+    kmip_destroy(&ctx);
+    return(result);
 }
 
 int
@@ -604,7 +1162,14 @@ test_encode_attribute_cryptographic_length(void)
     attr.value = &length;
     
     int result = encode_attribute(&ctx, &attr);
-    return(report_encoding_test_result(&ctx, expected, observed, result, __func__));
+    result = report_encoding_test_result(
+        &ctx,
+        expected,
+        observed,
+        result,
+        __func__);
+    kmip_destroy(&ctx);
+    return(result);
 }
 
 int
@@ -634,7 +1199,14 @@ test_encode_attribute_operation_policy_name(void)
     attr.value = &policy;
     
     int result = encode_attribute(&ctx, &attr);
-    return(report_encoding_test_result(&ctx, expected, observed, result, __func__));
+    result = report_encoding_test_result(
+        &ctx,
+        expected,
+        observed,
+        result,
+        __func__);
+    kmip_destroy(&ctx);
+    return(result);
 }
 
 int
@@ -661,7 +1233,14 @@ test_encode_attribute_cryptographic_usage_mask(void)
     attr.value = &mask;
     
     int result = encode_attribute(&ctx, &attr);
-    return(report_encoding_test_result(&ctx, expected, observed, result, __func__));
+    result = report_encoding_test_result(
+        &ctx,
+        expected,
+        observed,
+        result,
+        __func__);
+    kmip_destroy(&ctx);
+    return(result);
 }
 
 int
@@ -686,7 +1265,14 @@ test_encode_attribute_state(void)
     attr.value = &s;
     
     int result = encode_attribute(&ctx, &attr);
-    return(report_encoding_test_result(&ctx, expected, observed, result, __func__));
+    result = report_encoding_test_result(
+        &ctx,
+        expected,
+        observed,
+        result,
+        __func__);
+    kmip_destroy(&ctx);
+    return(result);
 }
 
 int
@@ -709,7 +1295,14 @@ test_encode_protocol_version(void)
     pv.minor = 0;
     
     int result = encode_protocol_version(&ctx, &pv);
-    return(report_encoding_test_result(&ctx, expected, observed, result, __func__));
+    result = report_encoding_test_result(
+        &ctx,
+        expected,
+        observed,
+        result,
+        __func__);
+    kmip_destroy(&ctx);
+    return(result);
 }
 
 int
@@ -738,7 +1331,14 @@ test_encode_cryptographic_parameters(void)
     cp.key_role_type = KMIP_ROLE_KEK;
     
     int result = encode_cryptographic_parameters(&ctx, &cp);
-    return(report_encoding_test_result(&ctx, expected, observed, result, __func__));
+    result = report_encoding_test_result(
+        &ctx,
+        expected,
+        observed,
+        result,
+        __func__);
+    kmip_destroy(&ctx);
+    return(result);
 }
 
 int
@@ -773,7 +1373,14 @@ test_encode_encryption_key_information(void)
     eki.cryptographic_parameters = &cp;
     
     int result = encode_encryption_key_information(&ctx, &eki);
-    return(report_encoding_test_result(&ctx, expected, observed, result, __func__));
+    result = report_encoding_test_result(
+        &ctx,
+        expected,
+        observed,
+        result,
+        __func__);
+    kmip_destroy(&ctx);
+    return(result);
 }
 
 int
@@ -808,7 +1415,14 @@ test_encode_mac_signature_key_information(void)
     mski.cryptographic_parameters = &cp;
     
     int result = encode_mac_signature_key_information(&ctx, &mski);
-    return(report_encoding_test_result(&ctx, expected, observed, result, __func__));
+    result = report_encoding_test_result(
+        &ctx,
+        expected,
+        observed,
+        result,
+        __func__);
+    kmip_destroy(&ctx);
+    return(result);
 }
 
 int
@@ -850,7 +1464,14 @@ test_encode_key_wrapping_data(void)
     kwd.encryption_key_info = &eki;
     
     int result = encode_key_wrapping_data(&ctx, &kwd);
-    return(report_encoding_test_result(&ctx, expected, observed, result, __func__));
+    result = report_encoding_test_result(
+        &ctx,
+        expected,
+        observed,
+        result,
+        __func__);
+    kmip_destroy(&ctx);
+    return(result);
 }
 
 int
@@ -875,7 +1496,14 @@ test_encode_key_material_byte_string(void)
     key.size = ARRAY_LENGTH(value);
     
     int result = encode_key_material(&ctx, KMIP_KEYFORMAT_RAW, &key);
-    return(report_encoding_test_result(&ctx, expected, observed, result, __func__));
+    result = report_encoding_test_result(
+        &ctx,
+        expected,
+        observed,
+        result,
+        __func__);
+    kmip_destroy(&ctx);
+    return(result);
 }
 
 int
@@ -910,7 +1538,14 @@ test_encode_key_material_transparent_symmetric_key(void)
         &ctx,
         KMIP_KEYFORMAT_TRANS_SYMMETRIC_KEY,
         &tsk);
-    return(report_encoding_test_result(&ctx, expected, observed, result, __func__));
+    result = report_encoding_test_result(
+        &ctx,
+        expected,
+        observed,
+        result,
+        __func__);
+    kmip_destroy(&ctx);
+    return(result);
 }
 
 int
@@ -942,7 +1577,14 @@ test_encode_key_value(void)
         &ctx,
         KMIP_KEYFORMAT_RAW,
         &kv);
-    return(report_encoding_test_result(&ctx, expected, observed, result, __func__));
+    result = report_encoding_test_result(
+        &ctx,
+        expected,
+        observed,
+        result,
+        __func__);
+    kmip_destroy(&ctx);
+    return(result);
 }
 
 int
@@ -1000,7 +1642,14 @@ test_encode_key_value_with_attributes(void)
         &ctx,
         KMIP_KEYFORMAT_RAW,
         &kv);
-    return(report_encoding_test_result(&ctx, expected, observed, result, __func__));
+    result = report_encoding_test_result(
+        &ctx,
+        expected,
+        observed,
+        result,
+        __func__);
+    kmip_destroy(&ctx);
+    return(result);
 }
 
 int
@@ -1069,7 +1718,14 @@ test_encode_key_block_key_value_byte_string(void)
     kb.key_wrapping_data = &kwd;
     
     int result = encode_key_block(&ctx, &kb);
-    return(report_encoding_test_result(&ctx, expected, observed, result, __func__));
+    result = report_encoding_test_result(
+        &ctx,
+        expected,
+        observed,
+        result,
+        __func__);
+    kmip_destroy(&ctx);
+    return(result);
 }
 
 int
@@ -1111,7 +1767,14 @@ test_encode_key_block_key_value_structure(void)
     kb.cryptographic_length = 128;
     
     int result = encode_key_block(&ctx, &kb);
-    return(report_encoding_test_result(&ctx, expected, observed, result, __func__));
+    result = report_encoding_test_result(
+        &ctx,
+        expected,
+        observed,
+        result,
+        __func__);
+    kmip_destroy(&ctx);
+    return(result);
 }
 
 int
@@ -1157,7 +1820,14 @@ test_encode_symmetric_key(void)
     sk.key_block = &kb;
     
     int result = encode_symmetric_key(&ctx, &sk);
-    return(report_encoding_test_result(&ctx, expected, observed, result, __func__));
+    result = report_encoding_test_result(
+        &ctx,
+        expected,
+        observed,
+        result,
+        __func__);
+    kmip_destroy(&ctx);
+    return(result);
 }
 
 int
@@ -1241,7 +1911,14 @@ test_encode_public_key(void)
     pk.key_block = &kb;
     
     int result = encode_public_key(&ctx, &pk);
-    return(report_encoding_test_result(&ctx, expected, observed, result, __func__));
+    result = report_encoding_test_result(
+        &ctx,
+        expected,
+        observed,
+        result,
+        __func__);
+    kmip_destroy(&ctx);
+    return(result);
 }
 
 int
@@ -1583,7 +2260,14 @@ test_encode_private_key(void)
     pk.key_block = &kb;
     
     int result = encode_private_key(&ctx, &pk);
-    return(report_encoding_test_result(&ctx, expected, observed, result, __func__));
+    result = report_encoding_test_result(
+        &ctx,
+        expected,
+        observed,
+        result,
+        __func__);
+    kmip_destroy(&ctx);
+    return(result);
 }
 
 int
@@ -1635,7 +2319,14 @@ test_encode_key_wrapping_specification(void)
     kws.attribute_name_count = 1;
     
     int result = encode_key_wrapping_specification(&ctx, &kws);
-    return(report_encoding_test_result(&ctx, expected, observed, result, __func__));
+    result = report_encoding_test_result(
+        &ctx,
+        expected,
+        observed,
+        result,
+        __func__);
+    kmip_destroy(&ctx);
+    return(result);
 }
 
 int
@@ -1699,7 +2390,14 @@ test_encode_create_request_payload(void)
     crp.template_attribute = &ta;
     
     int result = encode_create_request_payload(&ctx, &crp);
-    return(report_encoding_test_result(&ctx, expected, observed, result, __func__));
+    result = report_encoding_test_result(
+        &ctx,
+        expected,
+        observed,
+        result,
+        __func__);
+    kmip_destroy(&ctx);
+    return(result);
 }
 
 int
@@ -1730,7 +2428,14 @@ test_encode_create_response_payload(void)
     crp.unique_identifier = &uuid;
     
     int result = encode_create_response_payload(&ctx, &crp);
-    return(report_encoding_test_result(&ctx, expected, observed, result, __func__));
+    result = report_encoding_test_result(
+        &ctx,
+        expected,
+        observed,
+        result,
+        __func__);
+    kmip_destroy(&ctx);
+    return(result);
 }
 
 int
@@ -1780,7 +2485,14 @@ test_encode_create_response_payload_with_template_attribute(void)
     crp.template_attribute = &ta;
     
     int result = encode_create_response_payload(&ctx, &crp);
-    return(report_encoding_test_result(&ctx, expected, observed, result, __func__));
+    result = report_encoding_test_result(
+        &ctx,
+        expected,
+        observed,
+        result,
+        __func__);
+    kmip_destroy(&ctx);
+    return(result);
 }
 
 int
@@ -1808,7 +2520,14 @@ test_encode_get_request_payload(void)
     grp.unique_identifier = &uuid;
     
     int result = encode_get_request_payload(&ctx, &grp);
-    return(report_encoding_test_result(&ctx, expected, observed, result, __func__));
+    result = report_encoding_test_result(
+        &ctx,
+        expected,
+        observed,
+        result,
+        __func__);
+    kmip_destroy(&ctx);
+    return(result);
 }
 
 int
@@ -1842,7 +2561,14 @@ test_encode_get_request_payload_with_format_compression(void)
     grp.key_compression_type = KMIP_KEYCOMP_EC_PUB_UNCOMPRESSED;
     
     int result = encode_get_request_payload(&ctx, &grp);
-    return(report_encoding_test_result(&ctx, expected, observed, result, __func__));
+    result = report_encoding_test_result(
+        &ctx,
+        expected,
+        observed,
+        result,
+        __func__);
+    kmip_destroy(&ctx);
+    return(result);
 }
 
 int
@@ -1898,7 +2624,14 @@ test_encode_get_request_payload_with_wrapping_spec(void)
     grp.key_wrapping_spec = &kws;
     
     int result = encode_get_request_payload(&ctx, &grp);
-    return(report_encoding_test_result(&ctx, expected, observed, result, __func__));
+    result = report_encoding_test_result(
+        &ctx,
+        expected,
+        observed,
+        result,
+        __func__);
+    kmip_destroy(&ctx);
+    return(result);
 }
 
 int
@@ -1964,7 +2697,14 @@ test_encode_get_response_payload(void)
     grp.object = &key;
     
     int result = encode_get_response_payload(&ctx, &grp);
-    return(report_encoding_test_result(&ctx, expected, observed, result, __func__));
+    result = report_encoding_test_result(
+        &ctx,
+        expected,
+        observed,
+        result,
+        __func__);
+    kmip_destroy(&ctx);
+    return(result);
 }
 
 int
@@ -1992,7 +2732,14 @@ test_encode_destroy_request_payload(void)
     drp.unique_identifier = &uuid;
     
     int result = encode_destroy_request_payload(&ctx, &drp);
-    return(report_encoding_test_result(&ctx, expected, observed, result, __func__));
+    result = report_encoding_test_result(
+        &ctx,
+        expected,
+        observed,
+        result,
+        __func__);
+    kmip_destroy(&ctx);
+    return(result);
 }
 
 int
@@ -2020,7 +2767,14 @@ test_encode_destroy_response_payload(void)
     drp.unique_identifier = &uuid;
     
     int result = encode_destroy_response_payload(&ctx, &drp);
-    return(report_encoding_test_result(&ctx, expected, observed, result, __func__));
+    result = report_encoding_test_result(
+        &ctx,
+        expected,
+        observed,
+        result,
+        __func__);
+    kmip_destroy(&ctx);
+    return(result);
 }
 
 int
@@ -2051,7 +2805,14 @@ test_encode_username_password_credential(void)
     upc.password = &password;
     
     int result = encode_username_password_credential(&ctx, &upc);
-    return(report_encoding_test_result(&ctx, expected, observed, result, __func__));
+    result = report_encoding_test_result(
+        &ctx,
+        expected,
+        observed,
+        result,
+        __func__);
+    kmip_destroy(&ctx);
+    return(result);
 }
 
 int
@@ -2088,7 +2849,14 @@ test_encode_credential_username_password_credential(void)
     c.credential_value = &upc;
     
     int result = encode_credential(&ctx, &c);
-    return(report_encoding_test_result(&ctx, expected, observed, result, __func__));
+    result = report_encoding_test_result(
+        &ctx,
+        expected,
+        observed,
+        result,
+        __func__);
+    kmip_destroy(&ctx);
+    return(result);
 }
 
 int
@@ -2130,7 +2898,14 @@ test_encode_authentication_username_password_credential(void)
     a.credential = &c;
     
     int result = encode_authentication(&ctx, &a);
-    return(report_encoding_test_result(&ctx, expected, observed, result, __func__));
+    result = report_encoding_test_result(
+        &ctx,
+        expected,
+        observed,
+        result,
+        __func__);
+    kmip_destroy(&ctx);
+    return(result);
 }
 
 int
@@ -2197,7 +2972,14 @@ test_encode_request_header(void)
     rh.batch_count = 2;
     
     int result = encode_request_header(&ctx, &rh);
-    return(report_encoding_test_result(&ctx, expected, observed, result, __func__));
+    result = report_encoding_test_result(
+        &ctx,
+        expected,
+        observed,
+        result,
+        __func__);
+    kmip_destroy(&ctx);
+    return(result);
 }
 
 int
@@ -2230,7 +3012,14 @@ test_encode_response_header(void)
     rh.batch_count = 1;
     
     int result = encode_response_header(&ctx, &rh);
-    return(report_encoding_test_result(&ctx, expected, observed, result, __func__));
+    result = report_encoding_test_result(
+        &ctx,
+        expected,
+        observed,
+        result,
+        __func__);
+    kmip_destroy(&ctx);
+    return(result);
 }
 
 int
@@ -2265,7 +3054,14 @@ test_encode_request_batch_item_get_payload(void)
     rbi.request_payload = &grp;
     
     int result = encode_request_batch_item(&ctx, &rbi);
-    return(report_encoding_test_result(&ctx, expected, observed, result, __func__));
+    result = report_encoding_test_result(
+        &ctx,
+        expected,
+        observed,
+        result,
+        __func__);
+    kmip_destroy(&ctx);
+    return(result);
 }
 
 int
@@ -2342,7 +3138,14 @@ test_encode_response_batch_item_get_payload(void)
     rbi.response_payload = &grp;
     
     int result = encode_response_batch_item(&ctx, &rbi);
-    return(report_encoding_test_result(&ctx, expected, observed, result, __func__));
+    result = report_encoding_test_result(
+        &ctx,
+        expected,
+        observed,
+        result,
+        __func__);
+    kmip_destroy(&ctx);
+    return(result);
 }
 
 int
@@ -2401,7 +3204,14 @@ test_encode_request_message_get(void)
     rm.batch_count = 1;
     
     int result = encode_request_message(&ctx, &rm);
-    return(report_encoding_test_result(&ctx, expected, observed, result, __func__));
+    result = report_encoding_test_result(
+        &ctx,
+        expected,
+        observed,
+        result,
+        __func__);
+    kmip_destroy(&ctx);
+    return(result);
 }
 
 int
@@ -2503,7 +3313,14 @@ test_encode_response_message_get(void)
     rm.batch_count = 1;
     
     int result = encode_response_message(&ctx, &rm);
-    return(report_encoding_test_result(&ctx, expected, observed, result, __func__));
+    result = report_encoding_test_result(
+        &ctx,
+        expected,
+        observed,
+        result,
+        __func__);
+    kmip_destroy(&ctx);
+    return(result);
 }
 
 int
@@ -2597,7 +3414,14 @@ test_encode_template_attribute(void)
     ta.attribute_count = ARRAY_LENGTH(a);
     
     int result = encode_template_attribute(&ctx, &ta);
-    return(report_encoding_test_result(&ctx, expected, observed, result, __func__));
+    result = report_encoding_test_result(
+        &ctx,
+        expected,
+        observed,
+        result,
+        __func__);
+    kmip_destroy(&ctx);
+    return(result);
 }
 
 /*
@@ -2665,7 +3489,14 @@ test_encode_device_credential(void)
     dc.media_identifier = &med;
     
     int result = encode_device_credential(&ctx, &dc);
-    return(report_encoding_test_result(&ctx, expected, observed, result, __func__));
+    result = report_encoding_test_result(
+        &ctx,
+        expected,
+        observed,
+        result,
+        __func__);
+    kmip_destroy(&ctx);
+    return(result);
 }
 
 int
@@ -2710,7 +3541,14 @@ test_encode_key_wrapping_data_with_encoding_option(void)
     kwd.encoding_option = KMIP_ENCODE_NO_ENCODING;
     
     int result = encode_key_wrapping_data(&ctx, &kwd);
-    return(report_encoding_test_result(&ctx, expected, observed, result, __func__));
+    result = report_encoding_test_result(
+        &ctx,
+        expected,
+        observed,
+        result,
+        __func__);
+    kmip_destroy(&ctx);
+    return(result);
 }
 
 int
@@ -2755,7 +3593,14 @@ test_encode_key_wrapping_specification_with_encoding_option(void)
     kws.encoding_option = KMIP_ENCODE_NO_ENCODING;
     
     int result = encode_key_wrapping_specification(&ctx, &kws);
-    return(report_encoding_test_result(&ctx, expected, observed, result, __func__));
+    result = report_encoding_test_result(
+        &ctx,
+        expected,
+        observed,
+        result,
+        __func__);
+    kmip_destroy(&ctx);
+    return(result);
 }
 
 /*
@@ -2792,7 +3637,14 @@ test_encode_nonce(void)
     n.nonce_value = &nv;
     
     int result = encode_nonce(&ctx, &n);
-    return(report_encoding_test_result(&ctx, expected, observed, result, __func__));
+    result = report_encoding_test_result(
+        &ctx,
+        expected,
+        observed,
+        result,
+        __func__);
+    kmip_destroy(&ctx);
+    return(result);
 }
 
 int
@@ -2858,7 +3710,14 @@ test_encode_attestation_credential(void)
     ac.attestation_assertion = &aa;
     
     int result = encode_attestation_credential(&ctx, &ac);
-    return(report_encoding_test_result(&ctx, expected, observed, result, __func__));
+    result = report_encoding_test_result(
+        &ctx,
+        expected,
+        observed,
+        result,
+        __func__);
+    kmip_destroy(&ctx);
+    return(result);
 }
 
 int
@@ -2937,7 +3796,14 @@ test_encode_request_header_with_attestation_details(void)
     rh.batch_count = 2;
     
     int result = encode_request_header(&ctx, &rh);
-    return(report_encoding_test_result(&ctx, expected, observed, result, __func__));
+    result = report_encoding_test_result(
+        &ctx,
+        expected,
+        observed,
+        result,
+        __func__);
+    kmip_destroy(&ctx);
+    return(result);
 }
 
 int
@@ -3001,7 +3867,14 @@ test_encode_response_header_with_attestation_details(void)
     rh.batch_count = 1;
     
     int result = encode_response_header(&ctx, &rh);
-    return(report_encoding_test_result(&ctx, expected, observed, result, __func__));
+    result = report_encoding_test_result(
+        &ctx,
+        expected,
+        observed,
+        result,
+        __func__);
+    kmip_destroy(&ctx);
+    return(result);
 }
 
 int
@@ -3058,7 +3931,14 @@ test_encode_cryptographic_parameters_with_digital_signature_fields(void)
     cp.initial_counter_value = 0;
     
     int result = encode_cryptographic_parameters(&ctx, &cp);
-    return(report_encoding_test_result(&ctx, expected, observed, result, __func__));
+    result = report_encoding_test_result(
+        &ctx,
+        expected,
+        observed,
+        result,
+        __func__);
+    kmip_destroy(&ctx);
+    return(result);
 }
 
 /*
@@ -3146,7 +4026,14 @@ test_encode_cryptographic_parameters_with_mask_fields(void)
     cp.trailer_field = 1;
     
     int result = encode_cryptographic_parameters(&ctx, &cp);
-    return(report_encoding_test_result(&ctx, expected, observed, result, __func__));
+    result = report_encoding_test_result(
+        &ctx,
+        expected,
+        observed,
+        result,
+        __func__);
+    kmip_destroy(&ctx);
+    return(result);
 }
 
 int
@@ -3184,7 +4071,14 @@ test_encode_get_request_payload_with_wrap_type(void)
     grp.key_wrap_type = KMIP_WRAPTYPE_NOT_WRAPPED;
     
     int result = encode_get_request_payload(&ctx, &grp);
-    return(report_encoding_test_result(&ctx, expected, observed, result, __func__));
+    result = report_encoding_test_result(
+        &ctx,
+        expected,
+        observed,
+        result,
+        __func__);
+    kmip_destroy(&ctx);
+    return(result);
 }
 
 int
@@ -3283,7 +4177,14 @@ test_encode_request_header_with_correlation_values(void)
     rh.server_correlation_value = &scv;
     
     int result = encode_request_header(&ctx, &rh);
-    return(report_encoding_test_result(&ctx, expected, observed, result, __func__));
+    result = report_encoding_test_result(
+        &ctx,
+        expected,
+        observed,
+        result,
+        __func__);
+    kmip_destroy(&ctx);
+    return(result);
 }
 
 int
@@ -3362,7 +4263,14 @@ test_encode_response_header_with_correlation_values(void)
     rh.server_correlation_value = &scv;
     
     int result = encode_response_header(&ctx, &rh);
-    return(report_encoding_test_result(&ctx, expected, observed, result, __func__));
+    result = report_encoding_test_result(
+        &ctx,
+        expected,
+        observed,
+        result,
+        __func__);
+    kmip_destroy(&ctx);
+    return(result);
 }
 
 /*
@@ -3466,7 +4374,14 @@ test_kmip_1_1_test_suite_3_1_1_0_a(void)
     rm.batch_count = 1;
     
     int result = encode_request_message(&ctx, &rm);
-    return(report_encoding_test_result(&ctx, expected, observed, result, __func__));
+    result = report_encoding_test_result(
+        &ctx,
+        expected,
+        observed,
+        result,
+        __func__);
+    kmip_destroy(&ctx);
+    return(result);
 }
 
 int
@@ -3533,7 +4448,14 @@ test_kmip_1_1_test_suite_3_1_1_0_b(void)
     rm.batch_count = 1;
     
     int result = encode_response_message(&ctx, &rm);
-    return(report_encoding_test_result(&ctx, expected, observed, result, __func__));
+    result = report_encoding_test_result(
+        &ctx,
+        expected,
+        observed,
+        result,
+        __func__);
+    kmip_destroy(&ctx);
+    return(result);
 }
 
 int
@@ -3593,7 +4515,14 @@ test_kmip_1_1_test_suite_3_1_1_1_a(void)
     rm.batch_count = 1;
     
     int result = encode_request_message(&ctx, &rm);
-    return(report_encoding_test_result(&ctx, expected, observed, result, __func__));
+    result = report_encoding_test_result(
+        &ctx,
+        expected,
+        observed,
+        result,
+        __func__);
+    kmip_destroy(&ctx);
+    return(result);
 }
 
 int
@@ -3657,7 +4586,14 @@ test_kmip_1_1_test_suite_3_1_1_1_b(void)
     rm.batch_count = 1;
     
     int result = encode_response_message(&ctx, &rm);
-    return(report_encoding_test_result(&ctx, expected, observed, result, __func__));
+    result = report_encoding_test_result(
+        &ctx,
+        expected,
+        observed,
+        result,
+        __func__);
+    kmip_destroy(&ctx);
+    return(result);
 }
 
 int
@@ -3717,7 +4653,14 @@ test_kmip_1_1_test_suite_3_1_3_2_a(void)
     rm.batch_count = 1;
     
     int result = encode_request_message(&ctx, &rm);
-    return(report_encoding_test_result(&ctx, expected, observed, result, __func__));
+    result = report_encoding_test_result(
+        &ctx,
+        expected,
+        observed,
+        result,
+        __func__);
+    kmip_destroy(&ctx);
+    return(result);
 }
 
 int
@@ -3819,15 +4762,22 @@ test_kmip_1_1_test_suite_3_1_3_2_b(void)
     rm.batch_count = 1;
     
     int result = encode_response_message(&ctx, &rm);
-    return(report_encoding_test_result(&ctx, expected, observed, result, __func__));
+    result = report_encoding_test_result(
+        &ctx,
+        expected,
+        observed,
+        result,
+        __func__);
+    kmip_destroy(&ctx);
+    return(result);
 }
 
 /* Test Harness */
 
-int
-main(void)
+void
+run_tests(void)
 {
-    int num_tests = 76;
+    int num_tests = 88;
     int num_failures = 0;
     
     printf("Tests\n");
@@ -3836,17 +4786,31 @@ main(void)
     printf("\nKMIP 1.0 Feature Tests\n");
     printf("----------------------\n");
     num_failures += test_buffer_full_and_resize();
+    num_failures += test_is_tag_next();
+    num_failures += test_get_num_items_next();
+    num_failures += test_get_num_items_next_with_partial_item();
+    num_failures += test_get_num_items_next_with_mismatch_item();
+    num_failures += test_get_num_items_next_with_no_matches();
+    num_failures += test_get_num_items_next_with_non_structures();
+    printf("\n");
     num_failures += test_decode_int8_be();
     num_failures += test_decode_int32_be();
     num_failures += test_decode_int64_be();
-    num_failures += test_encode_integer();
     num_failures += test_decode_integer();
-    num_failures += test_encode_long();
     num_failures += test_decode_long();
-    num_failures += test_encode_enum();
     num_failures += test_decode_enum();
-    num_failures += test_encode_text_string();
+    num_failures += test_decode_bool();
     num_failures += test_decode_text_string();
+    num_failures += test_decode_byte_string();
+    num_failures += test_decode_date_time();
+    num_failures += test_decode_interval();
+    num_failures += test_decode_name();
+    printf("\n");
+    num_failures += test_encode_integer();
+    num_failures += test_encode_long();
+    num_failures += test_encode_enum();
+    num_failures += test_encode_bool();
+    num_failures += test_encode_text_string();
     num_failures += test_encode_byte_string();
     num_failures += test_encode_date_time();
     num_failures += test_encode_interval();
@@ -3929,4 +4893,19 @@ main(void)
     printf("Total tests: %d\n", num_tests);
     printf("       PASS: %d\n", num_tests - num_failures);
     printf("    FAILURE: %d\n", num_failures);
+}
+
+int
+main(void)
+{
+    run_tests();
+  
+    /*
+    while(1)
+    {
+        run_tests();
+    }
+    */
+    
+    return(0);
 }

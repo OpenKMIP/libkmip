@@ -288,11 +288,11 @@ enum key_wrap_type
 
 enum kmip_version
 {
-    KMIP_1_0 = 10,
-    KMIP_1_1 = 11,
-    KMIP_1_2 = 12,
-    KMIP_1_3 = 13,
-    KMIP_1_4 = 14
+    KMIP_1_0 = 0,
+    KMIP_1_1 = 1,
+    KMIP_1_2 = 2,
+    KMIP_1_3 = 3,
+    KMIP_1_4 = 4
 };
 
 enum mask_generator
@@ -527,8 +527,143 @@ enum wrapping_method
     KMIP_WRAP_TR31             = 0x05
 };
 
+static const char *attribute_names[25] = {
+    "AttestationType",
+    "BatchErrorContinuationOption",
+    "BlockCipherMode",
+    "CredentialType",
+    "CryptographicAlgorithm",
+    "CryptographicUsageMask",
+    "DigitalSignatureAlgorithm",
+    "EncodingOption",
+    "HashingAlgorithm",
+    "KeyCompressionType",
+    "KeyFormatType",
+    "KeyRoleType",
+    "KeyWrapType",
+    "MaskGenerator",
+    "NameType",
+    "ObjectType",
+    "Operation",
+    "PaddingMethod",
+    "ResultReason",
+    "ResultStatus",
+    "State",
+    "Tag", /*?*/
+    "Type", /*?*/
+    "WrappingMethod",
+    "Unknown" /* Catch all for unsupported enumerations */
+};
+
 int
-validate_enum_value(enum kmip_version version, enum tag t, int value)
+get_enum_string_index(enum tag t)
+{
+    switch(t)
+    {
+        case KMIP_TAG_ATTESTATION_TYPE:
+        return(0);
+        break;
+        
+        case KMIP_TAG_BATCH_ERROR_CONTINUATION_OPTION:
+        return(1);
+        break;
+        
+        case KMIP_TAG_BLOCK_CIPHER_MODE:
+        return(2);
+        break;
+        
+        case KMIP_TAG_CREDENTIAL_TYPE:
+        return(3);
+        break;
+        
+        case KMIP_TAG_CRYPTOGRAPHIC_ALGORITHM:
+        return(4);
+        break;
+        
+        case KMIP_TAG_CRYPTOGRAPHIC_USAGE_MASK:
+        return(5);
+        break;
+        
+        case KMIP_TAG_DIGITAL_SIGNATURE_ALGORITHM:
+        return(6);
+        break;
+        
+        case KMIP_TAG_ENCODING_OPTION:
+        return(7);
+        break;
+        
+        case KMIP_TAG_HASHING_ALGORITHM:
+        return(8);
+        break;
+        
+        case KMIP_TAG_KEY_COMPRESSION_TYPE:
+        return(9);
+        break;
+        
+        case KMIP_TAG_KEY_FORMAT_TYPE:
+        return(10);
+        break;
+        
+        case KMIP_TAG_KEY_ROLE_TYPE:
+        return(11);
+        break;
+        
+        case KMIP_TAG_KEY_WRAP_TYPE:
+        return(12);
+        break;
+        
+        case KMIP_TAG_MASK_GENERATOR:
+        return(13);
+        break;
+        
+        case KMIP_TAG_NAME_TYPE:
+        return(14);
+        break;
+        
+        case KMIP_TAG_OBJECT_TYPE:
+        return(15);
+        break;
+        
+        case KMIP_TAG_OPERATION:
+        return(16);
+        break;
+        
+        case KMIP_TAG_PADDING_METHOD:
+        return(17);
+        break;
+        
+        case KMIP_TAG_RESULT_REASON:
+        return(18);
+        break;
+        
+        case KMIP_TAG_RESULT_STATUS:
+        return(19);
+        break;
+        
+        case KMIP_TAG_STATE:
+        return(20);
+        break;
+        
+        case KMIP_TAG_TAG:
+        return(21);
+        break;
+        
+        case KMIP_TAG_TYPE:
+        return(22);
+        break;
+        
+        case KMIP_TAG_WRAPPING_METHOD:
+        return(23);
+        break;
+        
+        default:
+        return(24);
+        break;
+    };
+}
+
+int
+check_enum_value(enum kmip_version version, enum tag t, int value)
 {
     switch(t)
     {
