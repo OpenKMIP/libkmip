@@ -105,6 +105,17 @@ do                                                         \
     }                                                      \
 } while(0)
 
+#define CHECK_NEW_MEMORY(A, B, C, D)                    \
+do                                                      \
+{                                                       \
+    if((B) == NULL)                                     \
+    {                                                   \
+        set_alloc_error_message((A), (C), (D));         \
+        kmip_push_error_frame((A), __func__, __LINE__); \
+        return(KMIP_MEMORY_ALLOC_FAILED);               \
+    }                                                   \
+} while(0)
+
 #define CALCULATE_PADDING(A) ((8 - ((A) % 8)) % 8)
 
 void *
@@ -268,6 +279,25 @@ set_enum_error_message(struct kmip *ctx, enum tag t, int value, int result)
     };
 }
 
+void
+set_alloc_error_message(struct kmip *ctx, size_t size, const char *type)
+{
+    kmip_init_error_message(ctx);
+    snprintf(
+        ctx->error_message,
+        ctx->error_message_size,
+        "Could not allocate %zd bytes for a %s",
+        size,
+        type);
+}
+
+void
+set_error_message(struct kmip *ctx, const char *message)
+{
+    kmip_init_error_message(ctx);
+    snprintf(ctx->error_message, ctx->error_message_size, "%s", message);
+}
+
 int
 is_tag_next(const struct kmip *ctx, enum tag t)
 {
@@ -285,6 +315,31 @@ is_tag_next(const struct kmip *ctx, enum tag t)
     tag |= ((int32)*index++ << 0);
     
     if(tag != t)
+    {
+        return(KMIP_FALSE);
+    }
+    
+    return(KMIP_TRUE);
+}
+
+int
+is_tag_type_next(const struct kmip *ctx, enum tag t, enum type s)
+{
+    uint8 *index = ctx->index;
+    
+    if((ctx->size - (index - ctx->buffer)) < 4)
+    {
+        return(KMIP_FALSE);
+    }
+    
+    uint32 tag_type = 0;
+    
+    tag_type |= ((int32)*index++ << 24);
+    tag_type |= ((int32)*index++ << 16);
+    tag_type |= ((int32)*index++ << 8);
+    tag_type |= ((int32)*index++ << 0);
+    
+    if(tag_type != TAG_TYPE(t, s))
     {
         return(KMIP_FALSE);
     }
@@ -354,10 +409,14 @@ free_text_string(struct kmip *ctx, struct text_string *value)
 {
     if(value != NULL)
     {
-        ctx->memset_func(value->value, 0, value->size);
-        ctx->free_func(ctx->state, value->value);
+        if(value->value != NULL)
+        {
+            ctx->memset_func(value->value, 0, value->size);
+            ctx->free_func(ctx->state, value->value);
+            
+            value->value = NULL;
+        }
         
-        value->value = NULL;
         value->size = 0;
     }
     
@@ -369,10 +428,14 @@ free_byte_string(struct kmip *ctx, struct byte_string *value)
 {
     if(value != NULL)
     {
-        ctx->memset_func(value->value, 0, value->size);
-        ctx->free_func(ctx->state, value->value);
+        if(value->value != NULL)
+        {
+            ctx->memset_func(value->value, 0, value->size);
+            ctx->free_func(ctx->state, value->value);
+            
+            value->value = NULL;
+        }
         
-        value->value = NULL;
         value->size = 0;
     }
     
@@ -384,10 +447,14 @@ free_name(struct kmip *ctx, struct name *value)
 {
     if(value != NULL)
     {
-        free_text_string(ctx, value->value);
-        ctx->free_func(ctx->state, value->value);
+        if(value->value != NULL)
+        {
+            free_text_string(ctx, value->value);
+            ctx->free_func(ctx->state, value->value);
+            
+            value->value = NULL;
+        }
         
-        value->value = NULL;
         value->type = 0;
     }
     
@@ -399,56 +466,59 @@ free_attribute(struct kmip *ctx, struct attribute *value)
 {
     if(value != NULL)
     {
-        switch(value->type)
+        if(value->value != NULL)
         {
-            case KMIP_ATTR_UNIQUE_IDENTIFIER:
-            free_text_string(ctx, value->value);
-            break;
+            switch(value->type)
+            {
+                case KMIP_ATTR_UNIQUE_IDENTIFIER:
+                free_text_string(ctx, value->value);
+                break;
+                
+                case KMIP_ATTR_NAME:
+                free_name(ctx, value->value);
+                break;
+                
+                case KMIP_ATTR_OBJECT_TYPE:
+                *(int32*)value->value = 0;
+                break;
+                
+                case KMIP_ATTR_CRYPTOGRAPHIC_ALGORITHM:
+                *(int32*)value->value = 0;
+                break;
+                
+                case KMIP_ATTR_CRYPTOGRAPHIC_LENGTH:
+                *(int32*)value->value = KMIP_UNSET;
+                break;
+                
+                case KMIP_ATTR_OPERATION_POLICY_NAME:
+                free_text_string(ctx, value->value);
+                break;
+                
+                case KMIP_ATTR_CRYPTOGRAPHIC_USAGE_MASK:
+                *(int32*)value->value = KMIP_UNSET;
+                break;
+                
+                case KMIP_ATTR_STATE:
+                *(int32*)value->value = 0;
+                break;
+                
+                default:
+                /* NOTE (ph) Hitting this case means that we don't know what the */
+                /*      actual type, size, or value of value->value is. We can   */
+                /*      still free it but we cannot securely zero the memory. We */
+                /*      also do not know how to free any possible substructures  */
+                /*      pointed to within value->value.                          */
+                /*                                                               */
+                /*      Avoid hitting this case at all costs.                    */
+                break;
+            };
             
-            case KMIP_ATTR_NAME:
-            free_name(ctx, value->value);
-            break;
-            
-            case KMIP_ATTR_OBJECT_TYPE:
-            value->value = 0;
-            break;
-            
-            case KMIP_ATTR_CRYPTOGRAPHIC_ALGORITHM:
-            value->value = 0;
-            break;
-            
-            case KMIP_ATTR_CRYPTOGRAPHIC_LENGTH:
-            value->value = 0;  /* TODO (ph) KMIP_UNSET instead? */
-            break;
-            
-            case KMIP_ATTR_OPERATION_POLICY_NAME:
-            free_text_string(ctx, value->value);
-            break;
-            
-            case KMIP_ATTR_CRYPTOGRAPHIC_USAGE_MASK:
-            value->value = 0;  /* TODO (ph) KMIP_UNSET instead? */
-            break;
-            
-            case KMIP_ATTR_STATE:
-            value->value = 0;
-            break;
-            
-            default:
-            /* NOTE (ph) Hitting this case means that we don't know what the */
-            /*      actual type, size, or value of value->value is. We can   */
-            /*      still free it but we cannot securely zero the memory. We */
-            /*      also do not know how to free any possible substructures  */
-            /*      pointed to within value->value.                          */
-            /*                                                               */
-            /*      Avoid hitting this case at all costs.                    */
-            break;
-        };
-        
-        ctx->free_func(ctx->state, value->value);
+            ctx->free_func(ctx->state, value->value);
+            value->value = NULL;
+        }
         
         value->type = 0;
         value->index = KMIP_UNSET;
-        value->value = NULL;
     }
     
     return;
@@ -459,23 +529,90 @@ free_template_attribute(struct kmip *ctx, struct template_attribute *value)
 {
     if(value != NULL)
     {
-        for(size_t i = 0; i < value->name_count; i++)
+        if(value->names != NULL)
         {
-            free_name(ctx, &value->names[i]);
+            for(size_t i = 0; i < value->name_count; i++)
+            {
+                free_name(ctx, &value->names[i]);
+            }
+            ctx->free_func(ctx->state, value->names);
+            
+            value->names = NULL;
         }
-        ctx->free_func(ctx->state, value->names);
         
-        value->names = NULL;
         value->name_count = 0;
         
-        for(size_t i = 0; i < value->attribute_count; i++)
+        if(value->attributes != NULL)
         {
-            free_attribute(ctx, &value->attributes[i]);
+            for(size_t i = 0; i < value->attribute_count; i++)
+            {
+                free_attribute(ctx, &value->attributes[i]);
+            }
+            ctx->free_func(ctx->state, value->attributes);
+            
+            value->attributes = NULL;
         }
-        ctx->free_func(ctx->state, value->attributes);
         
-        value->attributes = NULL;
         value->attribute_count = 0;
+    }
+    
+    return;
+}
+
+void
+free_transparent_symmetric_key(struct kmip *ctx, 
+                               struct transparent_symmetric_key *value)
+{
+    if(value != NULL)
+    {
+        if(value->key != NULL)
+        {
+            free_byte_string(ctx, value->key);
+            value->key = NULL;
+        }
+    }
+    
+    return;
+}
+
+void
+free_key_material(struct kmip *ctx,
+                  enum key_format_type format,
+                  void **value)
+{
+    if(value != NULL)
+    {
+        if(*value != NULL)
+        {
+            switch(format)
+            {
+                case KMIP_KEYFORMAT_RAW:
+                case KMIP_KEYFORMAT_OPAQUE:
+                case KMIP_KEYFORMAT_PKCS1:
+                case KMIP_KEYFORMAT_PKCS8:
+                case KMIP_KEYFORMAT_X509:
+                case KMIP_KEYFORMAT_EC_PRIVATE_KEY:
+                free_byte_string(ctx, *value);
+                break;
+                
+                case KMIP_KEYFORMAT_TRANS_SYMMETRIC_KEY:
+                free_transparent_symmetric_key(ctx, *value);
+                break;
+                
+                default:
+                /* NOTE (ph) Hitting this case means that we don't know   */
+                /*      what the actual type, size, or value of value is. */
+                /*      We can still free it but we cannot securely zero  */
+                /*      the memory. We also do not know how to free any   */
+                /*      possible substructures pointed to within value.   */
+                /*                                                        */
+                /*      Avoid hitting this case at all costs.             */
+                break;
+            };
+            
+            ctx->free_func(ctx->state, *value);
+            *value = NULL;
+        }
     }
     
     return;
@@ -486,18 +623,35 @@ Comparison Functions
 */
 
 int
-compare_text_string(const struct text_string *a, const struct text_string *b)
+compare_text_string(const struct text_string *a, 
+                    const struct text_string *b)
 {
-    if(a->size != b->size)
+    if(a != b)
     {
-        return(KMIP_FALSE);
-    }
-    
-    for(size_t i = 0; i < a->size; i++)
-    {
-        if(a->value[i] != b->value[i])
+        if((a == NULL) || (b == NULL))
         {
             return(KMIP_FALSE);
+        }
+        
+        if(a->size != b->size)
+        {
+            return(KMIP_FALSE);
+        }
+        
+        if(a->value != b->value)
+        {
+            if((a->value == NULL) || (b->value == NULL))
+            {
+                return(KMIP_FALSE);
+            }
+            
+            for(size_t i = 0; i < a->size; i++)
+            {
+                if(a->value[i] != b->value[i])
+                {
+                    return(KMIP_FALSE);
+                }
+            }
         }
     }
     
@@ -508,16 +662,32 @@ int
 compare_byte_string(const struct byte_string *a, 
                     const struct byte_string *b)
 {
-    if(a->size != b->size)
+    if(a != b)
     {
-        return(KMIP_FALSE);
-    }
-    
-    for(size_t i = 0; i < a->size; i++)
-    {
-        if(a->value[i] != b->value[i])
+        if((a == NULL) || (b == NULL))
         {
             return(KMIP_FALSE);
+        }
+        
+        if(a->size != b->size)
+        {
+            return(KMIP_FALSE);
+        }
+        
+        if(a->value != b->value)
+        {
+            if((a->value == NULL) || (b->value == NULL))
+            {
+                return(KMIP_FALSE);
+            }
+            
+            for(size_t i = 0; i < a->size; i++)
+            {
+                if(a->value[i] != b->value[i])
+                {
+                    return(KMIP_FALSE);
+                }
+            }
         }
     }
     
@@ -527,14 +697,281 @@ compare_byte_string(const struct byte_string *a,
 int
 compare_name(const struct name *a, const struct name *b)
 {
-    if(compare_text_string(a->value, b->value) != KMIP_TRUE)
+    if(a != b)
     {
-        return(KMIP_FALSE);
+        if((a == NULL) || (b == NULL))
+        {
+            return(KMIP_FALSE);
+        }
+        
+        if(a->type != b->type)
+        {
+            return(KMIP_FALSE);
+        }
+        
+        if(a->value != b->value)
+        {
+            if((a->value == NULL) || (b->value == NULL))
+            {
+                return(KMIP_FALSE);
+            }
+            
+            if(compare_text_string(a->value, b->value) != KMIP_TRUE)
+            {
+                return(KMIP_FALSE);
+            }
+        }
     }
     
-    if(a->type != b->type)
+    return(KMIP_TRUE);
+}
+
+int
+compare_attribute(const struct attribute *a, 
+                  const struct attribute *b)
+{
+    if(a != b)
     {
-        return(KMIP_FALSE);
+        if((a == NULL) || (b == NULL))
+        {
+            return(KMIP_FALSE);
+        }
+        
+        if(a->type != b->type)
+        {
+            return(KMIP_FALSE);
+        }
+        
+        if(a->index != b->index)
+        {
+            return(KMIP_FALSE);
+        }
+        
+        if(a->value != b->value)
+        {
+            if((a->value == NULL) || (b->value == NULL))
+            {
+                return(KMIP_FALSE);
+            }
+            
+            switch(a->type)
+            {
+                case KMIP_ATTR_UNIQUE_IDENTIFIER:
+                return(compare_text_string((struct text_string *)a->value, 
+                                           (struct text_string *)b->value));
+                break;
+                
+                case KMIP_ATTR_NAME:
+                return(compare_name((struct name *)a->value,
+                                    (struct name *)b->value));
+                break;
+                
+                case KMIP_ATTR_OBJECT_TYPE:
+                
+                break;
+                
+                case KMIP_ATTR_CRYPTOGRAPHIC_ALGORITHM:
+                if(*(int32*)a->value != *(int32*)b->value)
+                {
+                    return(KMIP_FALSE);
+                }
+                break;
+                
+                case KMIP_ATTR_CRYPTOGRAPHIC_LENGTH:
+                if(*(int32*)a->value != *(int32*)b->value)
+                {
+                    return(KMIP_FALSE);
+                }
+                break;
+                
+                case KMIP_ATTR_OPERATION_POLICY_NAME:
+                return(compare_text_string((struct text_string *)a->value,
+                                           (struct text_string *)b->value));
+                break;
+                
+                case KMIP_ATTR_CRYPTOGRAPHIC_USAGE_MASK:
+                if(*(int32*)a->value != *(int32*)b->value)
+                {
+                    return(KMIP_FALSE);
+                }
+                break;
+                
+                case KMIP_ATTR_STATE:
+                if(*(int32*)a->value != *(int32*)b->value)
+                {
+                    return(KMIP_FALSE);
+                }
+                break;
+                
+                default:
+                /* NOTE (ph) Unsupported types can't be compared. */
+                return(KMIP_FALSE);
+                break;
+            };
+        }
+    }
+    
+    return(KMIP_TRUE);
+}
+
+int
+compare_template_attribute(const struct template_attribute *a,
+                           const struct template_attribute *b)
+{
+    if(a != b)
+    {
+        if((a == NULL) || (b == NULL))
+        {
+            return(KMIP_FALSE);
+        }
+        
+        if(a->name_count != b->name_count)
+        {
+            return(KMIP_FALSE);
+        }
+        
+        if(a->attribute_count != b->attribute_count)
+        {
+            return(KMIP_FALSE);
+        }
+        
+        if(a->names != b->names)
+        {
+            if((a->names == NULL) || (b->names == NULL))
+            {
+                return(KMIP_FALSE);
+            }
+            
+            for(size_t i = 0; i < a->name_count; i++)
+            {
+                if(compare_name(&a->names[i], &b->names[i]) == KMIP_FALSE)
+                {
+                    return(KMIP_FALSE);
+                }
+            }
+        }
+        
+        if(a->attributes != b->attributes)
+        {
+            if((a->attributes == NULL) || (b->attributes == NULL))
+            {
+                return(KMIP_FALSE);
+            }
+            
+            for(size_t i = 0; i < a->attribute_count; i++)
+            {
+                if(compare_attribute(
+                    &a->attributes[i], 
+                    &b->attributes[i]) == KMIP_FALSE)
+                {
+                    return(KMIP_FALSE);
+                }
+            }
+        }
+    }
+    
+    return(KMIP_TRUE);
+}
+
+int
+compare_protocol_version(const struct protocol_version *a,
+                         const struct protocol_version *b)
+{
+    if(a != b)
+    {
+        if((a == NULL) || (b == NULL))
+        {
+            return(KMIP_FALSE);
+        }
+        
+        if(a->major != b->major)
+        {
+            return(KMIP_FALSE);
+        }
+        
+        if(a->minor != b->minor)
+        {
+            return(KMIP_FALSE);
+        }
+    }
+    
+    return(KMIP_TRUE);
+}
+
+int
+compare_transparent_symmetric_key(const struct transparent_symmetric_key *a,
+                                  const struct transparent_symmetric_key *b)
+{
+    if(a != b)
+    {
+        if((a == NULL) || (b == NULL))
+        {
+            return(KMIP_FALSE);
+        }
+        
+        if(a->key != b->key)
+        {
+            if((a->key == NULL) || (b->key == NULL))
+            {
+                return(KMIP_FALSE);
+            }
+            
+            if(compare_byte_string(a->key, b->key) == KMIP_FALSE)
+            {
+                return(KMIP_FALSE);
+            }
+        }
+    }
+    
+    return(KMIP_TRUE);
+}
+
+int
+compare_key_material(enum key_format_type format,
+                     void **a,
+                     void **b)
+{
+    if(a != b)
+    {
+        if((a == NULL) || (b == NULL))
+        {
+            return(KMIP_FALSE);
+        }
+        
+        if(*a != *b)
+        {
+            if((*a == NULL) || (*b == NULL))
+            {
+                return(KMIP_FALSE);
+            }
+            
+            switch(format)
+            {
+                case KMIP_KEYFORMAT_RAW:
+                case KMIP_KEYFORMAT_OPAQUE:
+                case KMIP_KEYFORMAT_PKCS1:
+                case KMIP_KEYFORMAT_PKCS8:
+                case KMIP_KEYFORMAT_X509:
+                case KMIP_KEYFORMAT_EC_PRIVATE_KEY:
+                if(compare_byte_string(*a, *b) == KMIP_FALSE)
+                {
+                    return(KMIP_FALSE);
+                }
+                break;
+                
+                case KMIP_KEYFORMAT_TRANS_SYMMETRIC_KEY:
+                if(compare_transparent_symmetric_key(*a, *b) == KMIP_FALSE)
+                {
+                    return(KMIP_FALSE);
+                }
+                break;
+                
+                default:
+                /* NOTE (ph) Unsupported types cannot be compared.   */
+                return(KMIP_FALSE);
+                break;
+            };
+        }
     }
     
     return(KMIP_TRUE);
@@ -712,7 +1149,8 @@ encode_name(struct kmip *ctx, const struct name *value)
     int result = 0;
     
     result = encode_int32_be(
-        ctx, TAG_TYPE(KMIP_TAG_NAME, KMIP_TYPE_STRUCTURE));
+        ctx, 
+        TAG_TYPE(KMIP_TAG_NAME, KMIP_TYPE_STRUCTURE));
     CHECK_RESULT(ctx, result);
     
     uint8 *length_index = ctx->index;
@@ -839,7 +1277,7 @@ encode_attribute(struct kmip *ctx, const struct attribute *value)
         break;
         
         case KMIP_ATTR_NAME:
-        /* TODO (peter-hamilton) This is messy. Clean it up? */
+        /* TODO (ph) This is messy. Clean it up? */
         result = encode_name(ctx, (struct name*)value->value);
         CHECK_RESULT(ctx, result);
         
@@ -1291,8 +1729,9 @@ encode_key_wrapping_data(struct kmip *ctx,
 }
 
 int
-encode_transparent_symmetric_key(struct kmip *ctx,
-                                 const struct transparent_symmetric_key *value)
+encode_transparent_symmetric_key(
+struct kmip *ctx,
+const struct transparent_symmetric_key *value)
 {
     int result = 0;
     
@@ -1321,7 +1760,9 @@ encode_transparent_symmetric_key(struct kmip *ctx,
 }
 
 int
-encode_key_material(struct kmip *ctx, enum key_format_type format, const void *value)
+encode_key_material(struct kmip *ctx,
+                    enum key_format_type format,
+                    const void *value)
 {
     int result = 0;
     
@@ -2877,7 +3318,10 @@ decode_name(struct kmip *ctx, struct name *value)
     decode_int32_be(ctx, &length);
     CHECK_BUFFER_FULL(ctx, length);
     
-    value->value = ctx->calloc_func(ctx->state, 1, sizeof(struct text_string));
+    value->value = ctx->calloc_func(
+        ctx->state,
+        1,
+        sizeof(struct text_string));
     
     result = decode_text_string(ctx, KMIP_TAG_NAME_VALUE, value->value);
     CHECK_RESULT(ctx, result);
@@ -2966,16 +3410,417 @@ decode_attribute(struct kmip *ctx, struct attribute *value)
     result = decode_attribute_name(ctx, &value->type);
     CHECK_RESULT(ctx, result);
     
-    /*HERE*/
+    if(is_tag_next(ctx, KMIP_TAG_ATTRIBUTE_INDEX))
+    {
+        result = decode_integer(
+            ctx,
+            KMIP_TAG_ATTRIBUTE_INDEX,
+            &value->index);
+        CHECK_RESULT(ctx, result);
+    }
     
-    value->value = ctx->calloc_func(ctx->state, 1, sizeof(struct text_string));
+    uint8 *curr_index = ctx->index;
+    uint8 *tag_index = ctx->index;
+    enum tag t = KMIP_TAG_ATTRIBUTE_VALUE;
     
-    result = decode_text_string(ctx, KMIP_TAG_NAME_VALUE, value->value);
+    switch(value->type)
+    {
+        case KMIP_ATTR_UNIQUE_IDENTIFIER:
+        value->value = ctx->calloc_func(
+            ctx->state,
+            1,
+            sizeof(struct text_string));
+        CHECK_NEW_MEMORY(
+            ctx,
+            value->value,
+            sizeof(struct text_string),
+            "UniqueIdentifier text string");
+        result = decode_text_string(
+            ctx,
+            t,
+            (struct text_string*)value->value);
+        CHECK_RESULT(ctx, result);
+        break;
+        
+        case KMIP_ATTR_NAME:
+        /* TODO (ph) Like encoding, this is messy. Better solution? */
+        value->value = ctx->calloc_func(ctx->state, 1, sizeof(struct name));
+        CHECK_NEW_MEMORY(
+            ctx,
+            value->value,
+            sizeof(struct name),
+            "Name structure");
+        
+        if(is_tag_type_next(
+            ctx,
+            KMIP_TAG_ATTRIBUTE_VALUE,
+            KMIP_TYPE_STRUCTURE))
+        {
+            /* NOTE (ph) Decoding name structures will fail if the name tag */
+            /* is not present in the encoding. Temporarily swap the tags, */
+            /* decode the name structure, and then swap the tags back to */
+            /* preserve the encoding. The tag/type check above guarantees */
+            /* space exists for this to succeed. */
+            encode_int32_be(
+                ctx, 
+                TAG_TYPE(KMIP_TAG_NAME, KMIP_TYPE_STRUCTURE));
+            ctx->index = tag_index;
+            
+            result = decode_name(ctx, (struct name*)value->value);
+            
+            curr_index = ctx->index;
+            ctx->index = tag_index;
+            
+            encode_int32_be(
+                ctx,
+                TAG_TYPE(KMIP_TAG_ATTRIBUTE_VALUE, KMIP_TYPE_STRUCTURE));
+            ctx->index = curr_index;
+        }
+        else
+        {
+            result = KMIP_TAG_MISMATCH;
+        }
+        
+        CHECK_RESULT(ctx, result);
+        break;
+        
+        case KMIP_ATTR_OBJECT_TYPE:
+        value->value = ctx->calloc_func(ctx->state, 1, sizeof(int32));
+        CHECK_NEW_MEMORY(
+            ctx,
+            value->value,
+            sizeof(int32),
+            "ObjectType enumeration");
+        result = decode_enum(ctx, t, (int32 *)value->value);
+        CHECK_RESULT(ctx, result);
+        CHECK_ENUM(ctx, KMIP_TAG_OBJECT_TYPE, *(int32 *)value->value);
+        break;
+        
+        case KMIP_ATTR_CRYPTOGRAPHIC_ALGORITHM:
+        value->value = ctx->calloc_func(ctx->state, 1, sizeof(int32));
+        CHECK_NEW_MEMORY(
+            ctx,
+            value->value,
+            sizeof(int32),
+            "CryptographicAlgorithm enumeration");
+        result = decode_enum(ctx, t, (int32 *)value->value);
+        CHECK_RESULT(ctx, result);
+        CHECK_ENUM(
+            ctx,
+            KMIP_TAG_CRYPTOGRAPHIC_ALGORITHM,
+            *(int32 *)value->value);
+        break;
+        
+        case KMIP_ATTR_CRYPTOGRAPHIC_LENGTH:
+        value->value = ctx->calloc_func(ctx->state, 1, sizeof(int32));
+        CHECK_NEW_MEMORY(
+            ctx,
+            value->value,
+            sizeof(int32),
+            "CryptographicLength integer");
+        result = decode_integer(ctx, t, (int32 *)value->value);
+        CHECK_RESULT(ctx, result);
+        break;
+        
+        case KMIP_ATTR_OPERATION_POLICY_NAME:
+        value->value = ctx->calloc_func(
+            ctx->state,
+            1,
+            sizeof(struct text_string));
+        CHECK_NEW_MEMORY(
+            ctx,
+            value->value,
+            sizeof(struct text_string),
+            "OperationPolicyName text string");
+        result = decode_text_string(
+            ctx,
+            t,
+            (struct text_string*)value->value);
+        CHECK_RESULT(ctx, result);
+        break;
+        
+        case KMIP_ATTR_CRYPTOGRAPHIC_USAGE_MASK:
+        value->value = ctx->calloc_func(ctx->state, 1, sizeof(int32));
+        CHECK_NEW_MEMORY(
+            ctx,
+            value->value,
+            sizeof(int32),
+            "CryptographicUsageMask integer");
+        result = decode_integer(ctx, t, (int32 *)value->value);
+        CHECK_RESULT(ctx, result);
+        break;
+        
+        case KMIP_ATTR_STATE:
+        value->value = ctx->calloc_func(ctx->state, 1, sizeof(int32));
+        CHECK_NEW_MEMORY(
+            ctx,
+            value->value,
+            sizeof(int32),
+            "State enumeration");
+        result = decode_enum(ctx, t, (int32 *)value->value);
+        CHECK_RESULT(ctx, result);
+        CHECK_ENUM(ctx, KMIP_TAG_STATE, *(int32 *)value->value);
+        break;
+        
+        default:
+        kmip_push_error_frame(ctx, __func__, __LINE__);
+        return(KMIP_ERROR_ATTR_UNSUPPORTED);
+        break;
+    };
     CHECK_RESULT(ctx, result);
     
-    result = decode_enum(ctx, KMIP_TAG_NAME_TYPE, (int32*)&value->type);
+    return(KMIP_OK);
+}
+
+int
+decode_template_attribute(struct kmip *ctx, 
+                          struct template_attribute *value)
+{
+    CHECK_BUFFER_FULL(ctx, 8);
+    
+    int result = 0;
+    int32 tag_type = 0;
+    uint32 length = 0;
+    
+    decode_int32_be(ctx, &tag_type);
+    CHECK_TAG_TYPE(
+        ctx,
+        tag_type,
+        KMIP_TAG_TEMPLATE_ATTRIBUTE,
+        KMIP_TYPE_STRUCTURE);
+    
+    decode_int32_be(ctx, &length);
+    CHECK_BUFFER_FULL(ctx, length);
+    
+    value->name_count = get_num_items_next(ctx, KMIP_TAG_NAME);
+    value->names = ctx->calloc_func(
+        ctx->state,
+        value->name_count,
+        sizeof(struct name));
+    CHECK_NEW_MEMORY(
+        ctx,
+        value->names,
+        value->name_count * sizeof(struct name),
+        "sequence of Name structures");
+    
+    for(size_t i = 0; i < value->name_count; i++)
+    {
+        result = decode_name(ctx, &value->names[i]);
+        CHECK_RESULT(ctx, result);
+    }
+    
+    value->attribute_count = get_num_items_next(ctx, KMIP_TAG_ATTRIBUTE);
+    value->attributes = ctx->calloc_func(
+        ctx->state,
+        value->attribute_count,
+        sizeof(struct attribute));
+    CHECK_NEW_MEMORY(
+        ctx,
+        value->attributes,
+        value->attribute_count * sizeof(struct attribute),
+        "sequence of Attribute structures");
+    
+    for(size_t i = 0; i < value->attribute_count; i++)
+    {
+        result = decode_attribute(ctx, &value->attributes[i]);
+        CHECK_RESULT(ctx, result);
+    }
+    
+    return(KMIP_OK);
+}
+
+int
+decode_protocol_version(struct kmip *ctx, 
+                        struct protocol_version *value)
+{
+    CHECK_BUFFER_FULL(ctx, 40);
+    
+    int result = 0;
+    int32 tag_type = 0;
+    uint32 length = 0;
+    
+    decode_int32_be(ctx, &tag_type);
+    CHECK_TAG_TYPE(
+        ctx,
+        tag_type,
+        KMIP_TAG_PROTOCOL_VERSION,
+        KMIP_TYPE_STRUCTURE);
+    
+    decode_int32_be(ctx, &length);
+    CHECK_LENGTH(ctx, length, 32);
+    
+    result = decode_integer(
+        ctx,
+        KMIP_TAG_PROTOCOL_VERSION_MAJOR,
+        &value->major);
     CHECK_RESULT(ctx, result);
-    CHECK_ENUM(ctx, KMIP_TAG_NAME_TYPE, value->type);
+    
+    result = decode_integer(
+        ctx,
+        KMIP_TAG_PROTOCOL_VERSION_MINOR,
+        &value->minor);
+    CHECK_RESULT(ctx, result);
+    
+    return(KMIP_OK);
+}
+
+int
+decode_transparent_symmetric_key(struct kmip *ctx,
+                                 struct transparent_symmetric_key *value)
+{
+    CHECK_BUFFER_FULL(ctx, 8);
+    
+    int result = 0;
+    int32 tag_type = 0;
+    uint32 length = 0;
+    
+    decode_int32_be(ctx, &tag_type);
+    CHECK_TAG_TYPE(
+        ctx,
+        tag_type,
+        KMIP_TAG_KEY_MATERIAL,
+        KMIP_TYPE_STRUCTURE);
+    
+    decode_int32_be(ctx, &length);
+    CHECK_BUFFER_FULL(ctx, length);
+    
+    value->key = ctx->calloc_func(
+        ctx->state,
+        1,
+        sizeof(struct byte_string));
+    CHECK_NEW_MEMORY(
+        ctx,
+        value->key,
+        sizeof(struct byte_string),
+        "Key byte string");
+    
+    result = decode_byte_string(ctx, KMIP_TAG_KEY, value->key);
+    CHECK_RESULT(ctx, result);
+    
+    return(KMIP_OK);
+}
+
+int
+decode_key_material(struct kmip *ctx,
+                    enum key_format_type format,
+                    void **value)
+{
+    int result = 0;
+    
+    switch(format)
+    {
+        case KMIP_KEYFORMAT_RAW:
+        case KMIP_KEYFORMAT_OPAQUE:
+        case KMIP_KEYFORMAT_PKCS1:
+        case KMIP_KEYFORMAT_PKCS8:
+        case KMIP_KEYFORMAT_X509:
+        case KMIP_KEYFORMAT_EC_PRIVATE_KEY:
+        *value = ctx->calloc_func(
+            ctx->state,
+            1,
+            sizeof(struct byte_string));
+        CHECK_NEW_MEMORY(
+            ctx,
+            *value,
+            sizeof(struct byte_string),
+            "KeyMaterial byte string");
+        result = decode_byte_string(
+            ctx,
+            KMIP_TAG_KEY_MATERIAL,
+            (struct byte_string*)*value);
+        CHECK_RESULT(ctx, result);
+        return(KMIP_OK);
+        break;
+        
+        default:
+        break;
+    };
+    
+    switch(format)
+    {
+        case KMIP_KEYFORMAT_TRANS_SYMMETRIC_KEY:
+        *value = ctx->calloc_func(
+            ctx->state,
+            1,
+            sizeof(struct transparent_symmetric_key));
+        CHECK_NEW_MEMORY(
+            ctx,
+            *value,
+            sizeof(struct transparent_symmetric_key),
+            "TransparentSymmetricKey structure");
+        result = decode_transparent_symmetric_key(
+            ctx,
+            (struct transparent_symmetric_key*)*value);
+        CHECK_RESULT(ctx, result);
+        break;
+        
+        /* TODO (peter-hamilton) The rest require BigInteger support. */
+        
+        case KMIP_KEYFORMAT_TRANS_DSA_PRIVATE_KEY:
+        kmip_push_error_frame(ctx, __func__, __LINE__);
+        return(KMIP_NOT_IMPLEMENTED);
+        break;
+        
+        case KMIP_KEYFORMAT_TRANS_DSA_PUBLIC_KEY:
+        kmip_push_error_frame(ctx, __func__, __LINE__);
+        return(KMIP_NOT_IMPLEMENTED);
+        break;
+        
+        case KMIP_KEYFORMAT_TRANS_RSA_PRIVATE_KEY:
+        kmip_push_error_frame(ctx, __func__, __LINE__);
+        return(KMIP_NOT_IMPLEMENTED);
+        break;
+        
+        case KMIP_KEYFORMAT_TRANS_RSA_PUBLIC_KEY:
+        kmip_push_error_frame(ctx, __func__, __LINE__);
+        return(KMIP_NOT_IMPLEMENTED);
+        break;
+        
+        case KMIP_KEYFORMAT_TRANS_DH_PRIVATE_KEY:
+        kmip_push_error_frame(ctx, __func__, __LINE__);
+        return(KMIP_NOT_IMPLEMENTED);
+        break;
+        
+        case KMIP_KEYFORMAT_TRANS_DH_PUBLIC_KEY:
+        kmip_push_error_frame(ctx, __func__, __LINE__);
+        return(KMIP_NOT_IMPLEMENTED);
+        break;
+        
+        case KMIP_KEYFORMAT_TRANS_ECDSA_PRIVATE_KEY:
+        kmip_push_error_frame(ctx, __func__, __LINE__);
+        return(KMIP_NOT_IMPLEMENTED);
+        break;
+        
+        case KMIP_KEYFORMAT_TRANS_ECDSA_PUBLIC_KEY:
+        kmip_push_error_frame(ctx, __func__, __LINE__);
+        return(KMIP_NOT_IMPLEMENTED);
+        break;
+        
+        case KMIP_KEYFORMAT_TRANS_ECDH_PRIVATE_KEY:
+        kmip_push_error_frame(ctx, __func__, __LINE__);
+        return(KMIP_NOT_IMPLEMENTED);
+        break;
+        
+        case KMIP_KEYFORMAT_TRANS_ECDH_PUBLIC_KEY:
+        kmip_push_error_frame(ctx, __func__, __LINE__);
+        return(KMIP_NOT_IMPLEMENTED);
+        break;
+        
+        case KMIP_KEYFORMAT_TRANS_ECMQV_PRIVATE_KEY:
+        kmip_push_error_frame(ctx, __func__, __LINE__);
+        return(KMIP_NOT_IMPLEMENTED);
+        break;
+        
+        case KMIP_KEYFORMAT_TRANS_ECMQV_PUBLIC_KEY:
+        kmip_push_error_frame(ctx, __func__, __LINE__);
+        return(KMIP_NOT_IMPLEMENTED);
+        break;
+        
+        default:
+        kmip_push_error_frame(ctx, __func__, __LINE__);
+        return(KMIP_NOT_IMPLEMENTED);
+        break;
+    };
     
     return(KMIP_OK);
 }

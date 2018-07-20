@@ -1029,6 +1029,48 @@ test_encode_attribute_unique_identifier(void)
 }
 
 int
+test_decode_attribute_unique_identifier(void)
+{
+    uint8 encoding[88] = {
+        0x42, 0x00, 0x08, 0x01, 0x00, 0x00, 0x00, 0x50,
+        0x42, 0x00, 0x0A, 0x07, 0x00, 0x00, 0x00, 0x11,
+        0x55, 0x6E, 0x69, 0x71, 0x75, 0x65, 0x20, 0x49,
+        0x64, 0x65, 0x6E, 0x74, 0x69, 0x66, 0x69, 0x65,
+        0x72, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x42, 0x00, 0x0B, 0x07, 0x00, 0x00, 0x00, 0x24,
+        0x34, 0x39, 0x61, 0x31, 0x63, 0x61, 0x38, 0x38,
+        0x2D, 0x36, 0x62, 0x65, 0x61, 0x2D, 0x34, 0x66,
+        0x62, 0x32, 0x2D, 0x62, 0x34, 0x35, 0x30, 0x2D,
+        0x37, 0x65, 0x35, 0x38, 0x38, 0x30, 0x32, 0x63,
+        0x33, 0x30, 0x33, 0x38, 0x00, 0x00, 0x00, 0x00
+    };
+    
+    struct kmip ctx = {0};
+    kmip_init(&ctx, encoding, ARRAY_LENGTH(encoding), KMIP_1_0);
+    
+    struct text_string uuid = {0};
+    uuid.value = "49a1ca88-6bea-4fb2-b450-7e58802c3038";
+    uuid.size = 36;
+    
+    struct attribute expected = {0};
+    init_attribute(&expected);
+    expected.type = KMIP_ATTR_UNIQUE_IDENTIFIER;
+    expected.value = &uuid;
+    struct attribute observed = {0};
+    init_attribute(&observed);
+    
+    int result = decode_attribute(&ctx, &observed);
+    result = report_decoding_test_result(
+        &ctx,
+        compare_attribute(&expected, &observed),
+        result,
+        __func__);
+    free_attribute(&ctx, &observed);
+    kmip_destroy(&ctx);
+    return(result);
+}
+
+int
 test_encode_attribute_name(void)
 {
     uint8 expected[72] = {
@@ -1072,6 +1114,50 @@ test_encode_attribute_name(void)
 }
 
 int
+test_decode_attribute_name(void)
+{
+    uint8 encoding[72] = {
+        0x42, 0x00, 0x08, 0x01, 0x00, 0x00, 0x00, 0x40,
+        0x42, 0x00, 0x0A, 0x07, 0x00, 0x00, 0x00, 0x04,
+        0x4E, 0x61, 0x6D, 0x65, 0x00, 0x00, 0x00, 0x00,
+        0x42, 0x00, 0x0B, 0x01, 0x00, 0x00, 0x00, 0x28,
+        0x42, 0x00, 0x55, 0x07, 0x00, 0x00, 0x00, 0x09,
+        0x54, 0x65, 0x6D, 0x70, 0x6C, 0x61, 0x74, 0x65,
+        0x31, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x42, 0x00, 0x54, 0x05, 0x00, 0x00, 0x00, 0x04,
+        0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00
+    };
+    
+    struct kmip ctx = {0};
+    kmip_init(&ctx, encoding, ARRAY_LENGTH(encoding), KMIP_1_0);
+    
+    struct text_string value = {0};
+    value.value = "Template1";
+    value.size = 9;
+    
+    struct name n = {0};
+    n.value = &value;
+    n.type = KMIP_NAME_UNINTERPRETED_TEXT_STRING;
+    
+    struct attribute expected = {0};
+    init_attribute(&expected);
+    expected.type = KMIP_ATTR_NAME;
+    expected.value = &n;
+    struct attribute observed = {0};
+    init_attribute(&observed);
+    
+    int result = decode_attribute(&ctx, &observed);
+    result = report_decoding_test_result(
+        &ctx,
+        compare_attribute(&expected, &observed),
+        result,
+        __func__);
+    free_attribute(&ctx, &observed);
+    kmip_destroy(&ctx);
+    return(result);
+}
+
+int
 test_encode_attribute_object_type(void)
 {
     uint8 expected[48] = {
@@ -1100,6 +1186,40 @@ test_encode_attribute_object_type(void)
         observed,
         result,
         __func__);
+    kmip_destroy(&ctx);
+    return(result);
+}
+
+int
+test_decode_attribute_object_type(void)
+{
+    uint8 encoding[48] = {
+        0x42, 0x00, 0x08, 0x01, 0x00, 0x00, 0x00, 0x28,
+        0x42, 0x00, 0x0A, 0x07, 0x00, 0x00, 0x00, 0x0B,
+        0x4F, 0x62, 0x6A, 0x65, 0x63, 0x74, 0x20, 0x54,
+        0x79, 0x70, 0x65, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x42, 0x00, 0x0B, 0x05, 0x00, 0x00, 0x00, 0x04,
+        0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00
+    };
+    
+    struct kmip ctx = {0};
+    kmip_init(&ctx, encoding, ARRAY_LENGTH(encoding), KMIP_1_0);
+    
+    enum object_type t = KMIP_OBJTYPE_SYMMETRIC_KEY;
+    struct attribute expected = {0};
+    init_attribute(&expected);
+    expected.type = KMIP_ATTR_OBJECT_TYPE;
+    expected.value = &t;
+    struct attribute observed = {0};
+    init_attribute(&observed);
+    
+    int result = decode_attribute(&ctx, &observed);
+    result = report_decoding_test_result(
+        &ctx,
+        compare_attribute(&expected, &observed),
+        result,
+        __func__);
+    free_attribute(&ctx, &observed);
     kmip_destroy(&ctx);
     return(result);
 }
@@ -1139,6 +1259,41 @@ test_encode_attribute_cryptographic_algorithm(void)
 }
 
 int
+test_decode_attribute_cryptographic_algorithm(void)
+{
+    uint8 encoding[56] = {
+        0x42, 0x00, 0x08, 0x01, 0x00, 0x00, 0x00, 0x30,
+        0x42, 0x00, 0x0A, 0x07, 0x00, 0x00, 0x00, 0x17,
+        0x43, 0x72, 0x79, 0x70, 0x74, 0x6F, 0x67, 0x72,
+        0x61, 0x70, 0x68, 0x69, 0x63, 0x20, 0x41, 0x6C,
+        0x67, 0x6F, 0x72, 0x69, 0x74, 0x68, 0x6D, 0x00,
+        0x42, 0x00, 0x0B, 0x05, 0x00, 0x00, 0x00, 0x04,
+        0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x00
+    };
+    
+    struct kmip ctx = {0};
+    kmip_init(&ctx, encoding, ARRAY_LENGTH(encoding), KMIP_1_0);
+    
+    enum cryptographic_algorithm a = KMIP_CRYPTOALG_AES;
+    struct attribute expected = {0};
+    init_attribute(&expected);
+    expected.type = KMIP_ATTR_CRYPTOGRAPHIC_ALGORITHM;
+    expected.value = &a;
+    struct attribute observed = {0};
+    init_attribute(&observed);
+    
+    int result = decode_attribute(&ctx, &observed);
+    result = report_decoding_test_result(
+        &ctx,
+        compare_attribute(&expected, &observed),
+        result,
+        __func__);
+    free_attribute(&ctx, &observed);
+    kmip_destroy(&ctx);
+    return(result);
+}
+
+int
 test_encode_attribute_cryptographic_length(void)
 {
     uint8 expected[56] = {
@@ -1168,6 +1323,41 @@ test_encode_attribute_cryptographic_length(void)
         observed,
         result,
         __func__);
+    kmip_destroy(&ctx);
+    return(result);
+}
+
+int
+test_decode_attribute_cryptographic_length(void)
+{
+    uint8 encoding[56] = {
+        0x42, 0x00, 0x08, 0x01, 0x00, 0x00, 0x00, 0x30,
+        0x42, 0x00, 0x0A, 0x07, 0x00, 0x00, 0x00, 0x14,
+        0x43, 0x72, 0x79, 0x70, 0x74, 0x6F, 0x67, 0x72,
+        0x61, 0x70, 0x68, 0x69, 0x63, 0x20, 0x4C, 0x65,
+        0x6E, 0x67, 0x74, 0x68, 0x00, 0x00, 0x00, 0x00,
+        0x42, 0x00, 0x0B, 0x02, 0x00, 0x00, 0x00, 0x04,
+        0x00, 0x00, 0x00, 0x80, 0x00, 0x00, 0x00, 0x00
+    };
+    
+    struct kmip ctx = {0};
+    kmip_init(&ctx, encoding, ARRAY_LENGTH(encoding), KMIP_1_0);
+    
+    int32 length = 128;
+    struct attribute expected = {0};
+    init_attribute(&expected);
+    expected.type = KMIP_ATTR_CRYPTOGRAPHIC_LENGTH;
+    expected.value = &length;
+    struct attribute observed = {0};
+    init_attribute(&observed);
+    
+    int result = decode_attribute(&ctx, &observed);
+    result = report_decoding_test_result(
+        &ctx,
+        compare_attribute(&expected, &observed),
+        result,
+        __func__);
+    free_attribute(&ctx, &observed);
     kmip_destroy(&ctx);
     return(result);
 }
@@ -1210,6 +1400,44 @@ test_encode_attribute_operation_policy_name(void)
 }
 
 int
+test_decode_attribute_operation_policy_name(void)
+{
+    uint8 encoding[56] = {
+        0x42, 0x00, 0x08, 0x01, 0x00, 0x00, 0x00, 0x30,
+        0x42, 0x00, 0x0A, 0x07, 0x00, 0x00, 0x00, 0x15,
+        0x4F, 0x70, 0x65, 0x72, 0x61, 0x74, 0x69, 0x6F,
+        0x6E, 0x20, 0x50, 0x6F, 0x6C, 0x69, 0x63, 0x79,
+        0x20, 0x4E, 0x61, 0x6D, 0x65, 0x00, 0x00, 0x00,
+        0x42, 0x00, 0x0B, 0x07, 0x00, 0x00, 0x00, 0x07,
+        0x64, 0x65, 0x66, 0x61, 0x75, 0x6C, 0x74, 0x00
+    };
+    
+    struct kmip ctx = {0};
+    kmip_init(&ctx, encoding, ARRAY_LENGTH(encoding), KMIP_1_0);
+    
+    struct text_string policy = {0};
+    policy.value = "default";
+    policy.size = 7;
+    
+    struct attribute expected = {0};
+    init_attribute(&expected);
+    expected.type = KMIP_ATTR_OPERATION_POLICY_NAME;
+    expected.value = &policy;
+    struct attribute observed = {0};
+    init_attribute(&observed);
+    
+    int result = decode_attribute(&ctx, &observed);
+    result = report_decoding_test_result(
+        &ctx,
+        compare_attribute(&expected, &observed),
+        result,
+        __func__);
+    free_attribute(&ctx, &observed);
+    kmip_destroy(&ctx);
+    return(result);
+}
+
+int
 test_encode_attribute_cryptographic_usage_mask(void)
 {
     uint8 expected[56] = {
@@ -1239,6 +1467,41 @@ test_encode_attribute_cryptographic_usage_mask(void)
         observed,
         result,
         __func__);
+    kmip_destroy(&ctx);
+    return(result);
+}
+
+int
+test_decode_attribute_cryptographic_usage_mask(void)
+{
+    uint8 encoding[56] = {
+        0x42, 0x00, 0x08, 0x01, 0x00, 0x00, 0x00, 0x30,
+        0x42, 0x00, 0x0A, 0x07, 0x00, 0x00, 0x00, 0x18,
+        0x43, 0x72, 0x79, 0x70, 0x74, 0x6F, 0x67, 0x72,
+        0x61, 0x70, 0x68, 0x69, 0x63, 0x20, 0x55, 0x73,
+        0x61, 0x67, 0x65, 0x20, 0x4D, 0x61, 0x73, 0x6B,
+        0x42, 0x00, 0x0B, 0x02, 0x00, 0x00, 0x00, 0x04,
+        0x00, 0x00, 0x00, 0x0C, 0x00, 0x00, 0x00, 0x00
+    };
+    
+    struct kmip ctx = {0};
+    kmip_init(&ctx, encoding, ARRAY_LENGTH(encoding), KMIP_1_0);
+    
+    int32 mask = KMIP_CRYPTOMASK_ENCRYPT | KMIP_CRYPTOMASK_DECRYPT;
+    struct attribute expected = {0};
+    init_attribute(&expected);
+    expected.type = KMIP_ATTR_CRYPTOGRAPHIC_USAGE_MASK;
+    expected.value = &mask;
+    struct attribute observed = {0};
+    init_attribute(&observed);
+    
+    int result = decode_attribute(&ctx, &observed);
+    result = report_decoding_test_result(
+        &ctx,
+        compare_attribute(&expected, &observed),
+        result,
+        __func__);
+    free_attribute(&ctx, &observed);
     kmip_destroy(&ctx);
     return(result);
 }
@@ -1276,6 +1539,39 @@ test_encode_attribute_state(void)
 }
 
 int
+test_decode_attribute_state(void)
+{
+    uint8 encoding[40] = {
+        0x42, 0x00, 0x08, 0x01, 0x00, 0x00, 0x00, 0x20,
+        0x42, 0x00, 0x0A, 0x07, 0x00, 0x00, 0x00, 0x05, 
+        0x53, 0x74, 0x61, 0x74, 0x65, 0x00, 0x00, 0x00,
+        0x42, 0x00, 0x0B, 0x05, 0x00, 0x00, 0x00, 0x04,
+        0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00
+    };
+    
+    struct kmip ctx = {0};
+    kmip_init(&ctx, encoding, ARRAY_LENGTH(encoding), KMIP_1_0);
+    
+    enum state s = KMIP_STATE_PRE_ACTIVE;
+    struct attribute expected = {0};
+    init_attribute(&expected);
+    expected.type = KMIP_ATTR_STATE;
+    expected.value = &s;
+    struct attribute observed = {0};
+    init_attribute(&observed);
+    
+    int result = decode_attribute(&ctx, &observed);
+    result = report_decoding_test_result(
+        &ctx,
+        compare_attribute(&expected, &observed),
+        result,
+        __func__);
+    free_attribute(&ctx, &observed);
+    kmip_destroy(&ctx);
+    return(result);
+}
+
+int
 test_encode_protocol_version(void)
 {
     uint8 expected[40] = {
@@ -1299,6 +1595,35 @@ test_encode_protocol_version(void)
         &ctx,
         expected,
         observed,
+        result,
+        __func__);
+    kmip_destroy(&ctx);
+    return(result);
+}
+
+int
+test_decode_protocol_version(void)
+{
+    uint8 encoding[40] = {
+        0x42, 0x00, 0x69, 0x01, 0x00, 0x00, 0x00, 0x20,
+        0x42, 0x00, 0x6A, 0x02, 0x00, 0x00, 0x00, 0x04,
+        0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00,
+        0x42, 0x00, 0x6B, 0x02, 0x00, 0x00, 0x00, 0x04,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+    };
+    
+    struct kmip ctx = {0};
+    kmip_init(&ctx, encoding, ARRAY_LENGTH(encoding), KMIP_1_0);
+    
+    struct protocol_version expected = {0};
+    expected.major = 1;
+    expected.minor = 0;
+    struct protocol_version observed = {0};
+    
+    int result = decode_protocol_version(&ctx, &observed);
+    result = report_decoding_test_result(
+        &ctx,
+        compare_protocol_version(&expected, &observed),
         result,
         __func__);
     kmip_destroy(&ctx);
@@ -1502,6 +1827,45 @@ test_encode_key_material_byte_string(void)
         observed,
         result,
         __func__);
+    kmip_destroy(&ctx);
+    return(result);
+}
+
+int
+test_decode_key_material_byte_string(void)
+{
+    uint8 encoding[24] = {
+        0x42, 0x00, 0x43, 0x08, 0x00, 0x00, 0x00, 0x10,
+        0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77,
+        0x88, 0x99, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF
+    };
+    
+    struct kmip ctx = {0};
+    kmip_init(&ctx, encoding, ARRAY_LENGTH(encoding), KMIP_1_0);
+    
+    uint8 value[16] = {
+        0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77,
+        0x88, 0x99, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF
+    };
+    struct byte_string expected = {0};
+    expected.value = value;
+    expected.size = ARRAY_LENGTH(value);
+    
+    struct byte_string *expected_ptr = &expected;
+    struct byte_string *observed_ptr = NULL;
+    
+    int result = decode_key_material(
+        &ctx,
+        KMIP_KEYFORMAT_RAW,
+        (void**)&observed_ptr);
+    result = report_decoding_test_result(
+        &ctx,
+        compare_key_material(KMIP_KEYFORMAT_RAW,
+                             (void**)&expected_ptr,
+                             (void**)&observed_ptr),
+        result,
+        __func__);
+    free_key_material(&ctx, KMIP_KEYFORMAT_RAW, (void**)&observed_ptr);
     kmip_destroy(&ctx);
     return(result);
 }
@@ -3424,6 +3788,106 @@ test_encode_template_attribute(void)
     return(result);
 }
 
+int
+test_decode_template_attribute(void)
+{
+    uint8 encoding[288] = {
+        0x42, 0x00, 0x91, 0x01, 0x00, 0x00, 0x01, 0x18, 
+        0x42, 0x00, 0x53, 0x01, 0x00, 0x00, 0x00, 0x28, 
+        0x42, 0x00, 0x55, 0x07, 0x00, 0x00, 0x00, 0x09, 
+        0x54, 0x65, 0x6D, 0x70, 0x6C, 0x61, 0x74, 0x65, 
+        0x31, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
+        0x42, 0x00, 0x54, 0x05, 0x00, 0x00, 0x00, 0x04, 
+        0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 
+        0x42, 0x00, 0x08, 0x01, 0x00, 0x00, 0x00, 0x30, 
+        0x42, 0x00, 0x0A, 0x07, 0x00, 0x00, 0x00, 0x17, 
+        0x43, 0x72, 0x79, 0x70, 0x74, 0x6F, 0x67, 0x72, 
+        0x61, 0x70, 0x68, 0x69, 0x63, 0x20, 0x41, 0x6C, 
+        0x67, 0x6F, 0x72, 0x69, 0x74, 0x68, 0x6D, 0x00, 
+        0x42, 0x00, 0x0B, 0x05, 0x00, 0x00, 0x00, 0x04, 
+        0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x00, 
+        0x42, 0x00, 0x08, 0x01, 0x00, 0x00, 0x00, 0x30, 
+        0x42, 0x00, 0x0A, 0x07, 0x00, 0x00, 0x00, 0x14, 
+        0x43, 0x72, 0x79, 0x70, 0x74, 0x6F, 0x67, 0x72, 
+        0x61, 0x70, 0x68, 0x69, 0x63, 0x20, 0x4C, 0x65, 
+        0x6E, 0x67, 0x74, 0x68, 0x00, 0x00, 0x00, 0x00, 
+        0x42, 0x00, 0x0B, 0x02, 0x00, 0x00, 0x00, 0x04, 
+        0x00, 0x00, 0x00, 0x80, 0x00, 0x00, 0x00, 0x00, 
+        0x42, 0x00, 0x08, 0x01, 0x00, 0x00, 0x00, 0x30, 
+        0x42, 0x00, 0x0A, 0x07, 0x00, 0x00, 0x00, 0x18, 
+        0x43, 0x72, 0x79, 0x70, 0x74, 0x6F, 0x67, 0x72, 
+        0x61, 0x70, 0x68, 0x69, 0x63, 0x20, 0x55, 0x73, 
+        0x61, 0x67, 0x65, 0x20, 0x4D, 0x61, 0x73, 0x6B, 
+        0x42, 0x00, 0x0B, 0x02, 0x00, 0x00, 0x00, 0x04, 
+        0x00, 0x00, 0x00, 0x0C, 0x00, 0x00, 0x00, 0x00, 
+        0x42, 0x00, 0x08, 0x01, 0x00, 0x00, 0x00, 0x38, 
+        0x42, 0x00, 0x0A, 0x07, 0x00, 0x00, 0x00, 0x04, 
+        0x4E, 0x61, 0x6D, 0x65, 0x00, 0x00, 0x00, 0x00, 
+        0x42, 0x00, 0x0B, 0x01, 0x00, 0x00, 0x00, 0x20, 
+        0x42, 0x00, 0x55, 0x07, 0x00, 0x00, 0x00, 0x04, 
+        0x4B, 0x65, 0x79, 0x31, 0x00, 0x00, 0x00, 0x00, 
+        0x42, 0x00, 0x54, 0x05, 0x00, 0x00, 0x00, 0x04, 
+        0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00
+    };
+    
+    struct kmip ctx = {0};
+    kmip_init(&ctx, encoding, ARRAY_LENGTH(encoding), KMIP_1_0);
+    
+    struct text_string v = {0};
+    v.value = "Template1";
+    v.size = 9;
+    
+    struct name n = {0};
+    n.value = &v;
+    n.type = KMIP_NAME_UNINTERPRETED_TEXT_STRING;
+    
+    struct attribute a[4] = {0};
+    for(int i = 0; i < 4; i++)
+    {
+        init_attribute(&a[i]);
+    }
+    
+    enum cryptographic_algorithm algorithm = KMIP_CRYPTOALG_AES;
+    a[0].type = KMIP_ATTR_CRYPTOGRAPHIC_ALGORITHM;
+    a[0].value = &algorithm;
+    
+    int32 length = 128;
+    a[1].type = KMIP_ATTR_CRYPTOGRAPHIC_LENGTH;
+    a[1].value = &length;
+    
+    int32 mask = KMIP_CRYPTOMASK_ENCRYPT | KMIP_CRYPTOMASK_DECRYPT;
+    a[2].type = KMIP_ATTR_CRYPTOGRAPHIC_USAGE_MASK;
+    a[2].value = &mask;
+    
+    struct text_string value = {0};
+    value.value = "Key1";
+    value.size = 4;
+    
+    struct name name = {0};
+    name.value = &value;
+    name.type = KMIP_NAME_UNINTERPRETED_TEXT_STRING;
+    a[3].type = KMIP_ATTR_NAME;
+    a[3].index = KMIP_UNSET;
+    a[3].value = &name;
+    
+    struct template_attribute expected = {0};
+    expected.names = &n;
+    expected.name_count = 1;
+    expected.attributes = a;
+    expected.attribute_count = ARRAY_LENGTH(a);
+    struct template_attribute observed = {0};
+    
+    int result = decode_template_attribute(&ctx, &observed);
+    result = report_decoding_test_result(
+        &ctx,
+        compare_template_attribute(&expected, &observed),
+        result,
+        __func__);
+    free_template_attribute(&ctx, &observed);
+    kmip_destroy(&ctx);
+    return(result);
+}
+
 /*
 The following tests cover features added in KMIP 1.1.
 */
@@ -4777,7 +5241,7 @@ test_kmip_1_1_test_suite_3_1_3_2_b(void)
 void
 run_tests(void)
 {
-    int num_tests = 88;
+    int num_tests = 99;
     int num_failures = 0;
     
     printf("Tests\n");
@@ -4792,6 +5256,7 @@ run_tests(void)
     num_failures += test_get_num_items_next_with_mismatch_item();
     num_failures += test_get_num_items_next_with_no_matches();
     num_failures += test_get_num_items_next_with_non_structures();
+    
     printf("\n");
     num_failures += test_decode_int8_be();
     num_failures += test_decode_int32_be();
@@ -4805,6 +5270,18 @@ run_tests(void)
     num_failures += test_decode_date_time();
     num_failures += test_decode_interval();
     num_failures += test_decode_name();
+    num_failures += test_decode_attribute_unique_identifier();
+    num_failures += test_decode_attribute_name();
+    num_failures += test_decode_attribute_object_type();
+    num_failures += test_decode_attribute_cryptographic_algorithm();
+    num_failures += test_decode_attribute_cryptographic_length();
+    num_failures += test_decode_attribute_operation_policy_name();
+    num_failures += test_decode_attribute_cryptographic_usage_mask();
+    num_failures += test_decode_attribute_state();
+    num_failures += test_decode_template_attribute();
+    num_failures += test_decode_protocol_version();
+    num_failures += test_decode_key_material_byte_string();
+    
     printf("\n");
     num_failures += test_encode_integer();
     num_failures += test_encode_long();
@@ -4899,7 +5376,7 @@ int
 main(void)
 {
     run_tests();
-  
+    
     /*
     while(1)
     {

@@ -53,5 +53,6 @@ typedef double real64;
 #define KMIP_ENUM_MISMATCH          (-9)
 #define KMIP_ENUM_UNSUPPORTED       (-10)
 #define KMIP_INVALID_FOR_VERSION    (-11)
+#define KMIP_MEMORY_ALLOC_FAILED    (-12)
 
 #endif /* KMIP_TYPES_H */
