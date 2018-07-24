@@ -152,6 +152,7 @@ struct key_block
     enum key_format_type key_format_type;
     enum key_compression_type key_compression_type;
     void *key_value;
+    enum type key_value_type;
     enum cryptographic_algorithm cryptographic_algorithm;
     int32 cryptographic_length;
     struct key_wrapping_data *key_wrapping_data;

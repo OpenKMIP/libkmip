@@ -400,6 +400,58 @@ init_attribute(struct attribute *value)
     value->value = NULL;
 }
 
+void
+init_cryptographic_parameters(struct cryptographic_parameters *value)
+{
+    value->block_cipher_mode = 0;
+    value->padding_method = 0;
+    value->hashing_algorithm = 0;
+    value->key_role_type = 0;
+    
+    value->digital_signature_algorithm = 0;
+    value->cryptographic_algorithm = 0;
+    value->random_iv = KMIP_UNSET;
+    value->iv_length = KMIP_UNSET;
+    value->tag_length = KMIP_UNSET;
+    value->fixed_field_length = KMIP_UNSET;
+    value->invocation_field_length = KMIP_UNSET;
+    value->counter_length = KMIP_UNSET;
+    value->initial_counter_value = KMIP_UNSET;
+    
+    value->salt_length = KMIP_UNSET;
+    value->mask_generator = 0;
+    value->mask_generator_hashing_algorithm = 0;
+    value->p_source = NULL;
+    value->trailer_field = KMIP_UNSET;
+}
+
+void
+init_key_block(struct key_block *value)
+{
+    value->key_format_type = 0;
+    value->key_compression_type = 0;
+    value->key_value = NULL;
+    value->key_value_type = 0;
+    value->cryptographic_algorithm = 0;
+    value->cryptographic_length = KMIP_UNSET;
+    value->key_wrapping_data = NULL;
+}
+
+void
+init_response_header(struct response_header *value)
+{
+    value->protocol_version = NULL;
+    value->time_stamp = 0;
+    value->batch_count = KMIP_UNSET;
+    
+    value->nonce = NULL;
+    value->attestation_types = NULL;
+    value->attestation_type_count = 0;
+    
+    value->client_correlation_value = NULL;
+    value->server_correlation_value = NULL;
+}
+
 /*
 Freeing Functions
 */
@@ -568,6 +620,8 @@ free_transparent_symmetric_key(struct kmip *ctx,
         if(value->key != NULL)
         {
             free_byte_string(ctx, value->key);
+            
+            ctx->free_func(ctx->state, value->key);
             value->key = NULL;
         }
     }
@@ -613,6 +667,450 @@ free_key_material(struct kmip *ctx,
             ctx->free_func(ctx->state, *value);
             *value = NULL;
         }
+    }
+    
+    return;
+}
+
+void
+free_key_value(struct kmip *ctx,
+               enum key_format_type format,
+               struct key_value *value)
+{
+    if(value != NULL)
+    {
+        if(value->key_material != NULL)
+        {
+            free_key_material(ctx, format, &value->key_material);
+            value->key_material = NULL;
+        }
+        
+        if(value->attributes != NULL)
+        {
+            for(size_t i = 0; i < value->attribute_count; i++)
+            {
+                free_attribute(ctx, &value->attributes[i]);
+            }
+            ctx->free_func(ctx->state, value->attributes);
+            
+            value->attributes = NULL;
+        }
+        
+        value->attribute_count = 0;
+    }
+    
+    return;
+}
+
+void
+free_cryptographic_parameters(struct kmip *ctx,
+                              struct cryptographic_parameters *value)
+{
+    if(value != NULL)
+    {
+        if(value->p_source != NULL)
+        {
+            free_byte_string(ctx, value->p_source);
+            
+            ctx->free_func(ctx->state, value->p_source);
+            value->p_source = NULL;
+        }
+        
+        init_cryptographic_parameters(value);
+    }
+    
+    return;
+}
+
+void
+free_encryption_key_information(struct kmip *ctx,
+                                struct encryption_key_information *value)
+{
+    if(value != NULL)
+    {
+        if(value->unique_identifier != NULL)
+        {
+            free_text_string(ctx, value->unique_identifier);
+            
+            ctx->free_func(ctx->state, value->unique_identifier);
+            value->unique_identifier = NULL;
+        }
+        
+        if(value->cryptographic_parameters != NULL)
+        {
+            free_cryptographic_parameters(ctx, value->cryptographic_parameters);
+            
+            ctx->free_func(ctx->state, value->cryptographic_parameters);
+            value->cryptographic_parameters = NULL;
+        }
+    }
+    
+    return;
+}
+
+void
+free_mac_signature_key_information(struct kmip *ctx,
+                                   struct mac_signature_key_information *value)
+{
+    if(value != NULL)
+    {
+        if(value->unique_identifier != NULL)
+        {
+            free_text_string(ctx, value->unique_identifier);
+            
+            ctx->free_func(ctx->state, value->unique_identifier);
+            value->unique_identifier = NULL;
+        }
+        
+        if(value->cryptographic_parameters != NULL)
+        {
+            free_cryptographic_parameters(ctx, value->cryptographic_parameters);
+            
+            ctx->free_func(ctx->state, value->cryptographic_parameters);
+            value->cryptographic_parameters = NULL;
+        }
+    }
+    
+    return;
+}
+
+void
+free_key_wrapping_data(struct kmip *ctx,
+                       struct key_wrapping_data *value)
+{
+    if(value != NULL)
+    {
+        if(value->encryption_key_info != NULL)
+        {
+            free_encryption_key_information(ctx, value->encryption_key_info);
+            
+            ctx->free_func(ctx->state, value->encryption_key_info);
+            value->encryption_key_info = NULL;
+        }
+        
+        if(value->mac_signature_key_info != NULL)
+        {
+            free_mac_signature_key_information(ctx, value->mac_signature_key_info);
+            
+            ctx->free_func(ctx->state, value->mac_signature_key_info);
+            value->mac_signature_key_info = NULL;
+        }
+        
+        if(value->mac_signature != NULL)
+        {
+            free_byte_string(ctx, value->mac_signature);
+            
+            ctx->free_func(ctx->state, value->mac_signature);
+            value->mac_signature = NULL;
+        }
+        
+        if(value->iv_counter_nonce != NULL)
+        {
+            free_byte_string(ctx, value->iv_counter_nonce);
+            
+            ctx->free_func(ctx->state, value->iv_counter_nonce);
+            value->iv_counter_nonce = NULL;
+        }
+        
+        value->wrapping_method = 0;
+        value->encoding_option = 0;
+    }
+    
+    return;
+}
+
+void
+free_key_block(struct kmip *ctx, struct key_block *value)
+{
+    if(value != NULL)
+    {
+        if(value->key_value != NULL)
+        {
+            if(value->key_value_type == KMIP_TYPE_BYTE_STRING)
+            {
+                free_byte_string(ctx, value->key_value);
+                ctx->free_func(ctx->state, value->key_value);
+            }
+            else
+            {
+                free_key_value(ctx, value->key_format_type, value->key_value);
+                ctx->free_func(ctx->state, value->key_value);
+            }
+            value->key_value = NULL;
+        }
+        
+        if(value->key_wrapping_data != NULL)
+        {
+            free_key_wrapping_data(ctx, value->key_wrapping_data);
+            ctx->free_func(ctx->state, value->key_wrapping_data);
+            value->key_wrapping_data = NULL;
+        }
+        
+        init_key_block(value);
+    }
+    
+    return;
+}
+
+void
+free_symmetric_key(struct kmip *ctx, struct symmetric_key *value)
+{
+    if(value != NULL)
+    {
+        if(value->key_block != NULL)
+        {
+            free_key_block(ctx, value->key_block);
+            ctx->free_func(ctx->state, value->key_block);
+            value->key_block = NULL;
+        }
+    }
+    
+    return;
+}
+
+void
+free_public_key(struct kmip *ctx, struct public_key *value)
+{
+    if(value != NULL)
+    {
+        if(value->key_block != NULL)
+        {
+            free_key_block(ctx, value->key_block);
+            ctx->free_func(ctx->state, value->key_block);
+            value->key_block = NULL;
+        }
+    }
+    
+    return;
+}
+
+void
+free_private_key(struct kmip *ctx, struct private_key *value)
+{
+    if(value != NULL)
+    {
+        if(value->key_block != NULL)
+        {
+            free_key_block(ctx, value->key_block);
+            ctx->free_func(ctx->state, value->key_block);
+            value->key_block = NULL;
+        }
+    }
+    
+    return;
+}
+
+void
+free_get_response_payload(struct kmip *ctx,
+                          struct get_response_payload *value)
+{
+    if(value != NULL)
+    {
+        if(value->unique_identifier != NULL)
+        {
+            free_text_string(ctx, value->unique_identifier);
+            ctx->free_func(ctx->state, value->unique_identifier);
+            value->unique_identifier = NULL;
+        }
+        
+        if(value->object != NULL)
+        {
+            switch(value->object_type)
+            {
+                case KMIP_OBJTYPE_SYMMETRIC_KEY:
+                free_symmetric_key(ctx, (struct symmetric_key *)value->object);
+                break;
+                
+                case KMIP_OBJTYPE_PUBLIC_KEY:
+                free_public_key(ctx, (struct public_key *)value->object);
+                break;
+                
+                case KMIP_OBJTYPE_PRIVATE_KEY:
+                free_private_key(ctx, (struct private_key *)value->object);
+                break;
+                
+                default:
+                /* NOTE (ph) Hitting this case means that we don't know */
+                /*      what the actual type, size, or value of         */
+                /*      value->object is. We can still free it but we   */
+                /*      cannot securely zero the memory. We also do not */
+                /*      know how to free any possible substructures     */
+                /*      pointed to within value->object.                */
+                /*                                                      */
+                /*      Avoid hitting this case at all costs.           */
+                break;
+            };
+            
+            ctx->free_func(ctx->state, value->object);
+            value->object = NULL;
+        }
+        
+        value->object_type = 0;
+    }
+    
+    return;
+}
+
+void
+free_response_batch_item(struct kmip *ctx, struct response_batch_item *value)
+{
+    if(value != NULL)
+    {
+        if(value->unique_batch_item_id != NULL)
+        {
+            free_byte_string(ctx, value->unique_batch_item_id);
+            ctx->free_func(ctx->state, value->unique_batch_item_id);
+            value->unique_batch_item_id = NULL;
+        }
+        
+        if(value->result_message != NULL)
+        {
+            free_text_string(ctx, value->result_message);
+            ctx->free_func(ctx->state, value->result_message);
+            value->result_message = NULL;
+        }
+        
+        if(value->asynchronous_correlation_value != NULL)
+        {
+            free_byte_string(ctx, value->asynchronous_correlation_value);
+            ctx->free_func(ctx->state, value->asynchronous_correlation_value);
+            value->asynchronous_correlation_value = NULL;
+        }
+        
+        if(value->response_payload != NULL)
+        {
+            switch(value->operation)
+            {
+                case KMIP_OP_GET:
+                free_get_response_payload(
+                    ctx, 
+                    (struct get_response_payload *)value->response_payload);
+                break;
+                
+                default:
+                /* NOTE (ph) Hitting this case means that we don't know    */
+                /*      what the actual type, size, or value of            */
+                /*      value->response_payload is. We can still free it   */
+                /*      but we cannot securely zero the memory. We also    */
+                /*      do not know how to free any possible substructures */
+                /*      pointed to within value->object.                   */
+                /*                                                         */
+                /*      Avoid hitting this case at all costs.              */
+                break;
+            };
+            
+            ctx->free_func(ctx->state, value->response_payload);
+            value->response_payload = NULL;
+        }
+        
+        value->operation = 0;
+        value->result_status = 0;
+        value->result_reason = 0;
+    }
+    
+    return;
+}
+
+void
+free_nonce(struct kmip *ctx, struct nonce *value)
+{
+    if(value != NULL)
+    {
+        if(value->nonce_id != NULL)
+        {
+            free_byte_string(ctx, value->nonce_id);
+            ctx->free_func(ctx->state, value->nonce_id);
+            value->nonce_id = NULL;
+        }
+        
+        if(value->nonce_value != NULL)
+        {
+            free_byte_string(ctx, value->nonce_value);
+            ctx->free_func(ctx->state, value->nonce_value);
+            value->nonce_value = NULL;
+        }
+    }
+    
+    return;
+}
+
+void
+free_response_header(struct kmip *ctx, struct response_header *value)
+{
+    if(value != NULL)
+    {
+        if(value->protocol_version != NULL)
+        {
+            ctx->memset_func(
+                value->protocol_version,
+                0,
+                sizeof(struct protocol_version));
+            ctx->free_func(ctx->state, value->protocol_version);
+            value->protocol_version = NULL;
+        }
+        
+        if(value->nonce != NULL)
+        {
+            free_nonce(ctx, value->nonce);
+            ctx->free_func(ctx->state, value->nonce);
+            value->nonce = NULL;
+        }
+        
+        if(value->attestation_types != NULL)
+        {
+            ctx->memset_func(
+                value->attestation_types,
+                0,
+                value->attestation_type_count * sizeof(enum attestation_type));
+            ctx->free_func(ctx->state, value->attestation_types);
+            value->attestation_types = NULL;
+        }
+        
+        value->attestation_type_count = 0;
+        
+        if(value->client_correlation_value != NULL)
+        {
+            free_text_string(ctx, value->client_correlation_value);
+            ctx->free_func(ctx->state, value->client_correlation_value);
+            value->client_correlation_value = NULL;
+        }
+        
+        if(value->server_correlation_value != NULL)
+        {
+            free_text_string(ctx, value->server_correlation_value);
+            ctx->free_func(ctx->state, value->server_correlation_value);
+            value->server_correlation_value = NULL;
+        }
+        
+        init_response_header(value);
+    }
+    
+    return;
+}
+
+void
+free_response_message(struct kmip *ctx, struct response_message *value)
+{
+    if(value != NULL)
+    {
+        if(value->response_header != NULL)
+        {
+            free_response_header(ctx, value->response_header);
+            ctx->free_func(ctx->state, value->response_header);
+            value->response_header = NULL;
+        }
+        
+        if(value->batch_items != NULL)
+        {
+            for(size_t i = 0; i < value->batch_count; i++)
+            {
+                free_response_batch_item(ctx, &value->batch_items[i]);
+            }
+            ctx->free_func(ctx, value->batch_items);
+            value->batch_items = NULL;
+        }
+        
+        value->batch_count = 0;
     }
     
     return;
@@ -967,10 +1465,878 @@ compare_key_material(enum key_format_type format,
                 break;
                 
                 default:
-                /* NOTE (ph) Unsupported types cannot be compared.   */
+                /* NOTE (ph) Unsupported types cannot be compared. */
                 return(KMIP_FALSE);
                 break;
             };
+        }
+    }
+    
+    return(KMIP_TRUE);
+}
+
+int
+compare_key_value(enum key_format_type format,
+                  const struct key_value *a,
+                  const struct key_value *b)
+{
+    if(a != b)
+    {
+        if((a == NULL) || (b == NULL))
+        {
+            return(KMIP_FALSE);
+        }
+        
+        if(a->key_material != b->key_material)
+        {
+            if((a->key_material == NULL) || (b->key_material == NULL))
+            {
+                return(KMIP_FALSE);
+            }
+            
+            if(compare_key_material(format,
+                                    (void**)&a->key_material,
+                                    (void**)&b->key_material) == KMIP_FALSE)
+            {
+                return(KMIP_FALSE);
+            }
+        }
+        
+        if(a->attributes != b->attributes)
+        {
+            if((a->attributes == NULL) || (b->attributes == NULL))
+            {
+                return(KMIP_FALSE);
+            }
+            
+            for(size_t i = 0; i < a->attribute_count; i++)
+            {
+                if(compare_attribute(
+                    &a->attributes[i], 
+                    &b->attributes[i]) == KMIP_FALSE)
+                {
+                    return(KMIP_FALSE);
+                }
+            }
+        }
+    }
+    
+    return(KMIP_TRUE);
+}
+
+int
+compare_cryptographic_parameters(const struct cryptographic_parameters *a,
+                                 const struct cryptographic_parameters *b)
+{
+    if(a != b)
+    {
+        if((a == NULL) || (b == NULL))
+        {
+            return(KMIP_FALSE);
+        }
+        
+        if(a->block_cipher_mode != b->block_cipher_mode)
+        {
+            return(KMIP_FALSE);
+        }
+        
+        if(a->padding_method != b->padding_method)
+        {
+            return(KMIP_FALSE);
+        }
+        
+        if(a->hashing_algorithm != b->hashing_algorithm)
+        {
+            return(KMIP_FALSE);
+        }
+        
+        if(a->key_role_type != b->key_role_type)
+        {
+            return(KMIP_FALSE);
+        }
+        
+        if(a->digital_signature_algorithm != b->digital_signature_algorithm)
+        {
+            return(KMIP_FALSE);
+        }
+        
+        if(a->cryptographic_algorithm != b->cryptographic_algorithm)
+        {
+            return(KMIP_FALSE);
+        }
+        
+        if(a->random_iv != b->random_iv)
+        {
+            return(KMIP_FALSE);
+        }
+        
+        if(a->iv_length != b->iv_length)
+        {
+            return(KMIP_FALSE);
+        }
+        
+        if(a->tag_length != b->tag_length)
+        {
+            return(KMIP_FALSE);
+        }
+        
+        if(a->fixed_field_length != b->fixed_field_length)
+        {
+            return(KMIP_FALSE);
+        }
+        
+        if(a->invocation_field_length != b->invocation_field_length)
+        {
+            return(KMIP_FALSE);
+        }
+        
+        if(a->counter_length != b->counter_length)
+        {
+            return(KMIP_FALSE);
+        }
+        
+        if(a->initial_counter_value != b->initial_counter_value)
+        {
+            return(KMIP_FALSE);
+        }
+        
+        if(a->salt_length != b->salt_length)
+        {
+            return(KMIP_FALSE);
+        }
+        
+        if(a->mask_generator != b->mask_generator)
+        {
+            return(KMIP_FALSE);
+        }
+        
+        if(a->mask_generator_hashing_algorithm != 
+           b->mask_generator_hashing_algorithm)
+        {
+            return(KMIP_FALSE);
+        }
+        
+        if(a->trailer_field != b->trailer_field)
+        {
+            return(KMIP_FALSE);
+        }
+        
+        if(a->p_source != b->p_source)
+        {
+            if((a->p_source == NULL) || (b->p_source == NULL))
+            {
+                return(KMIP_FALSE);
+            }
+            
+            if(compare_byte_string(a->p_source, b->p_source) == KMIP_FALSE)
+            {
+                return(KMIP_FALSE);
+            }
+        }
+    }
+    
+    return(KMIP_TRUE);
+}
+
+int
+compare_encryption_key_information(const struct encryption_key_information *a,
+                                   const struct encryption_key_information *b)
+{
+    if(a != b)
+    {
+        if((a == NULL) || (b == NULL))
+        {
+            return(KMIP_FALSE);
+        }
+        
+        if(a->unique_identifier != b->unique_identifier)
+        {
+            if((a->unique_identifier == NULL) || (b->unique_identifier == NULL))
+            {
+                return(KMIP_FALSE);
+            }
+            
+            if(compare_text_string(a->unique_identifier,
+                                   b->unique_identifier) == KMIP_FALSE)
+            {
+                return(KMIP_FALSE);
+            }
+        }
+        
+        if(a->cryptographic_parameters != b->cryptographic_parameters)
+        {
+            if((a->cryptographic_parameters == NULL) ||
+               (b->cryptographic_parameters == NULL))
+            {
+                return(KMIP_FALSE);
+            }
+            
+            if(compare_cryptographic_parameters(
+                a->cryptographic_parameters, 
+                b->cryptographic_parameters) == KMIP_FALSE)
+            {
+                return(KMIP_FALSE);
+            }
+        }
+    }
+    
+    return(KMIP_TRUE);
+}
+
+int
+compare_mac_signature_key_information(const struct mac_signature_key_information *a,
+                                      const struct mac_signature_key_information *b)
+{
+    if(a != b)
+    {
+        if((a == NULL) || (b == NULL))
+        {
+            return(KMIP_FALSE);
+        }
+        
+        if(a->unique_identifier != b->unique_identifier)
+        {
+            if((a->unique_identifier == NULL) || (b->unique_identifier == NULL))
+            {
+                return(KMIP_FALSE);
+            }
+            
+            if(compare_text_string(a->unique_identifier,
+                                   b->unique_identifier) == KMIP_FALSE)
+            {
+                return(KMIP_FALSE);
+            }
+        }
+        
+        if(a->cryptographic_parameters != b->cryptographic_parameters)
+        {
+            if((a->cryptographic_parameters == NULL) ||
+               (b->cryptographic_parameters == NULL))
+            {
+                return(KMIP_FALSE);
+            }
+            
+            if(compare_cryptographic_parameters(
+                a->cryptographic_parameters, 
+                b->cryptographic_parameters) == KMIP_FALSE)
+            {
+                return(KMIP_FALSE);
+            }
+        }
+    }
+    
+    return(KMIP_TRUE);
+}
+
+int
+compare_key_wrapping_data(const struct key_wrapping_data *a,
+                          const struct key_wrapping_data *b)
+{
+    if(a != b)
+    {
+        if((a == NULL) || (b == NULL))
+        {
+            return(KMIP_FALSE);
+        }
+        
+        if(a->wrapping_method != b->wrapping_method)
+        {
+            return(KMIP_FALSE);
+        }
+        
+        if(a->encoding_option != b->encoding_option)
+        {
+            return(KMIP_FALSE);
+        }
+        
+        if(a->mac_signature != b->mac_signature)
+        {
+            if((a->mac_signature == NULL) || (b->mac_signature == NULL))
+            {
+                return(KMIP_FALSE);
+            }
+            
+            if(compare_byte_string(a->mac_signature,
+                                   b->mac_signature) == KMIP_FALSE)
+            {
+                return(KMIP_FALSE);
+            }
+        }
+        
+        if(a->iv_counter_nonce != b->iv_counter_nonce)
+        {
+            if((a->iv_counter_nonce == NULL) || (b->iv_counter_nonce == NULL))
+            {
+                return(KMIP_FALSE);
+            }
+            
+            if(compare_byte_string(a->iv_counter_nonce,
+                                   b->iv_counter_nonce) == KMIP_FALSE)
+            {
+                return(KMIP_FALSE);
+            }
+        }
+        
+        if(a->encryption_key_info != b->encryption_key_info)
+        {
+            if((a->encryption_key_info == NULL) || (b->encryption_key_info == NULL))
+            {
+                return(KMIP_FALSE);
+            }
+            
+            if(compare_encryption_key_information(
+                a->encryption_key_info,
+                b->encryption_key_info) == KMIP_FALSE)
+            {
+                return(KMIP_FALSE);
+            }
+        }
+        
+        if(a->mac_signature_key_info != b->mac_signature_key_info)
+        {
+            if((a->mac_signature_key_info == NULL) || 
+               (b->mac_signature_key_info == NULL))
+            {
+                return(KMIP_FALSE);
+            }
+            
+            if(compare_mac_signature_key_information(
+                a->mac_signature_key_info,
+                b->mac_signature_key_info) == KMIP_FALSE)
+            {
+                return(KMIP_FALSE);
+            }
+        }
+    }
+    
+    return(KMIP_TRUE);
+}
+
+int
+compare_key_block(const struct key_block *a, const struct key_block *b)
+{
+    if(a != b)
+    {
+        if((a == NULL) || (b == NULL))
+        {
+            return(KMIP_FALSE);
+        }
+        
+        if(a->key_format_type != b->key_format_type)
+        {
+            return(KMIP_FALSE);
+        }
+        
+        if(a->key_compression_type != b->key_compression_type)
+        {
+            return(KMIP_FALSE);
+        }
+        
+        if(a->cryptographic_algorithm != b->cryptographic_algorithm)
+        {
+            return(KMIP_FALSE);
+        }
+        
+        if(a->cryptographic_length != b->cryptographic_length)
+        {
+            return(KMIP_FALSE);
+        }
+        
+        if(a->key_value_type != b->key_value_type)
+        {
+            return(KMIP_FALSE);
+        }
+        
+        if(a->key_value != b->key_value)
+        {
+            if((a->key_value == NULL) || (b->key_value == NULL))
+            {
+                return(KMIP_FALSE);
+            }
+            
+            if(a->key_value_type == KMIP_TYPE_BYTE_STRING)
+            {
+                if(compare_byte_string(
+                    (struct byte_string *)a->key_value,
+                    (struct byte_string *)b->key_value) == KMIP_FALSE)
+                {
+                    return(KMIP_FALSE);
+                }
+            }
+            else
+            {
+                if(compare_key_value(a->key_format_type,
+                                     (struct key_value *)a->key_value,
+                                     (struct key_value *)b->key_value) == KMIP_FALSE)
+                {
+                    return(KMIP_FALSE);
+                }
+            }
+        }
+        
+        if(a->key_wrapping_data != b->key_wrapping_data)
+        {
+            if((a->key_wrapping_data == NULL) || (b->key_wrapping_data == NULL))
+            {
+                return(KMIP_FALSE);
+            }
+            
+            if(compare_key_wrapping_data(
+                a->key_wrapping_data, 
+                b->key_wrapping_data) == KMIP_FALSE)
+            {
+                return(KMIP_FALSE);
+            }
+        }
+    }
+    
+    return(KMIP_TRUE);
+}
+
+int
+compare_symmetric_key(const struct symmetric_key *a,
+                      const struct symmetric_key *b)
+{
+    if(a != b)
+    {
+        if((a == NULL) || (b == NULL))
+        {
+            return(KMIP_FALSE);
+        }
+        
+        if(a->key_block != b->key_block)
+        {
+            if((a->key_block == NULL) || (b->key_block == NULL))
+            {
+                return(KMIP_FALSE);
+            }
+            
+            if(compare_key_block(a->key_block, b->key_block) == KMIP_FALSE)
+            {
+                return(KMIP_FALSE);
+            }
+        }
+    }
+    
+    return(KMIP_TRUE);
+}
+
+int
+compare_public_key(const struct public_key *a, const struct public_key *b)
+{
+    if(a != b)
+    {
+        if((a == NULL) || (b == NULL))
+        {
+            return(KMIP_FALSE);
+        }
+        
+        if(a->key_block != b->key_block)
+        {
+            if((a->key_block == NULL) || (b->key_block == NULL))
+            {
+                return(KMIP_FALSE);
+            }
+            
+            if(compare_key_block(a->key_block, b->key_block) == KMIP_FALSE)
+            {
+                return(KMIP_FALSE);
+            }
+        }
+    }
+    
+    return(KMIP_TRUE);
+}
+
+int
+compare_private_key(const struct private_key *a, const struct private_key *b)
+{
+    if(a != b)
+    {
+        if((a == NULL) || (b == NULL))
+        {
+            return(KMIP_FALSE);
+        }
+        
+        if(a->key_block != b->key_block)
+        {
+            if((a->key_block == NULL) || (b->key_block == NULL))
+            {
+                return(KMIP_FALSE);
+            }
+            
+            if(compare_key_block(a->key_block, b->key_block) == KMIP_FALSE)
+            {
+                return(KMIP_FALSE);
+            }
+        }
+    }
+    
+    return(KMIP_TRUE);
+}
+
+int
+compare_get_response_payload(const struct get_response_payload *a,
+                             const struct get_response_payload *b)
+{
+    if(a != b)
+    {
+        if((a == NULL) || (b == NULL))
+        {
+            return(KMIP_FALSE);
+        }
+        
+        if(a->object_type != b->object_type)
+        {
+            return(KMIP_FALSE);
+        }
+        
+        if(a->unique_identifier != b->unique_identifier)
+        {
+            if((a->unique_identifier == NULL) || (b->unique_identifier == NULL))
+            {
+                return(KMIP_FALSE);
+            }
+            
+            if(compare_text_string(a->unique_identifier,
+                                   b->unique_identifier) == KMIP_FALSE)
+            {
+                return(KMIP_FALSE);
+            }
+        }
+        
+        if(a->object != b->object)
+        {
+            switch(a->object_type)
+            {
+                case KMIP_OBJTYPE_SYMMETRIC_KEY:
+                if(compare_symmetric_key(
+                    (struct symmetric_key *)a->object,
+                    (struct symmetric_key *)b->object) == KMIP_FALSE)
+                {
+                    return(KMIP_FALSE);
+                }
+                break;
+                
+                case KMIP_OBJTYPE_PUBLIC_KEY:
+                if(compare_public_key(
+                    (struct public_key *)a->object,
+                    (struct public_key *)b->object) == KMIP_FALSE)
+                {
+                    return(KMIP_FALSE);
+                }
+                break;
+                
+                case KMIP_OBJTYPE_PRIVATE_KEY:
+                if(compare_private_key(
+                    (struct private_key *)a->object,
+                    (struct private_key *)b->object) == KMIP_FALSE)
+                {
+                    return(KMIP_FALSE);
+                }
+                break;
+                
+                default:
+                /* NOTE (ph) Unsupported types cannot be compared. */
+                return(KMIP_FALSE);
+                break;
+            };
+        }
+    }
+    
+    return(KMIP_TRUE);
+}
+
+int
+compare_response_batch_item(const struct response_batch_item *a,
+                            const struct response_batch_item *b)
+{
+    if(a != b)
+    {
+        if((a == NULL) || (b == NULL))
+        {
+            return(KMIP_FALSE);
+        }
+        
+        if(a->operation != b->operation)
+        {
+            return(KMIP_FALSE);
+        }
+        
+        if(a->result_status != b->result_status)
+        {
+            return(KMIP_FALSE);
+        }
+        
+        if(a->result_reason != b->result_reason)
+        {
+            return(KMIP_FALSE);
+        }
+        
+        if(a->unique_batch_item_id != b->unique_batch_item_id)
+        {
+            if((a->unique_batch_item_id == NULL) || 
+               (b->unique_batch_item_id == NULL))
+            {
+                return(KMIP_FALSE);
+            }
+            
+            if(compare_byte_string(a->unique_batch_item_id, 
+                                   b->unique_batch_item_id) == KMIP_FALSE)
+            {
+                return(KMIP_FALSE);
+            }
+        }
+        
+        if(a->result_message != b->result_message)
+        {
+            if((a->result_message == NULL) || (b->result_message == NULL))
+            {
+                return(KMIP_FALSE);
+            }
+            
+            if(compare_text_string(a->result_message,
+                                   b->result_message) == KMIP_FALSE)
+            {
+                return(KMIP_FALSE);
+            }
+        }
+        
+        if(a->asynchronous_correlation_value !=
+           b->asynchronous_correlation_value)
+        {
+            if((a->asynchronous_correlation_value == NULL) ||
+               (b->asynchronous_correlation_value == NULL))
+            {
+                return(KMIP_FALSE);
+            }
+            
+            if(compare_byte_string(
+                a->asynchronous_correlation_value,
+                b->asynchronous_correlation_value) == KMIP_FALSE)
+            {
+                return(KMIP_FALSE);
+            }
+        }
+        
+        if(a->response_payload != b->response_payload)
+        {
+            if((a->response_payload == NULL) || (b->response_payload == NULL))
+            {
+                return(KMIP_FALSE);
+            }
+            
+            switch(a->operation)
+            {
+                case KMIP_OP_GET:
+                if(compare_get_response_payload
+                   ((struct get_response_payload *)a->response_payload,
+                    (struct get_response_payload *)b->response_payload) == 
+                   KMIP_FALSE)
+                {
+                    return(KMIP_FALSE);
+                }
+                break;
+                
+                default:
+                /* NOTE (ph) Unsupported payloads cannot be compared. */
+                return(KMIP_FALSE);
+                break;
+            };
+        }
+    }
+    
+    return(KMIP_TRUE);
+}
+
+int
+compare_nonce(const struct nonce *a, const struct nonce *b)
+{
+    if(a != b)
+    {
+        if((a == NULL) || (b == NULL))
+        {
+            return(KMIP_FALSE);
+        }
+        
+        if(a->nonce_id != b->nonce_id)
+        {
+            if((a->nonce_id == NULL) || (b->nonce_id == NULL))
+            {
+                return(KMIP_FALSE);
+            }
+            
+            if(compare_byte_string(a->nonce_id, b->nonce_id) == KMIP_FALSE)
+            {
+                return(KMIP_FALSE);
+            }
+        }
+        
+        if(a->nonce_value != b->nonce_value)
+        {
+            if((a->nonce_value == NULL) || (b->nonce_value == NULL))
+            {
+                return(KMIP_FALSE);
+            }
+            
+            if(compare_byte_string(a->nonce_value, b->nonce_value) == KMIP_FALSE)
+            {
+                return(KMIP_FALSE);
+            }
+        }
+    }
+    
+    return(KMIP_TRUE);
+}
+
+int
+compare_response_header(const struct response_header *a,
+                        const struct response_header *b)
+{
+    if(a != b)
+    {
+        if((a == NULL) || (b == NULL))
+        {
+            return(KMIP_FALSE);
+        }
+        
+        if(a->time_stamp != b->time_stamp)
+        {
+            return(KMIP_FALSE);
+        }
+        
+        if(a->batch_count != b->batch_count)
+        {
+            return(KMIP_FALSE);
+        }
+        
+        if(a->attestation_type_count != b->attestation_type_count)
+        {
+            return(KMIP_FALSE);
+        }
+        
+        if(a->protocol_version != b->protocol_version)
+        {
+            if((a->protocol_version == NULL) || (b->protocol_version == NULL))
+            {
+                return(KMIP_FALSE);
+            }
+            
+            if(compare_protocol_version(a->protocol_version,
+                                        b->protocol_version) == KMIP_FALSE)
+            {
+                return(KMIP_FALSE);
+            }
+        }
+        
+        if(a->nonce != b->nonce)
+        {
+            if((a->nonce == NULL) || (b->nonce == NULL))
+            {
+                return(KMIP_FALSE);
+            }
+            
+            if(compare_nonce(a->nonce, b->nonce) == KMIP_FALSE)
+            {
+                return(KMIP_FALSE);
+            }
+        }
+        
+        if(a->attestation_types != b->attestation_types)
+        {
+            if((a->attestation_types == NULL) || (b->attestation_types == NULL))
+            {
+                return(KMIP_FALSE);
+            }
+            
+            for(size_t i = 0; i < a->attestation_type_count; i++)
+            {
+                if(a->attestation_types[i] != b->attestation_types[i])
+                {
+                    return(KMIP_FALSE);
+                }
+            }
+        }
+        
+        if(a->client_correlation_value != b->client_correlation_value)
+        {
+            if((a->client_correlation_value == NULL) || 
+               (b->client_correlation_value == NULL))
+            {
+                return(KMIP_FALSE);
+            }
+            
+            if(compare_text_string(a->client_correlation_value,
+                                   b->client_correlation_value) == KMIP_FALSE)
+            {
+                return(KMIP_FALSE);
+            }
+        }
+        
+        if(a->server_correlation_value != b->server_correlation_value)
+        {
+            if((a->server_correlation_value == NULL) ||
+               (b->server_correlation_value == NULL))
+            {
+                return(KMIP_FALSE);
+            }
+            
+            if(compare_text_string(a->server_correlation_value,
+                                   b->server_correlation_value) == KMIP_FALSE)
+            {
+                return(KMIP_FALSE);
+            }
+        }
+    }
+    
+    return(KMIP_TRUE);
+}
+
+int
+compare_response_message(const struct response_message *a,
+                         const struct response_message *b)
+{
+    if(a != b)
+    {
+        if((a == NULL) || (b == NULL))
+        {
+            return(KMIP_FALSE);
+        }
+        
+        if(a->batch_count != b->batch_count)
+        {
+            return(KMIP_FALSE);
+        }
+        
+        if(a->response_header != b->response_header)
+        {
+            if((a->response_header == NULL) || (b->response_header == NULL))
+            {
+                return(KMIP_FALSE);
+            }
+            
+            if(compare_response_header(a->response_header,
+                                       b->response_header) == KMIP_FALSE)
+            {
+                return(KMIP_FALSE);
+            }
+        }
+        
+        if(a->batch_items != b->batch_items)
+        {
+            if((a->batch_items == NULL) || (b->batch_items == NULL))
+            {
+                return(KMIP_FALSE);
+            }
+            
+            for(size_t i = 0; i < a->batch_count; i++)
+            {
+                if(compare_response_batch_item(&a->batch_items[i], 
+                                               &b->batch_items[i]) == KMIP_FALSE)
+                {
+                    return(KMIP_FALSE);
+                }
+            }
         }
     }
     
@@ -1076,6 +2442,7 @@ int
 encode_text_string(struct kmip *ctx, enum tag t,
                    const struct text_string *value)
 {
+    /* TODO (ph) What if value is NULL? */
     uint8 padding = (8 - (value->size % 8)) % 8;
     CHECK_BUFFER_FULL(ctx, 8 + value->size + padding);
     
@@ -1626,8 +2993,9 @@ encode_encryption_key_information(struct kmip *ctx,
 }
 
 int
-encode_mac_signature_key_information(struct kmip *ctx, 
-                                     const struct mac_signature_key_information *value)
+encode_mac_signature_key_information(
+struct kmip *ctx, 
+const struct mac_signature_key_information *value)
 {
     int result = 0;
     result = encode_int32_be(
@@ -3593,37 +4961,43 @@ decode_template_attribute(struct kmip *ctx,
     CHECK_BUFFER_FULL(ctx, length);
     
     value->name_count = get_num_items_next(ctx, KMIP_TAG_NAME);
-    value->names = ctx->calloc_func(
-        ctx->state,
-        value->name_count,
-        sizeof(struct name));
-    CHECK_NEW_MEMORY(
-        ctx,
-        value->names,
-        value->name_count * sizeof(struct name),
-        "sequence of Name structures");
-    
-    for(size_t i = 0; i < value->name_count; i++)
+    if(value->name_count > 0)
     {
-        result = decode_name(ctx, &value->names[i]);
-        CHECK_RESULT(ctx, result);
+        value->names = ctx->calloc_func(
+            ctx->state,
+            value->name_count,
+            sizeof(struct name));
+        CHECK_NEW_MEMORY(
+            ctx,
+            value->names,
+            value->name_count * sizeof(struct name),
+            "sequence of Name structures");
+        
+        for(size_t i = 0; i < value->name_count; i++)
+        {
+            result = decode_name(ctx, &value->names[i]);
+            CHECK_RESULT(ctx, result);
+        }
     }
     
     value->attribute_count = get_num_items_next(ctx, KMIP_TAG_ATTRIBUTE);
-    value->attributes = ctx->calloc_func(
-        ctx->state,
-        value->attribute_count,
-        sizeof(struct attribute));
-    CHECK_NEW_MEMORY(
-        ctx,
-        value->attributes,
-        value->attribute_count * sizeof(struct attribute),
-        "sequence of Attribute structures");
-    
-    for(size_t i = 0; i < value->attribute_count; i++)
+    if(value->attribute_count > 0)
     {
-        result = decode_attribute(ctx, &value->attributes[i]);
-        CHECK_RESULT(ctx, result);
+        value->attributes = ctx->calloc_func(
+            ctx->state,
+            value->attribute_count,
+            sizeof(struct attribute));
+        CHECK_NEW_MEMORY(
+            ctx,
+            value->attributes,
+            value->attribute_count * sizeof(struct attribute),
+            "sequence of Attribute structures");
+        
+        for(size_t i = 0; i < value->attribute_count; i++)
+        {
+            result = decode_attribute(ctx, &value->attributes[i]);
+            CHECK_RESULT(ctx, result);
+        }
     }
     
     return(KMIP_OK);
@@ -3757,63 +5131,827 @@ decode_key_material(struct kmip *ctx,
         /* TODO (peter-hamilton) The rest require BigInteger support. */
         
         case KMIP_KEYFORMAT_TRANS_DSA_PRIVATE_KEY:
-        kmip_push_error_frame(ctx, __func__, __LINE__);
-        return(KMIP_NOT_IMPLEMENTED);
-        break;
-        
         case KMIP_KEYFORMAT_TRANS_DSA_PUBLIC_KEY:
-        kmip_push_error_frame(ctx, __func__, __LINE__);
-        return(KMIP_NOT_IMPLEMENTED);
-        break;
-        
         case KMIP_KEYFORMAT_TRANS_RSA_PRIVATE_KEY:
-        kmip_push_error_frame(ctx, __func__, __LINE__);
-        return(KMIP_NOT_IMPLEMENTED);
-        break;
-        
         case KMIP_KEYFORMAT_TRANS_RSA_PUBLIC_KEY:
-        kmip_push_error_frame(ctx, __func__, __LINE__);
-        return(KMIP_NOT_IMPLEMENTED);
-        break;
-        
         case KMIP_KEYFORMAT_TRANS_DH_PRIVATE_KEY:
-        kmip_push_error_frame(ctx, __func__, __LINE__);
-        return(KMIP_NOT_IMPLEMENTED);
-        break;
-        
         case KMIP_KEYFORMAT_TRANS_DH_PUBLIC_KEY:
-        kmip_push_error_frame(ctx, __func__, __LINE__);
-        return(KMIP_NOT_IMPLEMENTED);
-        break;
-        
         case KMIP_KEYFORMAT_TRANS_ECDSA_PRIVATE_KEY:
-        kmip_push_error_frame(ctx, __func__, __LINE__);
-        return(KMIP_NOT_IMPLEMENTED);
-        break;
-        
         case KMIP_KEYFORMAT_TRANS_ECDSA_PUBLIC_KEY:
-        kmip_push_error_frame(ctx, __func__, __LINE__);
-        return(KMIP_NOT_IMPLEMENTED);
-        break;
-        
         case KMIP_KEYFORMAT_TRANS_ECDH_PRIVATE_KEY:
-        kmip_push_error_frame(ctx, __func__, __LINE__);
-        return(KMIP_NOT_IMPLEMENTED);
-        break;
-        
         case KMIP_KEYFORMAT_TRANS_ECDH_PUBLIC_KEY:
-        kmip_push_error_frame(ctx, __func__, __LINE__);
-        return(KMIP_NOT_IMPLEMENTED);
-        break;
-        
         case KMIP_KEYFORMAT_TRANS_ECMQV_PRIVATE_KEY:
+        case KMIP_KEYFORMAT_TRANS_ECMQV_PUBLIC_KEY:
+        default:
         kmip_push_error_frame(ctx, __func__, __LINE__);
         return(KMIP_NOT_IMPLEMENTED);
         break;
+    };
+    
+    return(KMIP_OK);
+}
+
+int
+decode_key_value(struct kmip *ctx,
+                 enum key_format_type format,
+                 struct key_value *value)
+{
+    CHECK_BUFFER_FULL(ctx, 8);
+    
+    int result = 0;
+    int32 tag_type = 0;
+    uint32 length = 0;
+    
+    decode_int32_be(ctx, &tag_type);
+    CHECK_TAG_TYPE(
+        ctx,
+        tag_type,
+        KMIP_TAG_KEY_VALUE,
+        KMIP_TYPE_STRUCTURE);
+    
+    decode_int32_be(ctx, &length);
+    CHECK_BUFFER_FULL(ctx, length);
+    
+    result = decode_key_material(ctx, format, &value->key_material);
+    CHECK_RESULT(ctx, result);
+    
+    value->attribute_count = get_num_items_next(ctx, KMIP_TAG_ATTRIBUTE);
+    if(value->attribute_count > 0)
+    {
+        value->attributes = ctx->calloc_func(
+            ctx->state,
+            value->attribute_count,
+            sizeof(struct attribute));
+        CHECK_NEW_MEMORY(
+            ctx,
+            value->attributes,
+            value->attribute_count * sizeof(struct attribute),
+            "sequence of Attribute structures");
         
-        case KMIP_KEYFORMAT_TRANS_ECMQV_PUBLIC_KEY:
-        kmip_push_error_frame(ctx, __func__, __LINE__);
-        return(KMIP_NOT_IMPLEMENTED);
+        for(size_t i = 0; i < value->attribute_count; i++)
+        {
+            result = decode_attribute(ctx, &value->attributes[i]);
+            CHECK_RESULT(ctx, result);
+        }
+    }
+    
+    return(KMIP_OK);
+}
+
+int
+decode_cryptographic_parameters(struct kmip *ctx, 
+                                struct cryptographic_parameters *value)
+{
+    CHECK_BUFFER_FULL(ctx, 8);
+    
+    init_cryptographic_parameters(value);
+    
+    int result = 0;
+    int32 tag_type = 0;
+    uint32 length = 0;
+    
+    decode_int32_be(ctx, &tag_type);
+    CHECK_TAG_TYPE(
+        ctx,
+        tag_type,
+        KMIP_TAG_CRYPTOGRAPHIC_PARAMETERS,
+        KMIP_TYPE_STRUCTURE);
+    
+    decode_int32_be(ctx, &length);
+    CHECK_BUFFER_FULL(ctx, length);
+    
+    if(is_tag_next(ctx, KMIP_TAG_BLOCK_CIPHER_MODE))
+    {
+        result = decode_enum(
+            ctx,
+            KMIP_TAG_BLOCK_CIPHER_MODE,
+            &value->block_cipher_mode);
+        CHECK_RESULT(ctx, result);
+        CHECK_ENUM(ctx, KMIP_TAG_BLOCK_CIPHER_MODE, value->block_cipher_mode);
+    }
+    
+    if(is_tag_next(ctx, KMIP_TAG_PADDING_METHOD))
+    {
+        result = decode_enum(
+            ctx,
+            KMIP_TAG_PADDING_METHOD,
+            &value->padding_method);
+        CHECK_RESULT(ctx, result);
+        CHECK_ENUM(ctx, KMIP_TAG_PADDING_METHOD, value->padding_method);
+    }
+    
+    if(is_tag_next(ctx, KMIP_TAG_HASHING_ALGORITHM))
+    {
+        result = decode_enum(
+            ctx,
+            KMIP_TAG_HASHING_ALGORITHM,
+            &value->hashing_algorithm);
+        CHECK_RESULT(ctx, result);
+        CHECK_ENUM(ctx, KMIP_TAG_HASHING_ALGORITHM, value->hashing_algorithm);
+    }
+    
+    if(is_tag_next(ctx, KMIP_TAG_KEY_ROLE_TYPE))
+    {
+        result = decode_enum(
+            ctx,
+            KMIP_TAG_KEY_ROLE_TYPE,
+            &value->key_role_type);
+        CHECK_RESULT(ctx, result);
+        CHECK_ENUM(ctx, KMIP_TAG_KEY_ROLE_TYPE, value->key_role_type);
+    }
+    
+    if(ctx->version >= KMIP_1_2)
+    {
+        if(is_tag_next(ctx, KMIP_TAG_DIGITAL_SIGNATURE_ALGORITHM))
+        {
+            result = decode_enum(
+                ctx,
+                KMIP_TAG_DIGITAL_SIGNATURE_ALGORITHM,
+                &value->digital_signature_algorithm);
+            CHECK_RESULT(ctx, result);
+            CHECK_ENUM(
+                ctx,
+                KMIP_TAG_DIGITAL_SIGNATURE_ALGORITHM,
+                value->digital_signature_algorithm);
+        }
+        
+        if(is_tag_next(ctx, KMIP_TAG_CRYPTOGRAPHIC_ALGORITHM))
+        {
+            result = decode_enum(
+                ctx,
+                KMIP_TAG_CRYPTOGRAPHIC_ALGORITHM,
+                &value->cryptographic_algorithm);
+            CHECK_RESULT(ctx, result);
+            CHECK_ENUM(
+                ctx,
+                KMIP_TAG_CRYPTOGRAPHIC_ALGORITHM,
+                value->cryptographic_algorithm);
+        }
+        
+        if(is_tag_next(ctx, KMIP_TAG_RANDOM_IV))
+        {
+            result = decode_bool(
+                ctx,
+                KMIP_TAG_RANDOM_IV,
+                &value->random_iv);
+            CHECK_RESULT(ctx, result);
+        }
+        
+        if(is_tag_next(ctx, KMIP_TAG_IV_LENGTH))
+        {
+            result = decode_integer(
+                ctx,
+                KMIP_TAG_IV_LENGTH,
+                &value->iv_length);
+            CHECK_RESULT(ctx, result);
+        }
+        
+        if(is_tag_next(ctx, KMIP_TAG_TAG_LENGTH))
+        {
+            result = decode_integer(
+                ctx,
+                KMIP_TAG_TAG_LENGTH,
+                &value->tag_length);
+            CHECK_RESULT(ctx, result);
+        }
+        
+        if(is_tag_next(ctx, KMIP_TAG_FIXED_FIELD_LENGTH))
+        {
+            result = decode_integer(
+                ctx,
+                KMIP_TAG_FIXED_FIELD_LENGTH,
+                &value->fixed_field_length);
+            CHECK_RESULT(ctx, result);
+        }
+        
+        if(is_tag_next(ctx, KMIP_TAG_INVOCATION_FIELD_LENGTH))
+        {
+            result = decode_integer(
+                ctx,
+                KMIP_TAG_INVOCATION_FIELD_LENGTH,
+                &value->invocation_field_length);
+            CHECK_RESULT(ctx, result);
+        }
+        
+        if(is_tag_next(ctx, KMIP_TAG_COUNTER_LENGTH))
+        {
+            result = decode_integer(
+                ctx,
+                KMIP_TAG_COUNTER_LENGTH,
+                &value->counter_length);
+            CHECK_RESULT(ctx, result);
+        }
+        
+        if(is_tag_next(ctx, KMIP_TAG_INITIAL_COUNTER_VALUE))
+        {
+            result = decode_integer(
+                ctx,
+                KMIP_TAG_INITIAL_COUNTER_VALUE,
+                &value->initial_counter_value);
+            CHECK_RESULT(ctx, result);
+        }
+    }
+    
+    if(ctx->version >= KMIP_1_4)
+    {
+        if(is_tag_next(ctx, KMIP_TAG_SALT_LENGTH))
+        {
+            result = decode_integer(
+                ctx,
+                KMIP_TAG_SALT_LENGTH,
+                &value->salt_length);
+            CHECK_RESULT(ctx, result);
+        }
+        
+        if(is_tag_next(ctx, KMIP_TAG_MASK_GENERATOR))
+        {
+            result = decode_enum(
+                ctx,
+                KMIP_TAG_MASK_GENERATOR,
+                &value->mask_generator);
+            CHECK_RESULT(ctx, result);
+            CHECK_ENUM(ctx, KMIP_TAG_MASK_GENERATOR, value->mask_generator);
+        }
+        
+        if(is_tag_next(ctx, KMIP_TAG_MASK_GENERATOR_HASHING_ALGORITHM))
+        {
+            result = decode_enum(
+                ctx,
+                KMIP_TAG_MASK_GENERATOR_HASHING_ALGORITHM,
+                &value->mask_generator_hashing_algorithm);
+            CHECK_RESULT(ctx, result);
+            CHECK_ENUM(
+                ctx,
+                KMIP_TAG_HASHING_ALGORITHM,
+                value->mask_generator_hashing_algorithm);
+        }
+        
+        if(is_tag_next(ctx, KMIP_TAG_P_SOURCE))
+        {
+            value->p_source = ctx->calloc_func(
+                ctx->state,
+                1,
+                sizeof(struct byte_string));
+            CHECK_NEW_MEMORY(
+                ctx,
+                value->p_source,
+                sizeof(struct byte_string),
+                "P Source byte string");
+            
+            result = decode_byte_string(
+                ctx,
+                KMIP_TAG_P_SOURCE,
+                value->p_source);
+            CHECK_RESULT(ctx, result);
+        }
+        
+        if(is_tag_next(ctx, KMIP_TAG_TRAILER_FIELD))
+        {
+            result = decode_integer(
+                ctx,
+                KMIP_TAG_TRAILER_FIELD,
+                &value->trailer_field);
+            CHECK_RESULT(ctx, result);
+        }
+    }
+    
+    return(KMIP_OK);
+}
+
+int
+decode_encryption_key_information(struct kmip *ctx, 
+                                  struct encryption_key_information *value)
+{
+    CHECK_BUFFER_FULL(ctx, 8);
+    
+    int result = 0;
+    int32 tag_type = 0;
+    uint32 length = 0;
+    
+    decode_int32_be(ctx, &tag_type);
+    CHECK_TAG_TYPE(
+        ctx,
+        tag_type,
+        KMIP_TAG_ENCRYPTION_KEY_INFORMATION,
+        KMIP_TYPE_STRUCTURE);
+    
+    decode_int32_be(ctx, &length);
+    CHECK_BUFFER_FULL(ctx, length);
+    
+    value->unique_identifier = ctx->calloc_func(
+        ctx->state,
+        1,
+        sizeof(struct text_string));
+    CHECK_NEW_MEMORY(
+        ctx,
+        value->unique_identifier,
+        sizeof(struct text_string),
+        "UniqueIdentifier text string");
+    
+    result = decode_text_string(
+        ctx,
+        KMIP_TAG_UNIQUE_IDENTIFIER,
+        value->unique_identifier);
+    CHECK_RESULT(ctx, result);
+    
+    if(is_tag_next(ctx, KMIP_TAG_CRYPTOGRAPHIC_PARAMETERS))
+    {
+        value->cryptographic_parameters = ctx->calloc_func(
+            ctx->state,
+            1,
+            sizeof(struct cryptographic_parameters));
+        CHECK_NEW_MEMORY(
+            ctx,
+            value->cryptographic_parameters,
+            sizeof(struct cryptographic_parameters),
+            "CryptographicParameters structure");
+        
+        result = decode_cryptographic_parameters(
+            ctx,
+            value->cryptographic_parameters);
+        CHECK_RESULT(ctx, result);
+    }
+    
+    return(KMIP_OK);
+}
+
+int
+decode_mac_signature_key_information(struct kmip *ctx, 
+                                     struct mac_signature_key_information *value)
+{
+    CHECK_BUFFER_FULL(ctx, 8);
+    
+    int result = 0;
+    int32 tag_type = 0;
+    uint32 length = 0;
+    
+    decode_int32_be(ctx, &tag_type);
+    CHECK_TAG_TYPE(
+        ctx,
+        tag_type,
+        KMIP_TAG_MAC_SIGNATURE_KEY_INFORMATION,
+        KMIP_TYPE_STRUCTURE);
+    
+    decode_int32_be(ctx, &length);
+    CHECK_BUFFER_FULL(ctx, length);
+    
+    value->unique_identifier = ctx->calloc_func(
+        ctx->state,
+        1,
+        sizeof(struct text_string));
+    CHECK_NEW_MEMORY(
+        ctx,
+        value->unique_identifier,
+        sizeof(struct text_string),
+        "UniqueIdentifier text string");
+    
+    result = decode_text_string(
+        ctx,
+        KMIP_TAG_UNIQUE_IDENTIFIER,
+        value->unique_identifier);
+    CHECK_RESULT(ctx, result);
+    
+    if(is_tag_next(ctx, KMIP_TAG_CRYPTOGRAPHIC_PARAMETERS))
+    {
+        value->cryptographic_parameters = ctx->calloc_func(
+            ctx->state,
+            1,
+            sizeof(struct cryptographic_parameters));
+        CHECK_NEW_MEMORY(
+            ctx,
+            value->cryptographic_parameters,
+            sizeof(struct cryptographic_parameters),
+            "CryptographicParameters structure");
+        
+        result = decode_cryptographic_parameters(
+            ctx,
+            value->cryptographic_parameters);
+        CHECK_RESULT(ctx, result);
+    }
+    
+    return(KMIP_OK);
+}
+
+
+int
+decode_key_wrapping_data(struct kmip *ctx, 
+                         struct key_wrapping_data *value)
+{
+    CHECK_BUFFER_FULL(ctx, 8);
+    
+    int result = 0;
+    int32 tag_type = 0;
+    uint32 length = 0;
+    
+    decode_int32_be(ctx, &tag_type);
+    CHECK_TAG_TYPE(
+        ctx,
+        tag_type,
+        KMIP_TAG_KEY_WRAPPING_DATA,
+        KMIP_TYPE_STRUCTURE);
+    
+    decode_int32_be(ctx, &length);
+    CHECK_BUFFER_FULL(ctx, length);
+    
+    result = decode_enum(ctx, KMIP_TAG_WRAPPING_METHOD, &value->wrapping_method);
+    CHECK_RESULT(ctx, result);
+    CHECK_ENUM(ctx, KMIP_TAG_WRAPPING_METHOD, value->wrapping_method);
+    
+    if(is_tag_next(ctx, KMIP_TAG_ENCRYPTION_KEY_INFORMATION))
+    {
+        value->encryption_key_info = ctx->calloc_func(
+            ctx->state,
+            1,
+            sizeof(struct encryption_key_information));
+        CHECK_NEW_MEMORY(
+            ctx,
+            value->encryption_key_info,
+            sizeof(struct encryption_key_information),
+            "EncryptionKeyInformation structure");
+        
+        result = decode_encryption_key_information(
+            ctx,
+            value->encryption_key_info);
+        CHECK_RESULT(ctx, result);
+    }
+    
+    if(is_tag_next(ctx, KMIP_TAG_MAC_SIGNATURE_KEY_INFORMATION))
+    {
+        value->mac_signature_key_info = ctx->calloc_func(
+            ctx->state,
+            1,
+            sizeof(struct mac_signature_key_information));
+        CHECK_NEW_MEMORY(
+            ctx,
+            value->mac_signature_key_info,
+            sizeof(struct mac_signature_key_information),
+            "MAC/SignatureKeyInformation structure");
+        
+        result = decode_mac_signature_key_information(
+            ctx,
+            value->mac_signature_key_info);
+        CHECK_RESULT(ctx, result);
+    }
+    
+    if(is_tag_next(ctx, KMIP_TAG_MAC_SIGNATURE))
+    {
+        value->mac_signature = ctx->calloc_func(
+            ctx->state,
+            1,
+            sizeof(struct byte_string));
+        CHECK_NEW_MEMORY(
+            ctx,
+            value->mac_signature,
+            sizeof(struct byte_string),
+            "MAC/Signature byte string");
+        
+        result = decode_byte_string(
+            ctx,
+            KMIP_TAG_MAC_SIGNATURE,
+            value->mac_signature);
+        CHECK_RESULT(ctx, result);
+    }
+    
+    if(is_tag_next(ctx, KMIP_TAG_IV_COUNTER_NONCE))
+    {
+        value->iv_counter_nonce = ctx->calloc_func(
+            ctx->state,
+            1,
+            sizeof(struct byte_string));
+        CHECK_NEW_MEMORY(
+            ctx,
+            value->iv_counter_nonce,
+            sizeof(struct byte_string),
+            "IV/Counter/Nonce byte string");
+        
+        result = decode_byte_string(
+            ctx,
+            KMIP_TAG_IV_COUNTER_NONCE,
+            value->iv_counter_nonce);
+        CHECK_RESULT(ctx, result);
+    }
+    
+    if(ctx->version >= KMIP_1_1)
+    {
+        if(is_tag_next(ctx, KMIP_TAG_ENCODING_OPTION))
+        {
+            result = decode_enum(
+                ctx,
+                KMIP_TAG_ENCODING_OPTION,
+                &value->encoding_option);
+            CHECK_RESULT(ctx, result);
+            CHECK_ENUM(ctx, KMIP_TAG_ENCODING_OPTION, value->encoding_option);
+        }
+    }
+    
+    return(KMIP_OK);
+}
+
+int
+decode_key_block(struct kmip *ctx, struct key_block *value)
+{
+    CHECK_BUFFER_FULL(ctx, 8);
+    
+    int result = 0;
+    int32 tag_type = 0;
+    uint32 length = 0;
+    
+    decode_int32_be(ctx, &tag_type);
+    CHECK_TAG_TYPE(
+        ctx,
+        tag_type,
+        KMIP_TAG_KEY_BLOCK,
+        KMIP_TYPE_STRUCTURE);
+    
+    decode_int32_be(ctx, &length);
+    CHECK_BUFFER_FULL(ctx, length);
+    
+    result = decode_enum(ctx, KMIP_TAG_KEY_FORMAT_TYPE, &value->key_format_type);
+    CHECK_RESULT(ctx, result);
+    CHECK_ENUM(ctx, KMIP_TAG_KEY_FORMAT_TYPE, value->key_format_type);
+    
+    if(is_tag_next(ctx, KMIP_TAG_KEY_COMPRESSION_TYPE))
+    {
+        result = decode_enum(
+            ctx,
+            KMIP_TAG_KEY_COMPRESSION_TYPE,
+            &value->key_compression_type);
+        CHECK_RESULT(ctx, result);
+        CHECK_ENUM(ctx, KMIP_TAG_KEY_COMPRESSION_TYPE, value->key_compression_type);
+    }
+    
+    if(is_tag_type_next(ctx, KMIP_TAG_KEY_VALUE, KMIP_TYPE_BYTE_STRING))
+    {
+        value->key_value_type = KMIP_TYPE_BYTE_STRING;
+        value->key_value = ctx->calloc_func(
+            ctx->state,
+            1,
+            sizeof(struct byte_string));
+        CHECK_NEW_MEMORY(
+            ctx,
+            value->key_value,
+            sizeof(struct byte_string),
+            "KeyValue byte string");
+        
+        result = decode_byte_string(
+            ctx,
+            KMIP_TAG_KEY_VALUE,
+            (struct byte_string *)value->key_value);
+    }
+    else
+    {
+        value->key_value_type = KMIP_TYPE_STRUCTURE;
+        value->key_value = ctx->calloc_func(
+            ctx->state,
+            1,
+            sizeof(struct key_value));
+        CHECK_NEW_MEMORY(
+            ctx,
+            value->key_value,
+            sizeof(struct key_value),
+            "KeyValue structure");
+        
+        result = decode_key_value(
+            ctx,
+            value->key_format_type,
+            (struct key_value *)value->key_value);
+    }
+    CHECK_RESULT(ctx, result);
+    
+    if(is_tag_next(ctx, KMIP_TAG_CRYPTOGRAPHIC_ALGORITHM))
+    {
+        result = decode_enum(
+            ctx,
+            KMIP_TAG_CRYPTOGRAPHIC_ALGORITHM,
+            &value->cryptographic_algorithm);
+        CHECK_RESULT(ctx, result);
+        CHECK_ENUM(
+            ctx,
+            KMIP_TAG_CRYPTOGRAPHIC_ALGORITHM,
+            value->cryptographic_algorithm);
+    }
+    
+    if(is_tag_next(ctx, KMIP_TAG_CRYPTOGRAPHIC_LENGTH))
+    {
+        result = decode_integer(
+            ctx,
+            KMIP_TAG_CRYPTOGRAPHIC_LENGTH,
+            &value->cryptographic_length);
+        CHECK_RESULT(ctx, result);
+    }
+    
+    if(is_tag_next(ctx, KMIP_TAG_KEY_WRAPPING_DATA))
+    {
+        value->key_wrapping_data = ctx->calloc_func(
+            ctx,
+            1,
+            sizeof(struct key_wrapping_data));
+        CHECK_NEW_MEMORY(
+            ctx,
+            value->key_wrapping_data,
+            sizeof(struct key_wrapping_data),
+            "KeyWrappingData structure");
+        
+        result = decode_key_wrapping_data(ctx, value->key_wrapping_data);
+        CHECK_RESULT(ctx, result);
+    }
+    
+    return(KMIP_OK);
+}
+
+int
+decode_symmetric_key(struct kmip *ctx, struct symmetric_key *value)
+{
+    CHECK_BUFFER_FULL(ctx, 8);
+    
+    int result = 0;
+    int32 tag_type = 0;
+    uint32 length = 0;
+    
+    decode_int32_be(ctx, &tag_type);
+    CHECK_TAG_TYPE(
+        ctx,
+        tag_type,
+        KMIP_TAG_SYMMETRIC_KEY,
+        KMIP_TYPE_STRUCTURE);
+    
+    decode_int32_be(ctx, &length);
+    CHECK_BUFFER_FULL(ctx, length);
+    
+    value->key_block = ctx->calloc_func(
+        ctx->state,
+        1,
+        sizeof(struct key_block));
+    CHECK_NEW_MEMORY(
+        ctx,
+        value->key_block,
+        sizeof(struct key_block),
+        "KeyBlock structure");
+    
+    result = decode_key_block(ctx, value->key_block);
+    CHECK_RESULT(ctx, result);
+    
+    return(KMIP_OK);
+}
+
+int
+decode_public_key(struct kmip *ctx, struct public_key *value)
+{
+    CHECK_BUFFER_FULL(ctx, 8);
+    
+    int result = 0;
+    int32 tag_type = 0;
+    uint32 length = 0;
+    
+    decode_int32_be(ctx, &tag_type);
+    CHECK_TAG_TYPE(
+        ctx,
+        tag_type,
+        KMIP_TAG_PUBLIC_KEY,
+        KMIP_TYPE_STRUCTURE);
+    
+    decode_int32_be(ctx, &length);
+    CHECK_BUFFER_FULL(ctx, length);
+    
+    value->key_block = ctx->calloc_func(
+        ctx->state,
+        1,
+        sizeof(struct key_block));
+    CHECK_NEW_MEMORY(
+        ctx,
+        value->key_block,
+        sizeof(struct key_block),
+        "KeyBlock structure");
+    
+    result = decode_key_block(ctx, value->key_block);
+    CHECK_RESULT(ctx, result);
+    
+    return(KMIP_OK);
+}
+
+int
+decode_private_key(struct kmip *ctx, struct private_key *value)
+{
+    CHECK_BUFFER_FULL(ctx, 8);
+    
+    int result = 0;
+    int32 tag_type = 0;
+    uint32 length = 0;
+    
+    decode_int32_be(ctx, &tag_type);
+    CHECK_TAG_TYPE(
+        ctx,
+        tag_type,
+        KMIP_TAG_PRIVATE_KEY,
+        KMIP_TYPE_STRUCTURE);
+    
+    decode_int32_be(ctx, &length);
+    CHECK_BUFFER_FULL(ctx, length);
+    
+    value->key_block = ctx->calloc_func(
+        ctx->state,
+        1,
+        sizeof(struct key_block));
+    CHECK_NEW_MEMORY(
+        ctx,
+        value->key_block,
+        sizeof(struct key_block),
+        "KeyBlock structure");
+    
+    result = decode_key_block(ctx, value->key_block);
+    CHECK_RESULT(ctx, result);
+    
+    return(KMIP_OK);
+}
+
+int
+decode_get_response_payload(struct kmip *ctx,
+                            struct get_response_payload *value)
+{
+    CHECK_BUFFER_FULL(ctx, 8);
+    
+    int result = 0;
+    int32 tag_type = 0;
+    uint32 length = 0;
+    
+    decode_int32_be(ctx, &tag_type);
+    CHECK_TAG_TYPE(
+        ctx,
+        tag_type,
+        KMIP_TAG_RESPONSE_PAYLOAD,
+        KMIP_TYPE_STRUCTURE);
+    
+    decode_int32_be(ctx, &length);
+    CHECK_BUFFER_FULL(ctx, length);
+    
+    result = decode_enum(ctx, KMIP_TAG_OBJECT_TYPE, &value->object_type);
+    CHECK_RESULT(ctx, result);
+    CHECK_ENUM(ctx, KMIP_TAG_OBJECT_TYPE, value->object_type);
+    
+    value->unique_identifier = ctx->calloc_func(
+        ctx->state,
+        1,
+        sizeof(struct text_string));
+    CHECK_NEW_MEMORY(
+        ctx,
+        value->unique_identifier,
+        sizeof(struct text_string),
+        "UniqueIdentifier text string");
+    
+    result = decode_text_string(
+        ctx,
+        KMIP_TAG_UNIQUE_IDENTIFIER,
+        value->unique_identifier);
+    CHECK_RESULT(ctx, result);
+    
+    switch(value->object_type)
+    {
+        case KMIP_OBJTYPE_SYMMETRIC_KEY:
+        value->object = ctx->calloc_func(
+            ctx->state,
+            1,
+            sizeof(struct symmetric_key));
+        CHECK_NEW_MEMORY(
+            ctx,
+            value->object,
+            sizeof(struct symmetric_key),
+            "SymmetricKey structure");
+        result = decode_symmetric_key(
+            ctx,
+            (struct symmetric_key*)value->object);
+        CHECK_RESULT(ctx, result);
+        break;
+        
+        case KMIP_OBJTYPE_PUBLIC_KEY:
+        value->object = ctx->calloc_func(
+            ctx->state,
+            1,
+            sizeof(struct public_key));
+        CHECK_NEW_MEMORY(
+            ctx,
+            value->object,
+            sizeof(struct public_key),
+            "PublicKey structure");
+        result = decode_public_key(
+            ctx,
+            (struct public_key*)value->object);
+        CHECK_RESULT(ctx, result);
+        break;
+        
+        case KMIP_OBJTYPE_PRIVATE_KEY:
+        value->object = ctx->calloc_func(
+            ctx->state,
+            1,
+            sizeof(struct private_key));
+        CHECK_NEW_MEMORY(
+            ctx,
+            value->object,
+            sizeof(struct private_key),
+            "PrivateKey structure");
+        result = decode_private_key(
+            ctx,
+            (struct private_key*)value->object);
+        CHECK_RESULT(ctx, result);
         break;
         
         default:
@@ -3821,6 +5959,386 @@ decode_key_material(struct kmip *ctx,
         return(KMIP_NOT_IMPLEMENTED);
         break;
     };
+    
+    return(KMIP_OK);
+}
+
+int
+decode_response_batch_item(struct kmip *ctx,
+                           struct response_batch_item *value)
+{
+    CHECK_BUFFER_FULL(ctx, 8);
+    
+    int result = 0;
+    int32 tag_type = 0;
+    uint32 length = 0;
+    
+    decode_int32_be(ctx, &tag_type);
+    CHECK_TAG_TYPE(
+        ctx,
+        tag_type,
+        KMIP_TAG_BATCH_ITEM,
+        KMIP_TYPE_STRUCTURE);
+    
+    decode_int32_be(ctx, &length);
+    CHECK_BUFFER_FULL(ctx, length);
+    
+    result = decode_enum(ctx, KMIP_TAG_OPERATION, &value->operation);
+    CHECK_RESULT(ctx, result);
+    CHECK_ENUM(ctx, KMIP_TAG_OPERATION, value->operation);
+    
+    if(is_tag_next(ctx, KMIP_TAG_UNIQUE_BATCH_ITEM_ID))
+    {
+        value->unique_batch_item_id = ctx->calloc_func(
+            ctx->state,
+            1,
+            sizeof(struct byte_string));
+        CHECK_NEW_MEMORY(
+            ctx,
+            value->unique_batch_item_id,
+            sizeof(struct byte_string),
+            "UniqueBatchItemID byte string");
+        
+        result = decode_byte_string(
+            ctx,
+            KMIP_TAG_UNIQUE_BATCH_ITEM_ID,
+            value->unique_batch_item_id);
+        CHECK_RESULT(ctx, result);
+    }
+    
+    result = decode_enum(ctx, KMIP_TAG_RESULT_STATUS, &value->result_status);
+    CHECK_RESULT(ctx, result);
+    CHECK_ENUM(ctx, KMIP_TAG_RESULT_STATUS, value->result_status);
+    
+    if(is_tag_next(ctx, KMIP_TAG_RESULT_REASON))
+    {
+        result = decode_enum(
+            ctx,
+            KMIP_TAG_RESULT_REASON,
+            &value->result_reason);
+        CHECK_RESULT(ctx, result);
+    }
+    
+    if(is_tag_next(ctx, KMIP_TAG_RESULT_MESSAGE))
+    {
+        value->result_message = ctx->calloc_func(
+            ctx->state,
+            1,
+            sizeof(struct text_string));
+        CHECK_NEW_MEMORY(
+            ctx,
+            value->result_message,
+            sizeof(struct text_string),
+            "ResultMessage text string");
+        
+        result = decode_text_string(
+            ctx,
+            KMIP_TAG_RESULT_MESSAGE,
+            value->result_message);
+        CHECK_RESULT(ctx, result);
+    }
+    
+    if(is_tag_next(ctx, KMIP_TAG_ASYNCHRONOUS_CORRELATION_VALUE))
+    {
+        value->asynchronous_correlation_value = ctx->calloc_func(
+            ctx->state,
+            1,
+            sizeof(struct byte_string));
+        CHECK_NEW_MEMORY(
+            ctx,
+            value->asynchronous_correlation_value,
+            sizeof(struct byte_string),
+            "AsynchronousCorrelationValue byte string");
+        
+        result = decode_byte_string(
+            ctx,
+            KMIP_TAG_ASYNCHRONOUS_CORRELATION_VALUE,
+            value->asynchronous_correlation_value);
+        CHECK_RESULT(ctx, result);
+    }
+    
+    switch(value->operation)
+    {
+        /*
+        case KMIP_OP_CREATE:
+        result = encode_create_response_payload(
+            ctx,
+            (struct create_response_payload*)value->response_payload);
+        break;
+        */
+        
+        case KMIP_OP_GET:
+        value->response_payload = ctx->calloc_func(
+            ctx->state,
+            1,
+            sizeof(struct get_response_payload));
+        CHECK_NEW_MEMORY(
+            ctx,
+            value->response_payload,
+            sizeof(struct get_response_payload),
+            "GetResponsePayload structure");
+        
+        result = decode_get_response_payload(
+            ctx,
+            (struct get_response_payload *)value->response_payload);
+        break;
+        
+        /*
+        case KMIP_OP_DESTROY:
+        result = encode_destroy_response_payload(
+            ctx,
+            (struct destroy_response_payload*)value->response_payload);
+        break;
+        */
+        
+        default:
+        kmip_push_error_frame(ctx, __func__, __LINE__);
+        return(KMIP_NOT_IMPLEMENTED);
+        break;
+    };
+    CHECK_RESULT(ctx, result);
+    
+    return(KMIP_OK);
+}
+
+int
+decode_nonce(struct kmip *ctx, struct nonce *value)
+{
+    CHECK_BUFFER_FULL(ctx, 8);
+    
+    int result = 0;
+    int32 tag_type = 0;
+    uint32 length = 0;
+    
+    decode_int32_be(ctx, &tag_type);
+    CHECK_TAG_TYPE(
+        ctx,
+        tag_type,
+        KMIP_TAG_NONCE,
+        KMIP_TYPE_STRUCTURE);
+    
+    decode_int32_be(ctx, &length);
+    CHECK_BUFFER_FULL(ctx, length);
+    
+    value->nonce_id = ctx->calloc_func(
+        ctx->state,
+        1,
+        sizeof(struct byte_string));
+    CHECK_NEW_MEMORY(
+        ctx,
+        value->nonce_id,
+        sizeof(struct byte_string),
+        "NonceID byte string");
+    
+    result = decode_byte_string(
+        ctx,
+        KMIP_TAG_NONCE_ID,
+        value->nonce_id);
+    CHECK_RESULT(ctx, result);
+    
+    value->nonce_value = ctx->calloc_func(
+        ctx->state,
+        1,
+        sizeof(struct byte_string));
+    CHECK_NEW_MEMORY(
+        ctx,
+        value->nonce_value,
+        sizeof(struct byte_string),
+        "NonceValue byte string");
+    
+    result = decode_byte_string(
+        ctx,
+        KMIP_TAG_NONCE_VALUE,
+        value->nonce_value);
+    CHECK_RESULT(ctx, result);
+    
+    return(KMIP_OK);
+}
+
+int
+decode_response_header(struct kmip *ctx, struct response_header *value)
+{
+    CHECK_BUFFER_FULL(ctx, 8);
+    
+    int result = 0;
+    int32 tag_type = 0;
+    uint32 length = 0;
+    
+    decode_int32_be(ctx, &tag_type);
+    CHECK_TAG_TYPE(
+        ctx,
+        tag_type,
+        KMIP_TAG_RESPONSE_HEADER,
+        KMIP_TYPE_STRUCTURE);
+    
+    decode_int32_be(ctx, &length);
+    CHECK_BUFFER_FULL(ctx, length);
+    
+    value->protocol_version = ctx->calloc_func(
+        ctx->state,
+        1,
+        sizeof(struct protocol_version));
+    CHECK_NEW_MEMORY(
+        ctx,
+        value->protocol_version,
+        sizeof(struct protocol_version),
+        "ProtocolVersion structure");
+    
+    result = decode_protocol_version(ctx, value->protocol_version);
+    CHECK_RESULT(ctx, result);
+    
+    result = decode_date_time(ctx, KMIP_TAG_TIME_STAMP, &value->time_stamp);
+    CHECK_RESULT(ctx, result);
+    
+    if(ctx->version >= KMIP_1_2)
+    {
+        if(is_tag_next(ctx, KMIP_TAG_NONCE))
+        {
+            value->nonce = ctx->calloc_func(
+                ctx->state,
+                1,
+                sizeof(struct nonce));
+            CHECK_NEW_MEMORY(
+                ctx,
+                value->nonce,
+                sizeof(struct nonce),
+                "Nonce structure");
+            
+            result = decode_nonce(ctx, value->nonce);
+            CHECK_RESULT(ctx, result);
+        }
+        
+        value->attestation_type_count = get_num_items_next(
+            ctx, 
+            KMIP_TAG_ATTESTATION_TYPE);
+        if(value->attestation_type_count > 0)
+        {
+            value->attestation_types = ctx->calloc_func(
+                ctx->state,
+                value->attestation_type_count,
+                sizeof(enum attestation_type));
+            CHECK_NEW_MEMORY(
+                ctx,
+                value->attestation_types,
+                value->attestation_type_count * sizeof(enum attestation_type),
+                "sequence of AttestationType enumerations");
+            
+            for(size_t i = 0; i < value->attestation_type_count; i++)
+            {
+                result = decode_enum(
+                    ctx,
+                    KMIP_TAG_ATTESTATION_TYPE,
+                    &value->attestation_types[i]);
+                CHECK_RESULT(ctx, result);
+                CHECK_ENUM(
+                    ctx,
+                    KMIP_TAG_ATTESTATION_TYPE,
+                    value->attestation_types[i]);
+            }
+        }
+    }
+    
+    if(ctx->version >= KMIP_1_4)
+    {
+        if(is_tag_next(ctx, KMIP_TAG_CLIENT_CORRELATION_VALUE))
+        {
+            value->client_correlation_value = ctx->calloc_func(
+                ctx->state,
+                1,
+                sizeof(struct text_string));
+            CHECK_NEW_MEMORY(
+                ctx,
+                value->client_correlation_value,
+                sizeof(struct text_string),
+                "ClientCorrelationValue text string");
+            
+            result = decode_text_string(
+                ctx,
+                KMIP_TAG_CLIENT_CORRELATION_VALUE,
+                value->client_correlation_value);
+            CHECK_RESULT(ctx, result);
+        }
+        
+        if(is_tag_next(ctx, KMIP_TAG_SERVER_CORRELATION_VALUE))
+        {
+            value->server_correlation_value = ctx->calloc_func(
+                ctx->state,
+                1,
+                sizeof(struct text_string));
+            CHECK_NEW_MEMORY(
+                ctx,
+                value->server_correlation_value,
+                sizeof(struct text_string),
+                "ServerCorrelationValue text string");
+            
+            result = decode_text_string(
+                ctx,
+                KMIP_TAG_SERVER_CORRELATION_VALUE,
+                value->server_correlation_value);
+            CHECK_RESULT(ctx, result);
+        }
+    }
+    
+    result = decode_integer(ctx, KMIP_TAG_BATCH_COUNT, &value->batch_count);
+    CHECK_RESULT(ctx, result);
+    
+    return(KMIP_OK);
+}
+
+
+int
+decode_response_message(struct kmip *ctx, struct response_message *value)
+{
+    CHECK_BUFFER_FULL(ctx, 8);
+    
+    int result = 0;
+    int32 tag_type = 0;
+    uint32 length = 0;
+    
+    decode_int32_be(ctx, &tag_type);
+    CHECK_TAG_TYPE(
+        ctx,
+        tag_type,
+        KMIP_TAG_RESPONSE_MESSAGE,
+        KMIP_TYPE_STRUCTURE);
+    
+    decode_int32_be(ctx, &length);
+    CHECK_BUFFER_FULL(ctx, length);
+    
+    value->response_header = ctx->calloc_func(
+        ctx->state,
+        1,
+        sizeof(struct response_header));
+    CHECK_NEW_MEMORY(
+        ctx,
+        value->response_header,
+        sizeof(struct response_header),
+        "ResponseHeader structure");
+    
+    result = decode_response_header(ctx, value->response_header);
+    CHECK_RESULT(ctx, result);
+    
+    value->batch_count = get_num_items_next(ctx, KMIP_TAG_BATCH_ITEM);
+    if(value->batch_count > 0)
+    {
+        value->batch_items = ctx->calloc_func(
+            ctx->state,
+            value->batch_count,
+            sizeof(struct response_batch_item));
+        CHECK_NEW_MEMORY(
+            ctx,
+            value->batch_items,
+            value->batch_count * sizeof(struct response_batch_item),
+            "sequence of ResponseBatchItem structures");
+        
+        for(size_t i = 0; i < value->batch_count; i++)
+        {
+            result = decode_response_batch_item(
+                ctx,
+                &value->batch_items[i]);
+            CHECK_RESULT(ctx, result);
+        }
+    }
     
     return(KMIP_OK);
 }

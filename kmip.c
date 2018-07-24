@@ -149,7 +149,7 @@ main(void)
     {
         printf("Encoding failure detected. Aborting request.");
         return(encode_result);
-    };
+    }
     
     uint8 response[300] = {0};
     
@@ -163,6 +163,57 @@ BIO_write(bio, request, 120);
     
     printf("Received bytes: %d\n", recv);
     
+    kmip_reset(&kmip_ctx);
+    kmip_set_buffer(&kmip_ctx, response, recv);
+    
+    struct response_message resp_m = {0};
+    
+    int decode_result = decode_response_message(&kmip_ctx, &resp_m);
+    if(decode_result != KMIP_OK)
+    {
+        printf("Decoding failure detected. Error: %d\n", decode_result);
+        return(decode_result);
+    }
+    else
+    {
+        printf("Decoding succeeded!\n");
+    }
+    
+    struct response_batch_item batch_item = resp_m.batch_items[0];
+    
+    printf("Result Status:  %d\n", batch_item.result_status);
+    printf("Result Reason:  %d\n", batch_item.result_reason);
+    if(batch_item.result_message != NULL)
+    {
+        printf("Result Message: %s\n", batch_item.result_message->value);
+    }
+    else
+    {
+        printf("Result Message: -\n");
+    }
+    
+    struct get_response_payload payload = 
+        *(struct get_response_payload*)batch_item.response_payload;
+    
+    printf("Object Type:       %d\n", payload.object_type);
+    printf("Unique Identifier: %s\n", payload.unique_identifier->value);
+    printf("Object Bytes:\n");
+    
+    struct key_block block = *((struct symmetric_key*)payload.object)->key_block;
+    struct key_value value = *(struct key_value*)block.key_value;
+    struct byte_string bytes = *(struct byte_string*)value.key_material;
+    
+    for(size_t i = 0; i < bytes.size; i++)
+    {
+        if(i % 16 == 0)
+        {
+            printf("\n0x");
+        }
+        printf("%02X", bytes.value[i]);
+    }
+    printf("\n");
+    
+    /*
     for(int i = 0; i < recv; i++)
     {
         if(i % 16 == 0)
@@ -172,6 +223,7 @@ BIO_write(bio, request, 120);
         printf("%02X", response[i]);
     }
     printf("\n");
+    */
     
     return(0);
 }
