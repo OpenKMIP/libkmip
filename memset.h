@@ -15,61 +15,9 @@
  */
 
 #ifndef KMIP_MEMSET_H
-#define KMIP_MEMSET_H
 
-#if defined __STDC_LIB_EXT1__
+#include <stddef.h>
 
-#define __STDC_WANT_LIB_EXT1__
-#include <string.h>
+void* kmip_memset(void *ptr, int value, size_t size);
 
-void *
-kmip_memset(void *ptr, int value, size_t size)
-{
-    if(ptr == NULL)
-    {
-        return(ptr);
-    }
-    
-    memset_s(ptr, size, value, size);
-    
-    return(ptr);
-}
-
-#else
-
-void *
-kmip_base_memset(void *ptr, int value, size_t size)
-{
-    if(ptr == NULL)
-    {
-        return(ptr);
-    }
-    
-    unsigned char *index = (unsigned char*)ptr;
-    
-    for(size_t i = 0; i < size; i++)
-    {
-        *index++ = (unsigned char)value;
-    }
-    
-    return(ptr);
-}
-
-static void *
-(* volatile kmip_indirect_memset)(void *, int, size_t) = kmip_base_memset;
-
-void *
-kmip_memset(void *ptr, int value, size_t size)
-{
-    if(ptr == NULL)
-    {
-        return(ptr);
-    }
-    
-    kmip_indirect_memset(ptr, value, size);
-    
-    return(ptr);
-}
-
-#endif /* __STDC_LIB_EXT1__ */
-#endif /* KMIP_MEMSET_H*/
+#endif /* KMIP_MEMSET_H */

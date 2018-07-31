@@ -3775,6 +3775,45 @@ test_encode_create_response_payload(void)
 }
 
 int
+test_decode_create_response_payload(void)
+{
+    uint8 encoding[72] = {
+        0x42, 0x00, 0x7C, 0x01, 0x00, 0x00, 0x00, 0x40, 
+        0x42, 0x00, 0x57, 0x05, 0x00, 0x00, 0x00, 0x04, 
+        0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00, 
+        0x42, 0x00, 0x94, 0x07, 0x00, 0x00, 0x00, 0x24, 
+        0x66, 0x62, 0x34, 0x62, 0x35, 0x62, 0x39, 0x63, 
+        0x2D, 0x36, 0x31, 0x38, 0x38, 0x2D, 0x34, 0x63, 
+        0x36, 0x33, 0x2D, 0x38, 0x31, 0x34, 0x32, 0x2D, 
+        0x66, 0x65, 0x39, 0x63, 0x33, 0x32, 0x38, 0x31, 
+        0x32, 0x39, 0x66, 0x63, 0x00, 0x00, 0x00, 0x00
+    };
+    
+    struct kmip ctx = {0};
+    kmip_init(&ctx, encoding, ARRAY_LENGTH(encoding), KMIP_1_0);
+    
+    struct text_string uuid = {0};
+    uuid.value = "fb4b5b9c-6188-4c63-8142-fe9c328129fc";
+    uuid.size = 36;
+    
+    struct create_response_payload expected = {0};
+    expected.object_type = KMIP_OBJTYPE_SYMMETRIC_KEY;
+    expected.unique_identifier = &uuid;
+    
+    struct create_response_payload observed = {0};
+    
+    int result = decode_create_response_payload(&ctx, &observed);
+    result = report_decoding_test_result(
+        &ctx,
+        compare_create_response_payload(&expected, &observed),
+        result,
+        __func__);
+    free_create_response_payload(&ctx, &observed);
+    kmip_destroy(&ctx);
+    return(result);
+}
+
+int
 test_encode_create_response_payload_with_template_attribute(void)
 {
     uint8 expected[136] = {
@@ -3827,6 +3866,64 @@ test_encode_create_response_payload_with_template_attribute(void)
         observed,
         result,
         __func__);
+    kmip_destroy(&ctx);
+    return(result);
+}
+
+int
+test_decode_create_response_payload_with_template_attribute(void)
+{
+    uint8 encoding[136] = {
+        0x42, 0x00, 0x7C, 0x01, 0x00, 0x00, 0x00, 0x80, 
+        0x42, 0x00, 0x57, 0x05, 0x00, 0x00, 0x00, 0x04, 
+        0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00, 
+        0x42, 0x00, 0x94, 0x07, 0x00, 0x00, 0x00, 0x24, 
+        0x66, 0x62, 0x34, 0x62, 0x35, 0x62, 0x39, 0x63, 
+        0x2D, 0x36, 0x31, 0x38, 0x38, 0x2D, 0x34, 0x63, 
+        0x36, 0x33, 0x2D, 0x38, 0x31, 0x34, 0x32, 0x2D, 
+        0x66, 0x65, 0x39, 0x63, 0x33, 0x32, 0x38, 0x31, 
+        0x32, 0x39, 0x66, 0x63, 0x00, 0x00, 0x00, 0x00,
+        0x42, 0x00, 0x91, 0x01, 0x00, 0x00, 0x00, 0x38, 
+        0x42, 0x00, 0x08, 0x01, 0x00, 0x00, 0x00, 0x30, 
+        0x42, 0x00, 0x0A, 0x07, 0x00, 0x00, 0x00, 0x17, 
+        0x43, 0x72, 0x79, 0x70, 0x74, 0x6F, 0x67, 0x72, 
+        0x61, 0x70, 0x68, 0x69, 0x63, 0x20, 0x41, 0x6C, 
+        0x67, 0x6F, 0x72, 0x69, 0x74, 0x68, 0x6D, 0x00, 
+        0x42, 0x00, 0x0B, 0x05, 0x00, 0x00, 0x00, 0x04, 
+        0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x00, 
+    };
+    
+    struct kmip ctx = {0};
+    kmip_init(&ctx, encoding, ARRAY_LENGTH(encoding), KMIP_1_0);
+    
+    struct text_string uuid = {0};
+    uuid.value = "fb4b5b9c-6188-4c63-8142-fe9c328129fc";
+    uuid.size = 36;
+    
+    struct attribute a = {0};
+    enum cryptographic_algorithm algorithm = KMIP_CRYPTOALG_AES;
+    a.type = KMIP_ATTR_CRYPTOGRAPHIC_ALGORITHM;
+    a.index = KMIP_UNSET;
+    a.value = &algorithm;
+    
+    struct template_attribute ta = {0};
+    ta.attributes = &a;
+    ta.attribute_count = 1;
+    
+    struct create_response_payload expected = {0};
+    expected.object_type = KMIP_OBJTYPE_SYMMETRIC_KEY;
+    expected.unique_identifier = &uuid;
+    expected.template_attribute = &ta;
+    
+    struct create_response_payload observed = {0};
+    
+    int result = decode_create_response_payload(&ctx, &observed);
+    result = report_decoding_test_result(
+        &ctx,
+        compare_create_response_payload(&expected, &observed),
+        result,
+        __func__);
+    free_create_response_payload(&ctx, &observed);
     kmip_destroy(&ctx);
     return(result);
 }
@@ -4189,6 +4286,42 @@ test_encode_destroy_response_payload(void)
 }
 
 int
+test_decode_destroy_response_payload(void)
+{
+    uint8 encoding[56] = {
+        0x42, 0x00, 0x7C, 0x01, 0x00, 0x00, 0x00, 0x30,
+        0x42, 0x00, 0x94, 0x07, 0x00, 0x00, 0x00, 0x24, 
+        0x66, 0x62, 0x34, 0x62, 0x35, 0x62, 0x39, 0x63, 
+        0x2D, 0x36, 0x31, 0x38, 0x38, 0x2D, 0x34, 0x63, 
+        0x36, 0x33, 0x2D, 0x38, 0x31, 0x34, 0x32, 0x2D, 
+        0x66, 0x65, 0x39, 0x63, 0x33, 0x32, 0x38, 0x31, 
+        0x32, 0x39, 0x66, 0x63, 0x00, 0x00, 0x00, 0x00
+    };
+    
+    struct kmip ctx = {0};
+    kmip_init(&ctx, encoding, ARRAY_LENGTH(encoding), KMIP_1_0);
+    
+    struct text_string uuid = {0};
+    uuid.value = "fb4b5b9c-6188-4c63-8142-fe9c328129fc";
+    uuid.size = 36;
+    
+    struct destroy_response_payload expected = {0};
+    expected.unique_identifier = &uuid;
+    
+    struct destroy_response_payload observed = {0};
+    
+    int result = decode_destroy_response_payload(&ctx, &observed);
+    result = report_decoding_test_result(
+        &ctx,
+        compare_destroy_response_payload(&expected, &observed),
+        result,
+        __func__);
+    free_destroy_response_payload(&ctx, &observed);
+    kmip_destroy(&ctx);
+    return(result);
+}
+
+int
 test_encode_username_password_credential(void)
 {
     uint8 expected[48] = {
@@ -4222,6 +4355,45 @@ test_encode_username_password_credential(void)
         observed,
         result,
         __func__);
+    kmip_destroy(&ctx);
+    return(result);
+}
+
+int
+test_decode_username_password_credential(void)
+{
+    uint8 encoding[48] = {
+        0x42, 0x00, 0x25, 0x01, 0x00, 0x00, 0x00, 0x28, 
+        0x42, 0x00, 0x99, 0x07, 0x00, 0x00, 0x00, 0x04, 
+        0x46, 0x72, 0x65, 0x64, 0x00, 0x00, 0x00, 0x00, 
+        0x42, 0x00, 0xA1, 0x07, 0x00, 0x00, 0x00, 0x09, 
+        0x70, 0x61, 0x73, 0x73, 0x77, 0x6F, 0x72, 0x64, 
+        0x31, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+    };
+    
+    struct kmip ctx = {0};
+    kmip_init(&ctx, encoding, ARRAY_LENGTH(encoding), KMIP_1_0);
+    
+    struct text_string username = {0};
+    username.value = "Fred";
+    username.size = 4;
+    struct text_string password = {0};
+    password.value = "password1";
+    password.size = 9;
+    
+    struct username_password_credential expected = {0};
+    expected.username = &username;
+    expected.password = &password;
+    
+    struct username_password_credential observed = {0};
+    
+    int result = decode_username_password_credential(&ctx, &observed);
+    result = report_decoding_test_result(
+        &ctx,
+        compare_username_password_credential(&expected, &observed),
+        result,
+        __func__);
+    free_username_password_credential(&ctx, &observed);
     kmip_destroy(&ctx);
     return(result);
 }
@@ -4271,6 +4443,51 @@ test_encode_credential_username_password_credential(void)
 }
 
 int
+test_decode_credential_username_password_credential(void)
+{
+    uint8 encoding[64] = {
+        0x42, 0x00, 0x23, 0x01, 0x00, 0x00, 0x00, 0x38, 
+        0x42, 0x00, 0x24, 0x05, 0x00, 0x00, 0x00, 0x04, 
+        0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 
+        0x42, 0x00, 0x25, 0x01, 0x00, 0x00, 0x00, 0x20, 
+        0x42, 0x00, 0x99, 0x07, 0x00, 0x00, 0x00, 0x06, 
+        0x42, 0x61, 0x72, 0x6E, 0x65, 0x79, 0x00, 0x00, 
+        0x42, 0x00, 0xA1, 0x07, 0x00, 0x00, 0x00, 0x07, 
+        0x73, 0x65, 0x63, 0x72, 0x65, 0x74, 0x32, 0x00
+    };
+    
+    struct kmip ctx = {0};
+    kmip_init(&ctx, encoding, ARRAY_LENGTH(encoding), KMIP_1_0);
+    
+    struct text_string username = {0};
+    username.value = "Barney";
+    username.size = 6;
+    struct text_string password = {0};
+    password.value = "secret2";
+    password.size = 7;
+    
+    struct username_password_credential upc = {0};
+    upc.username = &username;
+    upc.password = &password;
+    
+    struct credential expected = {0};
+    expected.credential_type = KMIP_CRED_USERNAME_AND_PASSWORD;
+    expected.credential_value = &upc;
+
+    struct credential observed = {0};
+    
+    int result = decode_credential(&ctx, &observed);
+    result = report_decoding_test_result(
+        &ctx,
+        compare_credential(&expected, &observed),
+        result,
+        __func__);
+    free_credential(&ctx, &observed);
+    kmip_destroy(&ctx);
+    return(result);
+}
+
+int
 test_encode_authentication_username_password_credential(void)
 {
     uint8 expected[80] = {
@@ -4315,6 +4532,56 @@ test_encode_authentication_username_password_credential(void)
         observed,
         result,
         __func__);
+    kmip_destroy(&ctx);
+    return(result);
+}
+
+int
+test_decode_authentication_username_password_credential(void)
+{
+    uint8 encoding[80] = {
+        0x42, 0x00, 0x0C, 0x01, 0x00, 0x00, 0x00, 0x48, 
+        0x42, 0x00, 0x23, 0x01, 0x00, 0x00, 0x00, 0x40, 
+        0x42, 0x00, 0x24, 0x05, 0x00, 0x00, 0x00, 0x04, 
+        0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 
+        0x42, 0x00, 0x25, 0x01, 0x00, 0x00, 0x00, 0x28, 
+        0x42, 0x00, 0x99, 0x07, 0x00, 0x00, 0x00, 0x04, 
+        0x46, 0x72, 0x65, 0x64, 0x00, 0x00, 0x00, 0x00, 
+        0x42, 0x00, 0xA1, 0x07, 0x00, 0x00, 0x00, 0x09, 
+        0x70, 0x61, 0x73, 0x73, 0x77, 0x6F, 0x72, 0x64, 
+        0x31, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+    };
+    
+    struct kmip ctx = {0};
+    kmip_init(&ctx, encoding, ARRAY_LENGTH(encoding), KMIP_1_0);
+    
+    struct text_string username = {0};
+    username.value = "Fred";
+    username.size = 4;
+    struct text_string password = {0};
+    password.value = "password1";
+    password.size = 9;
+    
+    struct username_password_credential upc = {0};
+    upc.username = &username;
+    upc.password = &password;
+    
+    struct credential c = {0};
+    c.credential_type = KMIP_CRED_USERNAME_AND_PASSWORD;
+    c.credential_value = &upc;
+    
+    struct authentication expected = {0};
+    expected.credential = &c;
+    
+    struct authentication observed = {0};
+    
+    int result = decode_authentication(&ctx, &observed);
+    result = report_decoding_test_result(
+        &ctx,
+        compare_authentication(&expected, &observed),
+        result,
+        __func__);
+    free_authentication(&ctx, &observed);
     kmip_destroy(&ctx);
     return(result);
 }
@@ -5252,6 +5519,78 @@ test_encode_device_credential(void)
 }
 
 int
+test_decode_device_credential(void)
+{
+    uint8 encoding[144] = {
+        0x42, 0x00, 0x25, 0x01, 0x00, 0x00, 0x00, 0x88, 
+        0x42, 0x00, 0xB0, 0x07, 0x00, 0x00, 0x00, 0x0C, 
+        0x73, 0x65, 0x72, 0x4E, 0x75, 0x6D, 0x31, 0x32, 
+        0x33, 0x34, 0x35, 0x36, 0x00, 0x00, 0x00, 0x00, 
+        0x42, 0x00, 0xA1, 0x07, 0x00, 0x00, 0x00, 0x06, 
+        0x73, 0x65, 0x63, 0x72, 0x65, 0x74, 0x00, 0x00, 
+        0x42, 0x00, 0xA2, 0x07, 0x00, 0x00, 0x00, 0x09, 
+        0x64, 0x65, 0x76, 0x49, 0x44, 0x32, 0x32, 0x33, 
+        0x33, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
+        0x42, 0x00, 0xAB, 0x07, 0x00, 0x00, 0x00, 0x09, 
+        0x6E, 0x65, 0x74, 0x49, 0x44, 0x39, 0x30, 0x30, 
+        0x30, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
+        0x42, 0x00, 0xA9, 0x07, 0x00, 0x00, 0x00, 0x0A, 
+        0x6D, 0x61, 0x63, 0x68, 0x69, 0x6E, 0x65, 0x49, 
+        0x44, 0x31, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
+        0x42, 0x00, 0xAA, 0x07, 0x00, 0x00, 0x00, 0x0A, 
+        0x6D, 0x65, 0x64, 0x69, 0x61, 0x49, 0x44, 0x33, 
+        0x31, 0x33, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+    };
+    
+    struct kmip ctx = {0};
+    kmip_init(&ctx, encoding, ARRAY_LENGTH(encoding), KMIP_1_1);
+    
+    struct text_string dsn = {0};
+    dsn.value = "serNum123456";
+    dsn.size = 12;
+    
+    struct text_string p = {0};
+    p.value = "secret";
+    p.size = 6;
+    
+    struct text_string di = {0};
+    di.value = "devID2233";
+    di.size = 9;
+    
+    struct text_string ni = {0};
+    ni.value = "netID9000";
+    ni.size = 9;
+    
+    struct text_string mac = {0};
+    mac.value = "machineID1";
+    mac.size = 10;
+    
+    struct text_string med = {0};
+    med.value = "mediaID313";
+    med.size = 10;
+    
+    struct device_credential expected = {0};
+    expected.device_serial_number = &dsn;
+    expected.password = &p;
+    expected.device_identifier = &di;
+    expected.network_identifier = &ni;
+    expected.machine_identifier = &mac;
+    expected.media_identifier = &med;
+    
+    struct device_credential observed = {0};
+    
+    int result = decode_device_credential(&ctx, &observed);
+    result = report_decoding_test_result(
+        &ctx,
+        compare_device_credential(&expected, &observed),
+        result,
+        __func__);
+    free_device_credential(&ctx, &observed);
+    kmip_destroy(&ctx);
+    return(result);
+}
+
+int
 test_encode_key_wrapping_data_with_encoding_option(void)
 {
     uint8 expected[120] = {
@@ -5563,6 +5902,80 @@ test_encode_attestation_credential(void)
         observed,
         result,
         __func__);
+    kmip_destroy(&ctx);
+    return(result);
+}
+
+int
+test_decode_attestation_credential(void)
+{
+    uint8 encoding[128] = {
+        0x42, 0x00, 0x25, 0x01, 0x00, 0x00, 0x00, 0x70,
+        0x42, 0x00, 0xC8, 0x01, 0x00, 0x00, 0x00, 0x20,
+        0x42, 0x00, 0xC9, 0x08, 0x00, 0x00, 0x00, 0x04,
+        0x01, 0x02, 0x03, 0x04, 0x00, 0x00, 0x00, 0x00,
+        0x42, 0x00, 0xCA, 0x08, 0x00, 0x00, 0x00, 0x06,
+        0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x00,
+        0x42, 0x00, 0xC7, 0x05, 0x00, 0x00, 0x00, 0x04,
+        0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00,
+        0x42, 0x00, 0xCB, 0x08, 0x00, 0x00, 0x00, 0x10,
+        0x22, 0x22, 0x22, 0x22, 0x44, 0x44, 0x44, 0x44,
+        0x66, 0x66, 0x66, 0x66, 0x88, 0x88, 0x88, 0x88,
+        0x42, 0x00, 0xCC, 0x08, 0x00, 0x00, 0x00, 0x14,
+        0x11, 0x11, 0x11, 0x11, 0x33, 0x33, 0x33, 0x33,
+        0x55, 0x55, 0x55, 0x55, 0x77, 0x77, 0x77, 0x77,
+        0x99, 0x99, 0x99, 0x99, 0x00, 0x00, 0x00, 0x00
+    };
+    
+    struct kmip ctx = {0};
+    kmip_init(&ctx, encoding, ARRAY_LENGTH(encoding), KMIP_1_2);
+    
+    uint8 nonce_id[4] = {0x01, 0x02, 0x03, 0x04};
+    struct byte_string ni = {0};
+    ni.value = nonce_id;
+    ni.size = ARRAY_LENGTH(nonce_id);
+    
+    uint8 nonce_value[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+    struct byte_string nv = {0};
+    nv.value = nonce_value;
+    nv.size = ARRAY_LENGTH(nonce_value);
+    
+    struct nonce n = {0};
+    n.nonce_id = &ni;
+    n.nonce_value = &nv;
+    
+    uint8 measurement[16] = {
+        0x22, 0x22, 0x22, 0x22, 0x44, 0x44, 0x44, 0x44,
+        0x66, 0x66, 0x66, 0x66, 0x88, 0x88, 0x88, 0x88
+    };
+    struct byte_string am = {0};
+    am.value = measurement;
+    am.size = ARRAY_LENGTH(measurement);
+    
+    uint8 assertion[20] = {
+        0x11, 0x11, 0x11, 0x11, 0x33, 0x33, 0x33, 0x33,
+        0x55, 0x55, 0x55, 0x55, 0x77, 0x77, 0x77, 0x77,
+        0x99, 0x99, 0x99, 0x99
+    };
+    struct byte_string aa = {0};
+    aa.value = assertion;
+    aa.size = ARRAY_LENGTH(assertion);
+    
+    struct attestation_credential expected = {0};
+    expected.nonce = &n;
+    expected.attestation_type = KMIP_ATTEST_TPM_QUOTE;
+    expected.attestation_measurement = &am;
+    expected.attestation_assertion = &aa;
+    
+    struct attestation_credential observed = {0};
+    
+    int result = decode_attestation_credential(&ctx, &observed);
+    result = report_decoding_test_result(
+        &ctx,
+        compare_attestation_credential(&expected, &observed),
+        result,
+        __func__);
+    free_attestation_credential(&ctx, &observed);
     kmip_destroy(&ctx);
     return(result);
 }
@@ -6951,7 +7364,7 @@ test_kmip_1_1_test_suite_3_1_3_2_b(void)
 void
 run_tests(void)
 {
-    int num_tests = 121;
+    int num_tests = 129;
     int num_failures = 0;
     
     printf("Tests\n");
@@ -7003,8 +7416,14 @@ run_tests(void)
     num_failures += test_decode_symmetric_key();
     num_failures += test_decode_public_key();
     num_failures += test_decode_private_key();
+    num_failures += test_decode_create_response_payload();
+    num_failures += test_decode_create_response_payload_with_template_attribute();
     num_failures += test_decode_get_response_payload();
+    num_failures += test_decode_destroy_response_payload();
     num_failures += test_decode_response_batch_item_get_payload();
+    num_failures += test_decode_username_password_credential();
+    num_failures += test_decode_credential_username_password_credential();
+    num_failures += test_decode_authentication_username_password_credential();
     num_failures += test_decode_response_header();
     num_failures += test_decode_response_message_get();
     
@@ -7063,6 +7482,7 @@ run_tests(void)
     
     printf("\nKMIP 1.1 Feature Tests\n");
     printf("----------------------\n");
+    num_failures += test_decode_device_credential();
     num_failures += test_decode_key_wrapping_data_with_encoding_option();
     
     printf("\n");
@@ -7082,6 +7502,7 @@ run_tests(void)
     printf("\nKMIP 1.2 Feature Tests\n");
     printf("----------------------\n");
     num_failures += test_decode_nonce();
+    num_failures += test_decode_attestation_credential();
     num_failures += test_decode_response_header_with_attestation_details();
     num_failures += test_decode_cryptographic_parameters_with_digital_signature_fields();
     
@@ -7115,12 +7536,12 @@ main(void)
 {
     run_tests();
     
-
+/*
     while(1)
     {
         run_tests();
     }
-
+*/
     
     return(0);
 }

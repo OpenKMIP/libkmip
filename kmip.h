@@ -901,6 +901,32 @@ free_private_key(struct kmip *ctx, struct private_key *value)
 }
 
 void
+free_create_response_payload(struct kmip *ctx,
+                             struct create_response_payload *value)
+{
+    if(value != NULL)
+    {
+        if(value->unique_identifier != NULL)
+        {
+            free_text_string(ctx, value->unique_identifier);
+            ctx->free_func(ctx->state, value->unique_identifier);
+            value->unique_identifier = NULL;
+        }
+        
+        if(value->template_attribute != NULL)
+        {
+            free_template_attribute(ctx, value->template_attribute);
+            ctx->free_func(ctx->state, value->template_attribute);
+            value->template_attribute = NULL;
+        }
+        
+        value->object_type = 0;
+    }
+    
+    return;
+}
+
+void
 free_get_response_payload(struct kmip *ctx,
                           struct get_response_payload *value)
 {
@@ -952,6 +978,23 @@ free_get_response_payload(struct kmip *ctx,
 }
 
 void
+free_destroy_response_payload(struct kmip *ctx,
+                              struct destroy_response_payload *value)
+{
+    if(value != NULL)
+    {
+        if(value->unique_identifier != NULL)
+        {
+            free_text_string(ctx, value->unique_identifier);
+            ctx->free_func(ctx->state, value->unique_identifier);
+            value->unique_identifier = NULL;
+        }
+    }
+    
+    return;
+}
+
+void
 free_response_batch_item(struct kmip *ctx, struct response_batch_item *value)
 {
     if(value != NULL)
@@ -981,10 +1024,22 @@ free_response_batch_item(struct kmip *ctx, struct response_batch_item *value)
         {
             switch(value->operation)
             {
+                case KMIP_OP_CREATE:
+                free_create_response_payload(
+                    ctx,
+                    (struct create_response_payload *)value->response_payload);
+                break;
+                
                 case KMIP_OP_GET:
                 free_get_response_payload(
                     ctx, 
                     (struct get_response_payload *)value->response_payload);
+                break;
+                
+                case KMIP_OP_DESTROY:
+                free_destroy_response_payload(
+                    ctx,
+                    (struct destroy_response_payload *)value->response_payload);
                 break;
                 
                 default:
@@ -1028,6 +1083,197 @@ free_nonce(struct kmip *ctx, struct nonce *value)
             free_byte_string(ctx, value->nonce_value);
             ctx->free_func(ctx->state, value->nonce_value);
             value->nonce_value = NULL;
+        }
+    }
+    
+    return;
+}
+
+void
+free_username_password_credential(struct kmip *ctx,
+                                  struct username_password_credential *value)
+{
+    if(value != NULL)
+    {
+        if(value->username != NULL)
+        {
+            free_text_string(ctx, value->username);
+            ctx->free_func(ctx->state, value->username);
+            value->username = NULL;
+        }
+        
+        if(value->password != NULL)
+        {
+            free_text_string(ctx, value->password);
+            ctx->free_func(ctx->state, value->password);
+            value->password = NULL;
+        }
+    }
+    
+    return;
+}
+
+void
+free_device_credential(struct kmip *ctx, struct device_credential *value)
+{
+    if(value != NULL)
+    {
+        if(value->device_serial_number != NULL)
+        {
+            free_text_string(ctx, value->device_serial_number);
+            ctx->free_func(ctx->state, value->device_serial_number);
+            value->device_serial_number = NULL;
+        }
+        
+        if(value->password != NULL)
+        {
+            free_text_string(ctx, value->password);
+            ctx->free_func(ctx->state, value->password);
+            value->password = NULL;
+        }
+        
+        if(value->device_identifier != NULL)
+        {
+            free_text_string(ctx, value->device_identifier);
+            ctx->free_func(ctx->state, value->device_identifier);
+            value->device_identifier = NULL;
+        }
+        
+        if(value->network_identifier != NULL)
+        {
+            free_text_string(ctx, value->network_identifier);
+            ctx->free_func(ctx->state, value->network_identifier);
+            value->network_identifier = NULL;
+        }
+        
+        if(value->machine_identifier != NULL)
+        {
+            free_text_string(ctx, value->machine_identifier);
+            ctx->free_func(ctx->state, value->machine_identifier);
+            value->machine_identifier = NULL;
+        }
+        
+        if(value->media_identifier != NULL)
+        {
+            free_text_string(ctx, value->media_identifier);
+            ctx->free_func(ctx->state, value->media_identifier);
+            value->media_identifier = NULL;
+        }
+    }
+    
+    return;
+}
+
+void
+free_attestation_credential(struct kmip *ctx, struct attestation_credential *value)
+{
+    if(value != NULL)
+    {
+        if(value->nonce != NULL)
+        {
+            free_nonce(ctx, value->nonce);
+            ctx->free_func(ctx->state, value->nonce);
+            value->nonce = NULL;
+        }
+        
+        if(value->attestation_measurement != NULL)
+        {
+            free_byte_string(ctx, value->attestation_measurement);
+            ctx->free_func(ctx->state, value->attestation_measurement);
+            value->attestation_measurement = NULL;
+        }
+        
+        if(value->attestation_assertion != NULL)
+        {
+            free_byte_string(ctx, value->attestation_assertion);
+            ctx->free_func(ctx->state, value->attestation_assertion);
+            value->attestation_assertion = NULL;
+        }
+        
+        value->attestation_type = 0;
+    }
+    
+    return;
+}
+
+void
+free_credential_value(struct kmip *ctx,
+                      enum credential_type type,
+                      void **value)
+{
+    if(value != NULL)
+    {
+        if(*value != NULL)
+        {
+            switch(type)
+            {
+                case KMIP_CRED_USERNAME_AND_PASSWORD:
+                free_username_password_credential(
+                    ctx,
+                    (struct username_password_credential *)*value);
+                break;
+                
+                case KMIP_CRED_DEVICE:
+                free_device_credential(
+                    ctx,
+                    (struct device_credential *)*value);
+                break;
+                
+                case KMIP_CRED_ATTESTATION:
+                free_attestation_credential(
+                    ctx,
+                    (struct attestation_credential *)*value);
+                break;
+                
+                default:
+                /* NOTE (ph) Hitting this case means that we don't know   */
+                /*      what the actual type, size, or value of value is. */
+                /*      We can still free it but we cannot securely zero  */
+                /*      the memory. We also do not know how to free any   */
+                /*      possible substructures pointed to within value.   */
+                /*                                                        */
+                /*      Avoid hitting this case at all costs.             */
+                break;
+            };
+        
+            ctx->free_func(ctx->state, *value);
+            *value = NULL;
+        }    
+    }
+    
+    return;
+}
+
+void
+free_credential(struct kmip *ctx, struct credential *value)
+{
+    if(value != NULL)
+    {
+        if(value->credential_value != NULL)
+        {
+            free_credential_value(
+                ctx,
+                value->credential_type,
+                &value->credential_value);
+            value->credential_value = NULL;
+        }
+        
+        value->credential_type = 0;
+    }
+    
+    return;
+}
+
+void
+free_authentication(struct kmip *ctx, struct authentication *value)
+{
+    if(value != NULL)
+    {
+        if(value->credential != NULL)
+        {
+            free_credential(ctx, value->credential);
+            ctx->free_func(ctx->state, value->credential);
+            value->credential = NULL;
         }
     }
     
@@ -1976,6 +2222,54 @@ compare_private_key(const struct private_key *a, const struct private_key *b)
 }
 
 int
+compare_create_response_payload(const struct create_response_payload *a,
+                                const struct create_response_payload *b)
+{
+    if(a != b)
+    {
+        if((a == NULL) || (b == NULL))
+        {
+            return(KMIP_FALSE);
+        }
+        
+        if(a->object_type != b->object_type)
+        {
+            return(KMIP_FALSE);
+        }
+        
+        if(a->unique_identifier != b->unique_identifier)
+        {
+            if((a->unique_identifier == NULL) || (b->unique_identifier == NULL))
+            {
+                return(KMIP_FALSE);
+            }
+            
+            if(compare_text_string(a->unique_identifier,
+                                   b->unique_identifier) == KMIP_FALSE)
+            {
+                return(KMIP_FALSE);
+            }
+        }
+        
+        if(a->template_attribute != b->template_attribute)
+        {
+            if((a->template_attribute == NULL) || (b->template_attribute == NULL))
+            {
+                return(KMIP_FALSE);
+            }
+            
+            if(compare_template_attribute(a->template_attribute,
+                                          b->template_attribute) == KMIP_FALSE)
+            {
+                return(KMIP_FALSE);
+            }
+        }
+    }
+    
+    return(KMIP_TRUE);
+}
+
+int
 compare_get_response_payload(const struct get_response_payload *a,
                              const struct get_response_payload *b)
 {
@@ -2041,6 +2335,35 @@ compare_get_response_payload(const struct get_response_payload *a,
                 return(KMIP_FALSE);
                 break;
             };
+        }
+    }
+    
+    return(KMIP_TRUE);
+}
+
+int
+compare_destroy_response_payload(const struct destroy_response_payload *a,
+                                 const struct destroy_response_payload *b)
+{
+    if(a != b)
+    {
+        if((a == NULL) || (b == NULL))
+        {
+            return(KMIP_FALSE);
+        }
+        
+        if(a->unique_identifier != b->unique_identifier)
+        {
+            if((a->unique_identifier == NULL) || (b->unique_identifier == NULL))
+            {
+                return(KMIP_FALSE);
+            }
+            
+            if(compare_text_string(a->unique_identifier,
+                                   b->unique_identifier) == KMIP_FALSE)
+            {
+                return(KMIP_FALSE);
+            }
         }
     }
     
@@ -2128,10 +2451,30 @@ compare_response_batch_item(const struct response_batch_item *a,
             
             switch(a->operation)
             {
+                case KMIP_OP_CREATE:
+                if(compare_create_response_payload(
+                    (struct create_response_payload *)a->response_payload,
+                    (struct create_response_payload *)b->response_payload) == 
+                   KMIP_FALSE)
+                {
+                    return(KMIP_FALSE);
+                }
+                break;
+                
                 case KMIP_OP_GET:
-                if(compare_get_response_payload
-                   ((struct get_response_payload *)a->response_payload,
+                if(compare_get_response_payload(
+                    (struct get_response_payload *)a->response_payload,
                     (struct get_response_payload *)b->response_payload) == 
+                   KMIP_FALSE)
+                {
+                    return(KMIP_FALSE);
+                }
+                break;
+                
+                case KMIP_OP_DESTROY:
+                if(compare_destroy_response_payload(
+                    (struct destroy_response_payload *)a->response_payload,
+                    (struct destroy_response_payload *)b->response_payload) == 
                    KMIP_FALSE)
                 {
                     return(KMIP_FALSE);
@@ -2180,6 +2523,325 @@ compare_nonce(const struct nonce *a, const struct nonce *b)
             }
             
             if(compare_byte_string(a->nonce_value, b->nonce_value) == KMIP_FALSE)
+            {
+                return(KMIP_FALSE);
+            }
+        }
+    }
+    
+    return(KMIP_TRUE);
+}
+
+int
+compare_username_password_credential(const struct username_password_credential *a,
+                                     const struct username_password_credential *b)
+{
+    if(a != b)
+    {
+        if((a == NULL) || (b == NULL))
+        {
+            return(KMIP_FALSE);
+        }
+        
+        if(a->username != b->username)
+        {
+            if((a->username == NULL) || (b->username == NULL))
+            {
+                return(KMIP_FALSE);
+            }
+            
+            if(compare_text_string(a->username, b->username) == KMIP_FALSE)
+            {
+                return(KMIP_FALSE);
+            }
+        }
+        
+        if(a->password != b->password)
+        {
+            if((a->password == NULL) || (b->password == NULL))
+            {
+                return(KMIP_FALSE);
+            }
+            
+            if(compare_text_string(a->password, b->password) == KMIP_FALSE)
+            {
+                return(KMIP_FALSE);
+            }
+        }
+    }
+    
+    return(KMIP_TRUE);
+}
+
+int
+compare_device_credential(const struct device_credential *a,
+                          const struct device_credential *b)
+{
+    if(a != b)
+    {
+        if((a == NULL) || (b == NULL))
+        {
+            return(KMIP_FALSE);
+        }
+        
+        if(a->device_serial_number != b->device_serial_number)
+        {
+            if((a->device_serial_number == NULL) || (b->device_serial_number == NULL))
+            {
+                return(KMIP_FALSE);
+            }
+            
+            if(compare_text_string(a->device_serial_number,
+                                   b->device_serial_number) == KMIP_FALSE)
+            {
+                return(KMIP_FALSE);
+            }
+        }
+        
+        if(a->password != b->password)
+        {
+            if((a->password == NULL) || (b->password == NULL))
+            {
+                return(KMIP_FALSE);
+            }
+            
+            if(compare_text_string(a->password,
+                                   b->password) == KMIP_FALSE)
+            {
+                return(KMIP_FALSE);
+            }
+        }
+        
+        if(a->device_identifier != b->device_identifier)
+        {
+            if((a->device_identifier == NULL) || (b->device_identifier == NULL))
+            {
+                return(KMIP_FALSE);
+            }
+            
+            if(compare_text_string(a->device_identifier,
+                                   b->device_identifier) == KMIP_FALSE)
+            {
+                return(KMIP_FALSE);
+            }
+        }
+        
+        if(a->network_identifier != b->network_identifier)
+        {
+            if((a->network_identifier == NULL) || (b->network_identifier == NULL))
+            {
+                return(KMIP_FALSE);
+            }
+            
+            if(compare_text_string(a->network_identifier,
+                                   b->network_identifier) == KMIP_FALSE)
+            {
+                return(KMIP_FALSE);
+            }
+        }
+        
+        if(a->machine_identifier != b->machine_identifier)
+        {
+            if((a->machine_identifier == NULL) || (b->machine_identifier == NULL))
+            {
+                return(KMIP_FALSE);
+            }
+            
+            if(compare_text_string(a->machine_identifier,
+                                   b->machine_identifier) == KMIP_FALSE)
+            {
+                return(KMIP_FALSE);
+            }
+        }
+        
+        if(a->media_identifier != b->media_identifier)
+        {
+            if((a->media_identifier == NULL) || (b->media_identifier == NULL))
+            {
+                return(KMIP_FALSE);
+            }
+            
+            if(compare_text_string(a->media_identifier,
+                                   b->media_identifier) == KMIP_FALSE)
+            {
+                return(KMIP_FALSE);
+            }
+        }
+    }
+    
+    return(KMIP_TRUE);
+}
+
+int
+compare_attestation_credential(const struct attestation_credential *a,
+                               const struct attestation_credential *b)
+{
+    if(a != b)
+    {
+        if((a == NULL) || (b == NULL))
+        {
+            return(KMIP_FALSE);
+        }
+        
+        if(a->attestation_type != b->attestation_type)
+        {
+            return(KMIP_FALSE);
+        }
+        
+        if(a->nonce != b->nonce)
+        {
+            if((a->nonce == NULL) || (b->nonce == NULL))
+            {
+                return(KMIP_FALSE);
+            }
+            
+            if(compare_nonce(a->nonce, b->nonce) == KMIP_FALSE)
+            {
+                return(KMIP_FALSE);
+            }
+        }
+        
+        if(a->attestation_measurement != b->attestation_measurement)
+        {
+            if((a->attestation_measurement == NULL) || 
+               (b->attestation_measurement == NULL))
+            {
+                return(KMIP_FALSE);
+            }
+            
+            if(compare_byte_string(a->attestation_measurement,
+                                   b->attestation_measurement) == KMIP_FALSE)
+            {
+                return(KMIP_FALSE);
+            }
+        }
+        
+        if(a->attestation_assertion != b->attestation_assertion)
+        {
+            if((a->attestation_assertion == NULL) || 
+               (b->attestation_assertion == NULL))
+            {
+                return(KMIP_FALSE);
+            }
+            
+            if(compare_byte_string(a->attestation_assertion,
+                                   b->attestation_assertion) == KMIP_FALSE)
+            {
+                return(KMIP_FALSE);
+            }
+        }
+    }
+    
+    return(KMIP_TRUE);
+}
+
+int
+compare_credential_value(enum credential_type type,
+                         void **a,
+                         void **b)
+{
+    if(a != b)
+    {
+        if((a == NULL) || (b == NULL))
+        {
+            return(KMIP_FALSE);
+        }
+        
+        if(*a != *b)
+        {
+            if((*a == NULL) || (*b == NULL))
+            {
+                return(KMIP_FALSE);
+            }
+            
+            switch(type)
+            {
+                case KMIP_CRED_USERNAME_AND_PASSWORD:
+                if(compare_username_password_credential(*a, *b) == KMIP_FALSE)
+                {
+                    return(KMIP_FALSE);
+                }
+                break;
+                
+                case KMIP_CRED_DEVICE:
+                if(compare_device_credential(*a, *b) == KMIP_FALSE)
+                {
+                    return(KMIP_FALSE);
+                }
+                break;
+                
+                case KMIP_CRED_ATTESTATION:
+                if(compare_attestation_credential(*a, *b) == KMIP_FALSE)
+                {
+                    return(KMIP_FALSE);
+                }
+                break;
+                
+                default:
+                /* NOTE (ph) Unsupported types cannot be compared. */
+                return(KMIP_FALSE);
+                break;
+            };
+        }
+    }
+    
+    return(KMIP_TRUE);
+}
+
+int
+compare_credential(const struct credential *a, const struct credential *b)
+{
+    if(a != b)
+    {
+        if((a == NULL) || (b == NULL))
+        {
+            return(KMIP_FALSE);
+        }
+        
+        if(a->credential_type != b->credential_type)
+        {
+            return(KMIP_FALSE);
+        }
+        
+        if(a->credential_value != b->credential_value)
+        {
+            if((a->credential_value == NULL) || (b->credential_value == NULL))
+            {
+                return(KMIP_FALSE);
+            }
+            
+            if(compare_credential_value(
+                a->credential_type,
+                (void**)&a->credential_value,
+                (void**)&b->credential_value) == KMIP_FALSE)
+            {
+                return(KMIP_FALSE);
+            }
+        }
+    }
+    
+    return(KMIP_TRUE);
+}
+
+int
+compare_authentication(const struct authentication *a,
+                       const struct authentication *b)
+{
+    if(a != b)
+    {
+        if((a == NULL) || (b == NULL))
+        {
+            return(KMIP_FALSE);
+        }
+        
+        if(a->credential != b->credential)
+        {
+            if((a->credential == NULL) || (b->credential == NULL))
+            {
+                return(KMIP_FALSE);
+            }
+            
+            if(compare_credential(a->credential, b->credential) == KMIP_FALSE)
             {
                 return(KMIP_FALSE);
             }
@@ -3502,7 +4164,6 @@ encode_create_request_payload(struct kmip *ctx,
     
     return(KMIP_OK);
 }
-
 
 int
 encode_create_response_payload(struct kmip *ctx, 
@@ -5743,7 +6404,7 @@ decode_key_block(struct kmip *ctx, struct key_block *value)
     if(is_tag_next(ctx, KMIP_TAG_KEY_WRAPPING_DATA))
     {
         value->key_wrapping_data = ctx->calloc_func(
-            ctx,
+            ctx->state,
             1,
             sizeof(struct key_wrapping_data));
         CHECK_NEW_MEMORY(
@@ -5865,6 +6526,65 @@ decode_private_key(struct kmip *ctx, struct private_key *value)
 }
 
 int
+decode_create_response_payload(struct kmip *ctx, 
+                               struct create_response_payload *value)
+{
+    CHECK_BUFFER_FULL(ctx, 8);
+    
+    int result = 0;
+    int32 tag_type = 0;
+    uint32 length = 0;
+    
+    decode_int32_be(ctx, &tag_type);
+    CHECK_TAG_TYPE(
+        ctx,
+        tag_type,
+        KMIP_TAG_RESPONSE_PAYLOAD,
+        KMIP_TYPE_STRUCTURE);
+    
+    decode_int32_be(ctx, &length);
+    CHECK_BUFFER_FULL(ctx, length);
+    
+    result = decode_enum(ctx, KMIP_TAG_OBJECT_TYPE, &value->object_type);
+    CHECK_RESULT(ctx, result);
+    CHECK_ENUM(ctx, KMIP_TAG_OBJECT_TYPE, value->object_type);
+    
+    value->unique_identifier = ctx->calloc_func(
+        ctx->state,
+        1,
+        sizeof(struct text_string));
+    CHECK_NEW_MEMORY(
+        ctx,
+        value->unique_identifier,
+        sizeof(struct text_string),
+        "UniqueIdentifier text string");
+    
+    result = decode_text_string(
+        ctx,
+        KMIP_TAG_UNIQUE_IDENTIFIER,
+        value->unique_identifier);
+    CHECK_RESULT(ctx, result);
+    
+    if(is_tag_next(ctx, KMIP_TAG_TEMPLATE_ATTRIBUTE))
+    {
+        value->template_attribute = ctx->calloc_func(
+            ctx->state,
+            1,
+            sizeof(struct template_attribute));
+        CHECK_NEW_MEMORY(
+            ctx,
+            value->template_attribute,
+            sizeof(struct template_attribute),
+            "TemplateAttribute structure");
+        
+        result = decode_template_attribute(ctx, value->template_attribute);
+        CHECK_RESULT(ctx, result);
+    }
+    
+    return(KMIP_OK);
+}
+
+int
 decode_get_response_payload(struct kmip *ctx,
                             struct get_response_payload *value)
 {
@@ -5959,6 +6679,45 @@ decode_get_response_payload(struct kmip *ctx,
         return(KMIP_NOT_IMPLEMENTED);
         break;
     };
+    
+    return(KMIP_OK);
+}
+
+int
+decode_destroy_response_payload(struct kmip *ctx, 
+                                struct destroy_response_payload *value)
+{
+    CHECK_BUFFER_FULL(ctx, 8);
+    
+    int result = 0;
+    int32 tag_type = 0;
+    uint32 length = 0;
+    
+    decode_int32_be(ctx, &tag_type);
+    CHECK_TAG_TYPE(
+        ctx,
+        tag_type,
+        KMIP_TAG_RESPONSE_PAYLOAD,
+        KMIP_TYPE_STRUCTURE);
+    
+    decode_int32_be(ctx, &length);
+    CHECK_BUFFER_FULL(ctx, length);
+    
+    value->unique_identifier = ctx->calloc_func(
+        ctx->state,
+        1,
+        sizeof(struct text_string));
+    CHECK_NEW_MEMORY(
+        ctx,
+        value->unique_identifier,
+        sizeof(struct text_string),
+        "UniqueIdentifier text string");
+    
+    result = decode_text_string(
+        ctx,
+        KMIP_TAG_UNIQUE_IDENTIFIER,
+        value->unique_identifier);
+    CHECK_RESULT(ctx, result);
     
     return(KMIP_OK);
 }
@@ -6156,6 +6915,603 @@ decode_nonce(struct kmip *ctx, struct nonce *value)
 }
 
 int
+decode_username_password_credential(struct kmip *ctx,
+                                    struct username_password_credential *value)
+{
+    CHECK_BUFFER_FULL(ctx, 8);
+    
+    int result = 0;
+    int32 tag_type = 0;
+    uint32 length = 0;
+    
+    decode_int32_be(ctx, &tag_type);
+    CHECK_TAG_TYPE(
+        ctx,
+        tag_type,
+        KMIP_TAG_CREDENTIAL_VALUE,
+        KMIP_TYPE_STRUCTURE);
+    
+    decode_int32_be(ctx, &length);
+    CHECK_BUFFER_FULL(ctx, length);
+    
+    value->username = ctx->calloc_func(
+        ctx->state,
+        1,
+        sizeof(struct text_string));
+    CHECK_NEW_MEMORY(
+        ctx,
+        value->username,
+        sizeof(struct text_string),
+        "Username text string");
+    
+    result = decode_text_string(
+        ctx,
+        KMIP_TAG_USERNAME,
+        value->username);
+    CHECK_RESULT(ctx, result);
+    
+    if(is_tag_next(ctx, KMIP_TAG_PASSWORD))
+    {
+        value->password = ctx->calloc_func(
+            ctx->state,
+            1,
+            sizeof(struct text_string));
+        CHECK_NEW_MEMORY(
+            ctx,
+            value->password,
+            sizeof(struct text_string),
+            "Password text string");
+        
+        result = decode_text_string(
+            ctx,
+            KMIP_TAG_PASSWORD,
+            value->password);
+        CHECK_RESULT(ctx, result);
+    }
+    
+    return(KMIP_OK);
+}
+
+int
+decode_device_credential(struct kmip *ctx,
+                         struct device_credential *value)
+{
+    CHECK_BUFFER_FULL(ctx, 8);
+    
+    int result = 0;
+    int32 tag_type = 0;
+    uint32 length = 0;
+    
+    decode_int32_be(ctx, &tag_type);
+    CHECK_TAG_TYPE(
+        ctx,
+        tag_type,
+        KMIP_TAG_CREDENTIAL_VALUE,
+        KMIP_TYPE_STRUCTURE);
+    
+    decode_int32_be(ctx, &length);
+    CHECK_BUFFER_FULL(ctx, length);
+    
+    if(is_tag_next(ctx, KMIP_TAG_DEVICE_SERIAL_NUMBER))
+    {
+        value->device_serial_number = ctx->calloc_func(
+            ctx->state,
+            1,
+            sizeof(struct text_string));
+        CHECK_NEW_MEMORY(
+            ctx,
+            value->device_serial_number,
+            sizeof(struct text_string),
+            "DeviceSerialNumber text string");
+        
+        result = decode_text_string(
+            ctx,
+            KMIP_TAG_DEVICE_SERIAL_NUMBER,
+            value->device_serial_number);
+        CHECK_RESULT(ctx, result);
+    }
+    
+    if(is_tag_next(ctx, KMIP_TAG_PASSWORD))
+    {
+        value->password = ctx->calloc_func(
+            ctx->state,
+            1,
+            sizeof(struct text_string));
+        CHECK_NEW_MEMORY(
+            ctx,
+            value->password,
+            sizeof(struct text_string),
+            "Password text string");
+        
+        result = decode_text_string(
+            ctx,
+            KMIP_TAG_PASSWORD,
+            value->password);
+        CHECK_RESULT(ctx, result);
+    }
+    
+    if(is_tag_next(ctx, KMIP_TAG_DEVICE_IDENTIFIER))
+    {
+        value->device_identifier = ctx->calloc_func(
+            ctx->state,
+            1,
+            sizeof(struct text_string));
+        CHECK_NEW_MEMORY(
+            ctx,
+            value->device_identifier,
+            sizeof(struct text_string),
+            "DeviceIdentifier text string");
+        
+        result = decode_text_string(
+            ctx,
+            KMIP_TAG_DEVICE_IDENTIFIER,
+            value->device_identifier);
+        CHECK_RESULT(ctx, result);
+    }
+    
+    if(is_tag_next(ctx, KMIP_TAG_NETWORK_IDENTIFIER))
+    {
+        value->network_identifier = ctx->calloc_func(
+            ctx->state,
+            1,
+            sizeof(struct text_string));
+        CHECK_NEW_MEMORY(
+            ctx,
+            value->network_identifier,
+            sizeof(struct text_string),
+            "NetworkIdentifier text string");
+        
+        result = decode_text_string(
+            ctx,
+            KMIP_TAG_NETWORK_IDENTIFIER,
+            value->network_identifier);
+        CHECK_RESULT(ctx, result);
+    }
+    
+    if(is_tag_next(ctx, KMIP_TAG_MACHINE_IDENTIFIER))
+    {
+        value->machine_identifier = ctx->calloc_func(
+            ctx->state,
+            1,
+            sizeof(struct text_string));
+        CHECK_NEW_MEMORY(
+            ctx,
+            value->machine_identifier,
+            sizeof(struct text_string),
+            "MachineIdentifier text string");
+        
+        result = decode_text_string(
+            ctx,
+            KMIP_TAG_MACHINE_IDENTIFIER,
+            value->machine_identifier);
+        CHECK_RESULT(ctx, result);
+    }
+    
+    if(is_tag_next(ctx, KMIP_TAG_MEDIA_IDENTIFIER))
+    {
+        value->media_identifier = ctx->calloc_func(
+            ctx->state,
+            1,
+            sizeof(struct text_string));
+        CHECK_NEW_MEMORY(
+            ctx,
+            value->media_identifier,
+            sizeof(struct text_string),
+            "MediaIdentifier text string");
+        
+        result = decode_text_string(
+            ctx,
+            KMIP_TAG_MEDIA_IDENTIFIER,
+            value->media_identifier);
+        CHECK_RESULT(ctx, result);
+    }
+    
+    return(KMIP_OK);
+}
+
+int
+decode_attestation_credential(struct kmip *ctx,
+                              struct attestation_credential *value)
+{
+    CHECK_BUFFER_FULL(ctx, 8);
+    
+    int result = 0;
+    int32 tag_type = 0;
+    uint32 length = 0;
+    
+    decode_int32_be(ctx, &tag_type);
+    CHECK_TAG_TYPE(
+        ctx,
+        tag_type,
+        KMIP_TAG_CREDENTIAL_VALUE,
+        KMIP_TYPE_STRUCTURE);
+    
+    decode_int32_be(ctx, &length);
+    CHECK_BUFFER_FULL(ctx, length);
+    
+    value->nonce = ctx->calloc_func(
+        ctx->state,
+        1,
+        sizeof(struct nonce));
+    CHECK_NEW_MEMORY(
+        ctx,
+        value->nonce,
+        sizeof(struct nonce),
+        "Nonce structure");
+    
+    result = decode_nonce(ctx, value->nonce);
+    CHECK_RESULT(ctx, result);
+    
+    result = decode_enum(
+        ctx,
+        KMIP_TAG_ATTESTATION_TYPE,
+        &value->attestation_type);
+    CHECK_RESULT(ctx, result);
+    CHECK_ENUM(ctx, KMIP_TAG_ATTESTATION_TYPE, value->attestation_type);
+    
+    if(is_tag_next(ctx, KMIP_TAG_ATTESTATION_MEASUREMENT))
+    {
+        value->attestation_measurement = ctx->calloc_func(
+            ctx->state,
+            1,
+            sizeof(struct byte_string));
+        CHECK_NEW_MEMORY(
+            ctx,
+            value->attestation_measurement,
+            sizeof(struct byte_string),
+            "AttestationMeasurement byte string");
+        
+        result = decode_byte_string(
+            ctx,
+            KMIP_TAG_ATTESTATION_MEASUREMENT,
+            value->attestation_measurement);
+        CHECK_RESULT(ctx, result);
+    }
+    
+    if(is_tag_next(ctx, KMIP_TAG_ATTESTATION_ASSERTION))
+    {
+        value->attestation_assertion = ctx->calloc_func(
+            ctx->state,
+            1,
+            sizeof(struct byte_string));
+        CHECK_NEW_MEMORY(
+            ctx,
+            value->attestation_assertion,
+            sizeof(struct byte_string),
+            "AttestationAssertion byte string");
+        
+        result = decode_byte_string(
+            ctx,
+            KMIP_TAG_ATTESTATION_ASSERTION,
+            value->attestation_assertion);
+        CHECK_RESULT(ctx, result);
+    }
+    
+    return(KMIP_OK);
+}
+
+int
+decode_credential_value(struct kmip *ctx, 
+                        enum credential_type type, 
+                        void **value)
+{
+    int result = 0;
+    
+    switch(type)
+    {
+        case KMIP_CRED_USERNAME_AND_PASSWORD:
+        *value = ctx->calloc_func(
+            ctx->state,
+            1,
+            sizeof(struct username_password_credential));
+        CHECK_NEW_MEMORY(
+            ctx,
+            *value,
+            sizeof(struct username_password_credential),
+            "UsernamePasswordCredential structure");
+        result = decode_username_password_credential(
+            ctx, 
+            (struct username_password_credential *)*value);
+        break;
+        
+        case KMIP_CRED_DEVICE:
+        *value = ctx->calloc_func(
+            ctx->state,
+            1,
+            sizeof(struct device_credential));
+        CHECK_NEW_MEMORY(
+            ctx,
+            *value,
+            sizeof(struct device_credential),
+            "DeviceCredential structure");
+        result = decode_device_credential(
+            ctx,
+            (struct device_credential *)*value);
+        break;
+        
+        case KMIP_CRED_ATTESTATION:
+        *value = ctx->calloc_func(
+            ctx->state,
+            1,
+            sizeof(struct attestation_credential));
+        CHECK_NEW_MEMORY(
+            ctx,
+            *value,
+            sizeof(struct attestation_credential),
+            "AttestationCredential structure");
+        result = decode_attestation_credential(
+            ctx,
+            (struct attestation_credential*)*value);
+        break;
+        
+        default:
+        kmip_push_error_frame(ctx, __func__, __LINE__);
+        return(KMIP_NOT_IMPLEMENTED);
+        break;
+    }
+    CHECK_RESULT(ctx, result);
+    
+    return(KMIP_OK);
+}
+
+int
+decode_credential(struct kmip *ctx, struct credential *value)
+{
+    CHECK_BUFFER_FULL(ctx, 8);
+    
+    int result = 0;
+    int32 tag_type = 0;
+    uint32 length = 0;
+    
+    decode_int32_be(ctx, &tag_type);
+    CHECK_TAG_TYPE(
+        ctx,
+        tag_type,
+        KMIP_TAG_CREDENTIAL,
+        KMIP_TYPE_STRUCTURE);
+    
+    decode_int32_be(ctx, &length);
+    CHECK_BUFFER_FULL(ctx, length);
+    
+    result = decode_enum(
+        ctx,
+        KMIP_TAG_CREDENTIAL_TYPE,
+        &value->credential_type);
+    CHECK_RESULT(ctx, result);
+    CHECK_ENUM(ctx, KMIP_TAG_CREDENTIAL_TYPE, value->credential_type);
+    
+    result = decode_credential_value(
+        ctx,
+        value->credential_type,
+        &value->credential_value);
+    CHECK_RESULT(ctx, result);
+    
+    return(KMIP_OK);
+}
+
+int
+decode_authentication(struct kmip *ctx, struct authentication *value)
+{
+    CHECK_BUFFER_FULL(ctx, 8);
+    
+    int result = 0;
+    int32 tag_type = 0;
+    uint32 length = 0;
+    
+    decode_int32_be(ctx, &tag_type);
+    CHECK_TAG_TYPE(
+        ctx,
+        tag_type,
+        KMIP_TAG_AUTHENTICATION,
+        KMIP_TYPE_STRUCTURE);
+    
+    decode_int32_be(ctx, &length);
+    CHECK_BUFFER_FULL(ctx, length);
+    
+    value->credential = ctx->calloc_func(
+        ctx->state,
+        1,
+        sizeof(struct credential));
+    CHECK_NEW_MEMORY(
+        ctx,
+        value->credential,
+        sizeof(struct credential),
+        "Credential structure");
+    
+    result = decode_credential(ctx, value->credential);
+    CHECK_RESULT(ctx, result);
+    
+    return(KMIP_OK);
+}
+
+/*
+int
+decode_request_header(struct kmip *ctx, struct request_header *value)
+{
+    CHECK_BUFFER_FULL(ctx, 8);
+    
+    int result = 0;
+    int32 tag_type = 0;
+    uint32 length = 0;
+    
+    decode_int32_be(ctx, &tag_type);
+    CHECK_TAG_TYPE(
+        ctx,
+        tag_type,
+        KMIP_TAG_REQUEST_HEADER,
+        KMIP_TYPE_STRUCTURE);
+    
+    decode_int32_be(ctx, &length);
+    CHECK_BUFFER_FULL(ctx, length);
+    
+    value->protocol_version = ctx->calloc_func(
+        ctx->state,
+        1,
+        sizeof(struct protocol_version));
+    CHECK_NEW_MEMORY(
+        ctx,
+        value->protocol_version,
+        sizeof(struct protocol_version),
+        "ProtocolVersion structure");
+    
+    result = decode_protocol_version(ctx, value->protocol_version);
+    CHECK_RESULT(ctx, result);
+    
+    if(is_tag_next(ctx, KMIP_TAG_MAXIMUM_RESPONSE_SIZE))
+    {
+        result = decode_integer(
+            ctx,
+            KMIP_TAG_MAXIMUM_RESPONSE_SIZE,
+            &value->maximum_response_size);
+        CHECK_RESULT(ctx, result);
+    }
+    
+    if(ctx->version >= KMIP_1_4)
+    {
+        if(is_tag_next(ctx, KMIP_TAG_CLIENT_CORRELATION_VALUE))
+        {
+            value->client_correlation_value = ctx->calloc_func(
+                ctx->state,
+                1,
+                sizeof(struct text_string));
+            CHECK_NEW_MEMORY(
+                ctx,
+                value->client_correlation_value,
+                sizeof(struct text_string),
+                "ClientCorrelationValue text string");
+            
+            result = decode_text_string(
+                ctx,
+                KMIP_TAG_CLIENT_CORRELATION_VALUE,
+                value->client_correlation_value);
+            CHECK_RESULT(ctx, result);
+        }
+        
+        if(is_tag_next(ctx, KMIP_TAG_SERVER_CORRELATION_VALUE))
+        {
+            value->server_correlation_value = ctx->calloc_func(
+                ctx->state,
+                1,
+                sizeof(struct text_string));
+            CHECK_NEW_MEMORY(
+                ctx,
+                value->server_correlation_value,
+                sizeof(struct text_string),
+                "ServerCorrelationValue text string");
+            
+            result = decode_text_string(
+                ctx,
+                KMIP_TAG_SERVER_CORRELATION_VALUE,
+                value->server_correlation_value);
+            CHECK_RESULT(ctx, result);
+        }
+    }
+    
+    if(is_tag_next(ctx, KMIP_TAG_ASYNCHRONOUS_INDICATOR))
+    {
+        result = decode_bool(
+            ctx,
+            KMIP_TAG_ASYNCHRONOUS_INDICATOR,
+            &value->asynchronous_indicator);
+        CHECK_RESULT(ctx, result);
+    }
+    
+    if(ctx->version >= KMIP_1_2)
+    {
+        if(is_tag_next(ctx, KMIP_TAG_ATTESTATION_CAPABLE_INDICATOR))
+        {
+            result = decode_bool(
+                ctx,
+                KMIP_TAG_ATTESTATION_CAPABLE_INDICATOR,
+                &value->attestation_capable_indicator);
+            CHECK_RESULT(ctx, result);
+        }
+        
+        value->attestation_type_count = get_num_items_next(
+            ctx, 
+            KMIP_TAG_ATTESTATION_TYPE);
+        if(value->attestation_type_count > 0)
+        {
+            value->attestation_types = ctx->calloc_func(
+                ctx->state,
+                value->attestation_type_count,
+                sizeof(enum attestation_type));
+            CHECK_NEW_MEMORY(
+                ctx,
+                value->attestation_types,
+                value->attestation_type_count * sizeof(enum attestation_type),
+                "sequence of AttestationType enumerations");
+            
+            for(size_t i = 0; i < value->attestation_type_count; i++)
+            {
+                result = decode_enum(
+                    ctx,
+                    KMIP_TAG_ATTESTATION_TYPE,
+                    &value->attestation_types[i]);
+                CHECK_RESULT(ctx, result);
+                CHECK_ENUM(
+                    ctx,
+                    KMIP_TAG_ATTESTATION_TYPE,
+                    value->attestation_types[i]);
+            }
+        }
+    }
+    
+    if(is_tag_next(ctx, KMIP_TAG_AUTHENTICATION))
+    {
+        value->authentication = ctx->calloc_func(
+            ctx->state,
+            1,
+            sizeof(struct authentication));
+        CHECK_NEW_MEMORY(
+            ctx,
+            value->authentication,
+            sizeof(struct authentication),
+            "Authentication structure");
+        
+        result = decode_authentication(ctx, value->authentication);
+        CHECK_RESULT(ctx, result);
+    }
+    
+    if(is_tag_next(ctx, KMIP_TAG_BATCH_ERROR_CONTINUATION_OPTION))
+    {
+        result = decode_enum(
+            ctx,
+            KMIP_TAG_BATCH_ERROR_CONTINUATION_OPTION,
+            &value->batch_error_continuation_option);
+        CHECK_RESULT(ctx, result);
+        CHECK_ENUM(
+            ctx,
+            KMIP_TAG_BATCH_ERROR_CONTINUATION_OPTION,
+            value->batch_error_continuation_option);
+    }
+    
+    if(is_tag_next(ctx, KMIP_TAG_BATCH_ORDER_OPTION))
+    {
+        result = decode_bool(
+            ctx,
+            KMIP_TAG_BATCH_ORDER_OPTION,
+            &value->batch_order_option);
+        CHECK_RESULT(ctx, result);
+    }
+    
+    if(is_tag_next(ctx, KMIP_TAG_TIME_STAMP))
+    {
+        result = decode_date_time(
+            ctx,
+            KMIP_TAG_TIME_STAMP,
+            &value->time_stamp);
+        CHECK_RESULT(ctx, result);
+    }
+    
+    result = decode_integer(ctx, KMIP_TAG_BATCH_COUNT, &value->batch_count);
+    CHECK_RESULT(ctx, result);
+    
+    return(KMIP_OK);
+}
+*/
+
+int
 decode_response_header(struct kmip *ctx, struct response_header *value)
 {
     CHECK_BUFFER_FULL(ctx, 8);
@@ -6284,7 +7640,6 @@ decode_response_header(struct kmip *ctx, struct response_header *value)
     
     return(KMIP_OK);
 }
-
 
 int
 decode_response_message(struct kmip *ctx, struct response_message *value)

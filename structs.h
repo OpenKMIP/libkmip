@@ -268,9 +268,10 @@ struct attestation_credential
 
 struct authentication
 {
-    /* NOTE (peter-hamilton) KMIP 1.2+ supports multiple credentials here. */
-    /* NOTE (peter-hamilton) Polymorphism makes this tricky. Omitting for now. */
-    void *credential;
+    /* NOTE (ph) KMIP 1.2+ supports multiple credentials here. */
+    /* NOTE (ph) Polymorphism makes this tricky. Omitting for now. */
+    /* TODO (ph) Credential structs are constant size, so no problem here. */
+    struct credential *credential;
 };
 
 /* Message Structures */
