@@ -68,7 +68,6 @@ main(void)
     BIO_set_conn_hostname(bio, "127.0.0.1");
     BIO_set_conn_port(bio, "5696");
     result = BIO_do_connect(bio);
-    
     if(result != 1)
     {
         printf("BIO_do_connect failed (%d)\n", result);
@@ -89,16 +88,35 @@ main(void)
     rh.protocol_version = &pv;
     rh.batch_count = 1;
     
-    struct text_string uuid = {0};
-    uuid.value = "1";
-    uuid.size = 1;
+    struct attribute a[3] = {0};
+    for(int i = 0; i < 3; i++)
+    {
+        init_attribute(&a[i]);
+    }
     
-    struct get_request_payload grp = {0};
-    grp.unique_identifier = &uuid;
+    enum cryptographic_algorithm algorithm = KMIP_CRYPTOALG_AES;
+    a[0].type = KMIP_ATTR_CRYPTOGRAPHIC_ALGORITHM;
+    a[0].value = &algorithm;
+    
+    int32 length = 256;
+    a[1].type = KMIP_ATTR_CRYPTOGRAPHIC_LENGTH;
+    a[1].value = &length;
+    
+    int32 mask = KMIP_CRYPTOMASK_ENCRYPT | KMIP_CRYPTOMASK_DECRYPT;
+    a[2].type = KMIP_ATTR_CRYPTOGRAPHIC_USAGE_MASK;
+    a[2].value = &mask;
+    
+    struct template_attribute ta = {0};
+    ta.attributes = a;
+    ta.attribute_count = ARRAY_LENGTH(a);
+    
+    struct create_request_payload crp = {0};
+    crp.object_type = KMIP_OBJTYPE_SYMMETRIC_KEY;
+    crp.template_attribute = &ta;
     
     struct request_batch_item rbi = {0};
-    rbi.operation = KMIP_OP_GET;
-    rbi.request_payload = &grp;
+    rbi.operation = KMIP_OP_CREATE;
+    rbi.request_payload = &crp;
     
     struct request_message rm = {0};
     rm.request_header = &rh;
@@ -120,8 +138,6 @@ main(void)
     int recv = BIO_read(bio, response, 300);
     
     printf("Received bytes: %d\n\n", recv);
-    /*print_buffer(response, recv);
-    printf("\n\n");*/
     
     kmip_reset(&kmip_ctx);
     kmip_set_buffer(&kmip_ctx, response, recv);
@@ -135,7 +151,7 @@ main(void)
         printf("- error code: %d\n", decode_result);
         printf("- error name: ");
         print_error_string(decode_result);
-        printf("\n");
+        printf("\n");;
         printf("- context error: %s\n", kmip_ctx.error_message);
         printf("Stack trace:\n");
         print_stack_trace(&kmip_ctx);
@@ -153,3 +169,5 @@ main(void)
     
     return(0);
 }
+
+

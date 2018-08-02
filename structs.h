@@ -37,6 +37,7 @@ struct kmip
     char *error_message;
     size_t error_message_size;
     struct error_frame errors[20];
+    size_t error_frame_count;
     struct error_frame *frame_index;
     
     void *(*calloc_func)(void *state, size_t num, size_t size);
