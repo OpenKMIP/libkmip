@@ -16,6 +16,7 @@
 
 #include <openssl/ssl.h>
 #include <stdio.h>
+#include <time.h>
 
 #include "kmip.h"
 
@@ -86,37 +87,19 @@ main(void)
     init_request_header(&rh);
     
     rh.protocol_version = &pv;
+    rh.time_stamp = time(NULL);
     rh.batch_count = 1;
     
-    struct attribute a[3] = {0};
-    for(int i = 0; i < 3; i++)
-    {
-        init_attribute(&a[i]);
-    }
+    struct text_string uuid = {0};
+    uuid.value = "1";
+    uuid.size = 1;
     
-    enum cryptographic_algorithm algorithm = KMIP_CRYPTOALG_AES;
-    a[0].type = KMIP_ATTR_CRYPTOGRAPHIC_ALGORITHM;
-    a[0].value = &algorithm;
-    
-    int32 length = 256;
-    a[1].type = KMIP_ATTR_CRYPTOGRAPHIC_LENGTH;
-    a[1].value = &length;
-    
-    int32 mask = KMIP_CRYPTOMASK_ENCRYPT | KMIP_CRYPTOMASK_DECRYPT;
-    a[2].type = KMIP_ATTR_CRYPTOGRAPHIC_USAGE_MASK;
-    a[2].value = &mask;
-    
-    struct template_attribute ta = {0};
-    ta.attributes = a;
-    ta.attribute_count = ARRAY_LENGTH(a);
-    
-    struct create_request_payload crp = {0};
-    crp.object_type = KMIP_OBJTYPE_SYMMETRIC_KEY;
-    crp.template_attribute = &ta;
+    struct destroy_request_payload drp = {0};
+    drp.unique_identifier = &uuid;
     
     struct request_batch_item rbi = {0};
-    rbi.operation = KMIP_OP_CREATE;
-    rbi.request_payload = &crp;
+    rbi.operation = KMIP_OP_DESTROY;
+    rbi.request_payload = &drp;
     
     struct request_message rm = {0};
     rm.request_header = &rh;
@@ -124,6 +107,7 @@ main(void)
     rm.batch_count = 1;
     
     print_request_message(&rm);
+    printf("\n");
     
     int encode_result = encode_request_message(&kmip_ctx, &rm);
     if(encode_result != KMIP_OK)
@@ -132,6 +116,9 @@ main(void)
         return(encode_result);
     }
     
+    printf("Sending bytes: %ld\n", kmip_ctx.index - kmip_ctx.buffer);
+    
+    /* TODO (ph) Make response buffer dynamically sized off of response. */
     uint8 response[300] = {0};
     
     BIO_write(bio, kmip_ctx.buffer, kmip_ctx.index - kmip_ctx.buffer);

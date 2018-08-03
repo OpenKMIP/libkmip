@@ -1785,8 +1785,64 @@ print_encoding_option_enum(enum encoding_option value)
 }
 
 void
-print_cryptographic_usage_mask_enums(int indent, int64 value)
+print_key_wrap_type_enum(enum key_wrap_type value)
 {
+    if(value == 0)
+    {
+        printf("-");
+        return;
+    }
+    
+    switch(value)
+    {
+        case KMIP_WRAPTYPE_NOT_WRAPPED:
+        printf("Not Wrapped");
+        break;
+        
+        case KMIP_WRAPTYPE_AS_REGISTERED:
+        printf("As Registered");
+        break;
+        
+        default:
+        printf("Unknown");
+        break;
+    };
+}
+
+void
+print_credential_type_enum(enum credential_type value)
+{
+    if(value == 0)
+    {
+        printf("-");
+        return;
+    }
+    
+    switch(value)
+    {
+        case KMIP_CRED_USERNAME_AND_PASSWORD:
+        printf("Username and Password");
+        break;
+        
+        case KMIP_CRED_DEVICE:
+        printf("Device");
+        break;
+        
+        case KMIP_CRED_ATTESTATION:
+        printf("Attestation");
+        break;
+        
+        default:
+        printf("Unknown");
+        break;
+    };
+}
+
+void
+print_cryptographic_usage_mask_enums(int indent, int32 value)
+{
+    printf("\n");
+    
     if((value & KMIP_CRYPTOMASK_SIGN) == KMIP_CRYPTOMASK_SIGN)
     {
         printf("%*sSign\n", indent, "");
@@ -2169,8 +2225,7 @@ print_attribute_value(int indent, enum attribute_type type, void *value)
         break;
         
         case KMIP_ATTR_CRYPTOGRAPHIC_USAGE_MASK:
-        printf("\n");
-        print_cryptographic_usage_mask_enums(indent + 2, *(int64 *)value);
+        print_cryptographic_usage_mask_enums(indent + 2, *(int32 *)value);
         break;
         
         case KMIP_ATTR_STATE:
@@ -2355,6 +2410,26 @@ print_create_request_payload(int indent, struct create_request_payload *value)
 }
 
 void
+print_create_response_payload(int indent, struct create_response_payload *value)
+{
+    printf("%*sCreate Response Payload @ %p\n", indent, "", (void *)value);
+    
+    if(value != NULL)
+    {
+        printf("%*sObject Type: ", indent + 2, "");
+        print_object_type_enum(value->object_type);
+        printf("\n");
+        
+        print_text_string(
+            indent + 2,
+            "Unique Identifier",
+            value->unique_identifier);
+        
+        print_template_attribute(indent + 2, value->template_attribute);
+    }
+}
+
+void
 print_get_request_payload(int indent, struct get_request_payload *value)
 {
     printf("%*sGet Request Payload @ %p\n", indent, "", (void *)value);
@@ -2367,15 +2442,15 @@ print_get_request_payload(int indent, struct get_request_payload *value)
             value->unique_identifier);
         
         printf("%*sKey Format Type: ", indent + 2, "");
-        printf("???");
+        print_key_format_type_enum(value->key_format_type);
         printf("\n");
         
         printf("%*sKey Wrap Type: ", indent + 2, "");
-        printf("???");
+        print_key_wrap_type_enum(value->key_wrap_type);
         printf("\n");
         
         printf("%*sKey Compression Type: ", indent + 2, "");
-        printf("???");
+        print_key_compression_type_enum(value->key_compression_type);
         printf("\n");
         
         print_key_wrapping_specification(indent + 2, value->key_wrapping_spec);
@@ -2401,6 +2476,34 @@ print_get_response_payload(int indent, struct get_response_payload *value)
 }
 
 void
+print_destroy_request_payload(int indent, struct destroy_request_payload *value)
+{
+    printf("%*sDestroy Request Payload @ %p\n", indent, "", (void *)value);
+    
+    if(value != NULL)
+    {
+        print_text_string(
+            indent + 2,
+            "Unique Identifier",
+            value->unique_identifier);
+    }
+}
+
+void
+print_destroy_response_payload(int indent, struct destroy_response_payload *value)
+{
+    printf("%*sDestroy Response Payload @ %p\n", indent, "", (void *)value);
+
+    if(value != NULL)
+    {
+        print_text_string(
+            indent + 2,
+            "Unique Identifier",
+            value->unique_identifier);
+    }
+}
+
+void
 print_request_payload(int indent, enum operation type, void *value)
 {
     switch(type)
@@ -2414,6 +2517,7 @@ print_request_payload(int indent, enum operation type, void *value)
         break;
         
         case KMIP_OP_DESTROY:
+        print_destroy_request_payload(indent, value);
         break;
         
         default:
@@ -2427,8 +2531,16 @@ print_response_payload(int indent, enum operation type, void *value)
 {
     switch(type)
     {
+        case KMIP_OP_CREATE:
+        print_create_response_payload(indent, value);
+        break;
+        
         case KMIP_OP_GET:
         print_get_response_payload(indent, (struct get_response_payload *)value);
+        break;
+        
+        case KMIP_OP_DESTROY:
+        print_destroy_response_payload(indent, value);
         break;
         
         default:
@@ -2438,9 +2550,78 @@ print_response_payload(int indent, enum operation type, void *value)
 }
 
 void
+print_username_password_credential(int indent, struct username_password_credential *value)
+{
+    printf("%*sUsername/Password Credential @ %p\n", indent, "", (void *)value);
+}
+
+void
+print_device_credential(int indent, struct device_credential *value)
+{
+    printf("%*sDevice Credential @ %p\n", indent, "", (void *)value);
+}
+
+void
+print_attestation_credential(int indent, struct attestation_credential *value)
+{
+    printf("%*sAttestation Credential @ %p\n", indent, "", (void *)value);
+}
+
+void
+print_credential_value(int indent, enum credential_type type, void *value)
+{
+    printf("%*sCredential Value @ %p\n", indent, "", value);
+    
+    if(value != NULL)
+    {
+        switch(type)
+        {
+            case KMIP_CRED_USERNAME_AND_PASSWORD:
+            print_username_password_credential(indent + 2, value);
+            break;
+            
+            case KMIP_CRED_DEVICE:
+            print_device_credential(indent + 2, value);
+            break;
+            
+            case KMIP_CRED_ATTESTATION:
+            print_attestation_credential(indent + 2, value);
+            break;
+            
+            default:
+            printf("%*sUnknown Credential @ %p\n", indent + 2, "", value);
+            break;
+        };
+    }
+}
+
+void
+print_credential(int indent, struct credential *value)
+{
+    printf("%*sCredential @ %p\n", indent, "", (void *)value);
+    
+    if(value != NULL)
+    {
+        printf("%*sCredential Type: ", indent + 2, "");
+        print_credential_type_enum(value->credential_type);
+        printf("\n");
+        
+        print_credential_value(
+            indent + 2,
+            value->credential_type,
+            value->credential_value);
+    }
+}
+
+void
 print_authentication(int indent, struct authentication *value)
 {
     printf("%*sAuthentication @ %p\n", indent, "", (void *)value);
+    
+    if(value != NULL)
+    {
+        print_credential(indent + 2, value->credential);
+    }
 }
 
 void

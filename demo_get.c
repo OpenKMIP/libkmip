@@ -106,6 +106,7 @@ main(void)
     rm.batch_count = 1;
     
     print_request_message(&rm);
+    printf("\n");
     
     int encode_result = encode_request_message(&kmip_ctx, &rm);
     if(encode_result != KMIP_OK)
@@ -114,6 +115,9 @@ main(void)
         return(encode_result);
     }
     
+    printf("Sending bytes: %ld\n", kmip_ctx.index - kmip_ctx.buffer);
+    
+    /* TODO (ph) Make response buffer dynamically sized off of response. */
     uint8 response[300] = {0};
     
     BIO_write(bio, kmip_ctx.buffer, kmip_ctx.index - kmip_ctx.buffer);
