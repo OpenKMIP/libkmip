@@ -17,23 +17,6 @@
 #include <stdio.h>
 #include "kmip.h"
 
-void
-print_error_frames(struct kmip *ctx, const char *prefix)
-{
-    for(size_t i = 0; i < 20; i++)
-    {
-        struct error_frame *frame = &ctx->errors[i];
-        if(frame->line != 0)
-        {
-            printf("%s%s(%d)\n", prefix, frame->function, frame->line);
-        }
-        else
-        {
-            break;
-        }
-    }
-}
-
 int
 report_encoding_test_result(struct kmip *ctx, const uint8 *expected,
                             const uint8 *observed, int result,
@@ -66,7 +49,7 @@ report_encoding_test_result(struct kmip *ctx, const uint8 *expected,
         {
             printf("- context buffer is full\n");
         }
-        print_error_frames(ctx, "- ");
+        print_stack_trace(ctx);
         return(1);
     }
 }
@@ -96,7 +79,7 @@ report_decoding_test_result(struct kmip *ctx, int comparison, int result,
         {
             printf("- context buffer is underfull\n");
         }
-        print_error_frames(ctx, "- ");
+        print_stack_trace(ctx);
         return(1);
     }
 }
@@ -1013,8 +996,9 @@ test_encode_attribute_unique_identifier(void)
     uuid.size = 36;
     
     struct attribute attr = {0};
+    init_attribute(&attr);
+    
     attr.type = KMIP_ATTR_UNIQUE_IDENTIFIER;
-    attr.index = KMIP_UNSET;
     attr.value = &uuid;
     
     int result = encode_attribute(&ctx, &attr);
@@ -1098,8 +1082,9 @@ test_encode_attribute_name(void)
     n.type = KMIP_NAME_UNINTERPRETED_TEXT_STRING;
     
     struct attribute attr = {0};
+    init_attribute(&attr);
+    
     attr.type = KMIP_ATTR_NAME;
-    attr.index = KMIP_UNSET;
     attr.value = &n;
     
     int result = encode_attribute(&ctx, &attr);
@@ -1175,8 +1160,9 @@ test_encode_attribute_object_type(void)
     
     enum object_type t = KMIP_OBJTYPE_SYMMETRIC_KEY;
     struct attribute attr = {0};
+    init_attribute(&attr);
+    
     attr.type = KMIP_ATTR_OBJECT_TYPE;
-    attr.index = KMIP_UNSET;
     attr.value = &t;
     
     int result = encode_attribute(&ctx, &attr);
@@ -1243,8 +1229,9 @@ test_encode_attribute_cryptographic_algorithm(void)
     
     enum cryptographic_algorithm a = KMIP_CRYPTOALG_AES;
     struct attribute attr = {0};
+    init_attribute(&attr);
+    
     attr.type = KMIP_ATTR_CRYPTOGRAPHIC_ALGORITHM;
-    attr.index = KMIP_UNSET;
     attr.value = &a;
     
     int result = encode_attribute(&ctx, &attr);
@@ -1312,8 +1299,9 @@ test_encode_attribute_cryptographic_length(void)
     
     int32 length = 128;
     struct attribute attr = {0};
+    init_attribute(&attr);
+    
     attr.type = KMIP_ATTR_CRYPTOGRAPHIC_LENGTH;
-    attr.index = KMIP_UNSET;
     attr.value = &length;
     
     int result = encode_attribute(&ctx, &attr);
@@ -1384,8 +1372,9 @@ test_encode_attribute_operation_policy_name(void)
     policy.size = 7;
     
     struct attribute attr = {0};
+    init_attribute(&attr);
+    
     attr.type = KMIP_ATTR_OPERATION_POLICY_NAME;
-    attr.index = KMIP_UNSET;
     attr.value = &policy;
     
     int result = encode_attribute(&ctx, &attr);
@@ -1456,8 +1445,9 @@ test_encode_attribute_cryptographic_usage_mask(void)
     
     int32 mask = KMIP_CRYPTOMASK_ENCRYPT | KMIP_CRYPTOMASK_DECRYPT;
     struct attribute attr = {0};
+    init_attribute(&attr);
+    
     attr.type = KMIP_ATTR_CRYPTOGRAPHIC_USAGE_MASK;
-    attr.index = KMIP_UNSET;
     attr.value = &mask;
     
     int result = encode_attribute(&ctx, &attr);
@@ -1523,8 +1513,9 @@ test_encode_attribute_state(void)
     
     enum state s = KMIP_STATE_PRE_ACTIVE;
     struct attribute attr = {0};
+    init_attribute(&attr);
+    
     attr.type = KMIP_ATTR_STATE;
-    attr.index = KMIP_UNSET;
     attr.value = &s;
     
     int result = encode_attribute(&ctx, &attr);
@@ -2256,13 +2247,16 @@ test_encode_key_value_with_attributes(void)
     key.size = ARRAY_LENGTH(value);
     
     struct attribute attributes[2] = {0};
+    for(int i = 0; i < 2; i++)
+    {
+        init_attribute(&attributes[i]);
+    }
+    
     enum cryptographic_algorithm ca = KMIP_CRYPTOALG_AES;
     int length = 128;
     attributes[0].type = KMIP_ATTR_CRYPTOGRAPHIC_ALGORITHM;
-    attributes[0].index = KMIP_UNSET;
     attributes[0].value = &ca;
     attributes[1].type = KMIP_ATTR_CRYPTOGRAPHIC_LENGTH;
-    attributes[1].index = KMIP_UNSET;
     attributes[1].value = &length;
     
     struct key_value kv = {0};
@@ -3763,20 +3757,21 @@ test_encode_create_request_payload(void)
     kmip_init(&ctx, observed, ARRAY_LENGTH(observed), KMIP_1_0);
     
     struct attribute a[3] = {0};
+    for(int i = 0; i < 3; i++)
+    {
+        init_attribute(&a[i]);
+    }
     
     enum cryptographic_algorithm algorithm = KMIP_CRYPTOALG_AES;
     a[0].type = KMIP_ATTR_CRYPTOGRAPHIC_ALGORITHM;
-    a[0].index = KMIP_UNSET;
     a[0].value = &algorithm;
     
     int32 length = 128;
     a[1].type = KMIP_ATTR_CRYPTOGRAPHIC_LENGTH;
-    a[1].index = KMIP_UNSET;
     a[1].value = &length;
     
     int32 mask = KMIP_CRYPTOMASK_ENCRYPT | KMIP_CRYPTOMASK_DECRYPT;
     a[2].type = KMIP_ATTR_CRYPTOGRAPHIC_USAGE_MASK;
-    a[2].index = KMIP_UNSET;
     a[2].value = &mask;
     
     struct template_attribute ta = {0};
@@ -3833,20 +3828,21 @@ test_decode_create_request_payload(void)
     kmip_init(&ctx, encoding, ARRAY_LENGTH(encoding), KMIP_1_0);
     
     struct attribute a[3] = {0};
+    for(int i = 0; i < 3; i++)
+    {
+        init_attribute(&a[i]);
+    }
     
     enum cryptographic_algorithm algorithm = KMIP_CRYPTOALG_AES;
     a[0].type = KMIP_ATTR_CRYPTOGRAPHIC_ALGORITHM;
-    a[0].index = KMIP_UNSET;
     a[0].value = &algorithm;
     
     int32 length = 128;
     a[1].type = KMIP_ATTR_CRYPTOGRAPHIC_LENGTH;
-    a[1].index = KMIP_UNSET;
     a[1].value = &length;
     
     int32 mask = KMIP_CRYPTOMASK_ENCRYPT | KMIP_CRYPTOMASK_DECRYPT;
     a[2].type = KMIP_ATTR_CRYPTOGRAPHIC_USAGE_MASK;
-    a[2].index = KMIP_UNSET;
     a[2].value = &mask;
     
     struct template_attribute ta = {0};
@@ -3979,9 +3975,10 @@ test_encode_create_response_payload_with_template_attribute(void)
     uuid.size = 36;
     
     struct attribute a = {0};
+    init_attribute(&a);
+    
     enum cryptographic_algorithm algorithm = KMIP_CRYPTOALG_AES;
     a.type = KMIP_ATTR_CRYPTOGRAPHIC_ALGORITHM;
-    a.index = KMIP_UNSET;
     a.value = &algorithm;
     
     struct template_attribute ta = {0};
@@ -4035,9 +4032,10 @@ test_decode_create_response_payload_with_template_attribute(void)
     uuid.size = 36;
     
     struct attribute a = {0};
+    init_attribute(&a);
+    
     enum cryptographic_algorithm algorithm = KMIP_CRYPTOALG_AES;
     a.type = KMIP_ATTR_CRYPTOGRAPHIC_ALGORITHM;
-    a.index = KMIP_UNSET;
     a.value = &algorithm;
     
     struct template_attribute ta = {0};
@@ -4845,11 +4843,10 @@ test_encode_request_header(void)
     struct authentication a = {0};
     a.credential = &c;
     
-    /* NOTE (peter-hamilton) KMIP_UNSET isn't zero, must be explicit */
-    /* TODO (peter-hamilton) Need init functions for structs like this? */
     struct request_header rh = {0};
+    init_request_header(&rh);
+    
     rh.protocol_version = &pv;
-    rh.asynchronous_indicator = KMIP_UNSET;
     rh.authentication = &a;
     rh.batch_error_continuation_option = KMIP_BATCH_CONTINUE;
     rh.batch_order_option = KMIP_TRUE;
@@ -4966,6 +4963,8 @@ test_encode_response_header(void)
     pv.minor = 0;
     
     struct response_header rh = {0};
+    init_response_header(&rh);
+    
     rh.protocol_version = &pv;
     rh.time_stamp = 1335514341;
     rh.batch_count = 1;
@@ -5314,9 +5313,9 @@ test_encode_request_message_get(void)
     pv.minor = 0;
     
     struct request_header rh = {0};
+    init_request_header(&rh);
+    
     rh.protocol_version = &pv;
-    rh.asynchronous_indicator = KMIP_UNSET;
-    rh.batch_order_option = KMIP_UNSET;
     rh.batch_count = 1;
     
     struct text_string uuid = {0};
@@ -5466,6 +5465,8 @@ test_encode_response_message_get(void)
     pv.minor = 0;
     
     struct response_header rh = {0};
+    init_response_header(&rh);
+    
     rh.protocol_version = &pv;
     rh.time_stamp = 1335514343;
     rh.batch_count = 1;
@@ -5574,6 +5575,8 @@ test_decode_response_message_get(void)
     pv.minor = 0;
     
     struct response_header rh = {0};
+    init_response_header(&rh);
+    
     rh.protocol_version = &pv;
     rh.time_stamp = 1335514343;
     rh.batch_count = 1;
@@ -5688,22 +5691,21 @@ test_encode_template_attribute(void)
     n.type = KMIP_NAME_UNINTERPRETED_TEXT_STRING;
     
     struct attribute a[4] = {0};
+    for(int i = 0; i < 4; i++)
+    {
+        init_attribute(&a[i]);
+    }
     
-    /* NOTE (peter-hamilton) Having to manually set the index is annoying. */
-    /* TODO (peter-hamilton) Add a template_attribute_init function? */
     enum cryptographic_algorithm algorithm = KMIP_CRYPTOALG_AES;
     a[0].type = KMIP_ATTR_CRYPTOGRAPHIC_ALGORITHM;
-    a[0].index = KMIP_UNSET;
     a[0].value = &algorithm;
     
     int32 length = 128;
     a[1].type = KMIP_ATTR_CRYPTOGRAPHIC_LENGTH;
-    a[1].index = KMIP_UNSET;
     a[1].value = &length;
     
     int32 mask = KMIP_CRYPTOMASK_ENCRYPT | KMIP_CRYPTOMASK_DECRYPT;
     a[2].type = KMIP_ATTR_CRYPTOGRAPHIC_USAGE_MASK;
-    a[2].index = KMIP_UNSET;
     a[2].value = &mask;
     
     struct text_string value = {0};
@@ -5714,7 +5716,6 @@ test_encode_template_attribute(void)
     name.value = &value;
     name.type = KMIP_NAME_UNINTERPRETED_TEXT_STRING;
     a[3].type = KMIP_ATTR_NAME;
-    a[3].index = KMIP_UNSET;
     a[3].value = &name;
     
     struct template_attribute ta = {0};
@@ -5813,7 +5814,6 @@ test_decode_template_attribute(void)
     name.value = &value;
     name.type = KMIP_NAME_UNINTERPRETED_TEXT_STRING;
     a[3].type = KMIP_ATTR_NAME;
-    a[3].index = KMIP_UNSET;
     a[3].value = &name;
     
     struct template_attribute expected = {0};
@@ -6436,8 +6436,9 @@ test_encode_request_header_with_attestation_details(void)
     };
     
     struct request_header rh = {0};
+    init_request_header(&rh);
+    
     rh.protocol_version = &pv;
-    rh.asynchronous_indicator = KMIP_UNSET;
     rh.attestation_capable_indicator = KMIP_TRUE;
     rh.attestation_types = types;
     rh.attestation_type_count = ARRAY_LENGTH(types);
@@ -6510,6 +6511,8 @@ test_encode_response_header_with_attestation_details(void)
     };
     
     struct response_header rh = {0};
+    init_response_header(&rh);
+    
     rh.protocol_version = &pv;
     rh.time_stamp = 1335514341;
     rh.nonce = &n;
@@ -7050,6 +7053,8 @@ test_encode_request_header_with_correlation_values(void)
     scv.size = 8;
     
     struct request_header rh = {0};
+    init_request_header(&rh);
+    
     rh.protocol_version = &pv;
     rh.maximum_response_size = 4096;
     rh.asynchronous_indicator = KMIP_TRUE;
@@ -7140,6 +7145,8 @@ test_encode_response_header_with_correlation_values(void)
     scv.size = 8;
     
     struct response_header rh = {0};
+    init_response_header(&rh);
+    
     rh.protocol_version = &pv;
     rh.time_stamp = 1335514341;
     rh.nonce = &n;
@@ -7312,9 +7319,9 @@ test_kmip_1_1_test_suite_3_1_1_0_a(void)
     pv.minor = 1;
     
     struct request_header rh = {0};
+    init_request_header(&rh);
+    
     rh.protocol_version = &pv;
-    rh.asynchronous_indicator = KMIP_UNSET;
-    rh.batch_order_option = KMIP_UNSET;
     rh.batch_count = 1;
     
     struct attribute a[3] = {0};
@@ -7325,17 +7332,14 @@ test_kmip_1_1_test_suite_3_1_1_0_a(void)
     
     enum cryptographic_algorithm algorithm = KMIP_CRYPTOALG_AES;
     a[0].type = KMIP_ATTR_CRYPTOGRAPHIC_ALGORITHM;
-    a[0].index = KMIP_UNSET;
     a[0].value = &algorithm;
     
     int32 length = 128;
     a[1].type = KMIP_ATTR_CRYPTOGRAPHIC_LENGTH;
-    a[1].index = KMIP_UNSET;
     a[1].value = &length;
     
     int32 mask = KMIP_CRYPTOMASK_ENCRYPT | KMIP_CRYPTOMASK_DECRYPT;
     a[2].type = KMIP_ATTR_CRYPTOGRAPHIC_USAGE_MASK;
-    a[2].index = KMIP_UNSET;
     a[2].value = &mask;
     
     struct template_attribute ta = {0};
@@ -7407,6 +7411,8 @@ test_kmip_1_1_test_suite_3_1_1_0_b(void)
     pv.minor = 1;
     
     struct response_header rh = {0};
+    init_response_header(&rh);
+    
     rh.protocol_version = &pv;
     rh.time_stamp = 1335514341;
     rh.batch_count = 1;
@@ -7475,9 +7481,9 @@ test_kmip_1_1_test_suite_3_1_1_1_a(void)
     pv.minor = 1;
     
     struct request_header rh = {0};
+    init_request_header(&rh);
+    
     rh.protocol_version = &pv;
-    rh.asynchronous_indicator = KMIP_UNSET;
-    rh.batch_order_option = KMIP_UNSET;
     rh.batch_count = 1;
     
     struct text_string uuid = {0};
@@ -7546,6 +7552,8 @@ test_kmip_1_1_test_suite_3_1_1_1_b(void)
     pv.minor = 1;
     
     struct response_header rh = {0};
+    init_response_header(&rh);
+    
     rh.protocol_version = &pv;
     rh.time_stamp = 1335514341;
     rh.batch_count = 1;
@@ -7613,9 +7621,9 @@ test_kmip_1_1_test_suite_3_1_3_2_a(void)
     pv.minor = 1;
     
     struct request_header rh = {0};
+    init_request_header(&rh);
+    
     rh.protocol_version = &pv;
-    rh.asynchronous_indicator = KMIP_UNSET;
-    rh.batch_order_option = KMIP_UNSET;
     rh.batch_count = 1;
     
     struct text_string uuid = {0};
@@ -7698,6 +7706,8 @@ test_kmip_1_1_test_suite_3_1_3_2_b(void)
     pv.minor = 1;
     
     struct response_header rh = {0};
+    init_response_header(&rh);
+    
     rh.protocol_version = &pv;
     rh.time_stamp = 1335514343;
     rh.batch_count = 1;
