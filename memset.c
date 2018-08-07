@@ -16,28 +16,6 @@
 
 #include "memset.h"
 
-/*
-#if defined __STDC_LIB_EXT1__
-
-#define __STDC_WANT_LIB_EXT1__
-#include <string.h>
-
-void *
-kmip_memset(void *ptr, int value, size_t size)
-{
-    if(ptr == NULL)
-    {
-        return(ptr);
-    }
-    
-    memset_s(ptr, size, value, size);
-    
-    return(ptr);
-}
-
-#else
-*/
-
 void *
 kmip_base_memset(void *ptr, int value, size_t size)
 {
@@ -66,7 +44,3 @@ kmip_memset(void *ptr, int value, size_t size)
     
     return(ptr);
 }
-
-/*
-#endif
-*/

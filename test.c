@@ -7948,12 +7948,12 @@ main(void)
 {
     run_tests();
     
-/*
+
     while(1)
     {
         run_tests();
     }
-*/
+
     
     return(0);
 }

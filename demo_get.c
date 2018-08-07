@@ -16,6 +16,7 @@
 
 #include <openssl/ssl.h>
 #include <stdio.h>
+#include <time.h>
 
 #include "kmip.h"
 
@@ -87,6 +88,7 @@ main(void)
     init_request_header(&rh);
     
     rh.protocol_version = &pv;
+    rh.time_stamp = time(NULL);
     rh.batch_count = 1;
     
     struct text_string uuid = {0};
@@ -112,6 +114,13 @@ main(void)
     if(encode_result != KMIP_OK)
     {
         printf("Encoding failure detected. Aborting request.");
+        printf("- error code: %d\n", encode_result);
+        printf("- error name: ");
+        print_error_string(encode_result);
+        printf("\n");
+        printf("- context error: %s\n", kmip_ctx.error_message);
+        printf("Stack trace:\n");
+        print_stack_trace(&kmip_ctx);
         return(encode_result);
     }
     
