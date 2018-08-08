@@ -22,6 +22,31 @@
 #include "memset.h"
 
 /*
+Miscellaneous Utilities
+*/
+
+size_t
+kmip_strnlen_s(const char *str, size_t strsz)
+{
+    if(str == NULL)
+    {
+        return(0);
+    }
+    
+    size_t length = 0;
+    for(const char *i = str; *i != 0; i++)
+    {
+        length++;
+        if(length >= strsz)
+        {
+            return(strsz);
+        }
+    }
+    return(length);
+}
+
+
+/*
 Memory Handlers
 */
 

@@ -120,6 +120,12 @@ do                                                      \
 #define CALCULATE_PADDING(A) ((8 - ((A) % 8)) % 8)
 
 /*
+Miscellaneous Utilities
+*/
+
+size_t kmip_strnlen_s(const char *, size_t);
+
+/*
 Memory Handlers
 */
 

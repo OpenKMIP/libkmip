@@ -21,8 +21,14 @@
 #include "kmip.h"
 
 int
-main(void)
+main(int argc, char **argv)
 {
+    if(argc != 2)
+    {
+        printf("\nUsage: %s <id>\n\n", argv[0]);
+        return(-1);
+    }
+    
     SSL_CTX *ctx = NULL;
     SSL *ssl = NULL;
     OPENSSL_init_ssl(0, NULL);
@@ -91,8 +97,8 @@ main(void)
     rh.batch_count = 1;
     
     struct text_string uuid = {0};
-    uuid.value = "1";
-    uuid.size = 1;
+    uuid.value = argv[1];
+    uuid.size = kmip_strnlen_s(argv[1], 50);
     
     struct destroy_request_payload drp = {0};
     drp.unique_identifier = &uuid;
