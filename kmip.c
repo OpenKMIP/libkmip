@@ -45,7 +45,6 @@ kmip_strnlen_s(const char *str, size_t strsz)
     return(length);
 }
 
-
 /*
 Memory Handlers
 */
