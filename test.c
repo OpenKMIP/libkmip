@@ -7944,16 +7944,21 @@ run_tests(void)
 }
 
 int
-main(void)
+main(int argc, char **argv)
 {
-    run_tests();
+    (void)argv;
     
-
-    while(1)
+    if(argc == 1)
     {
         run_tests();
     }
-
+    else
+    {
+        while(1)
+        {
+            run_tests();
+        }
+    }
     
     return(0);
 }
