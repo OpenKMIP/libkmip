@@ -34,6 +34,8 @@ struct kmip
     
     enum kmip_version version;
     
+    struct authentication *auth;
+    
     char *error_message;
     size_t error_message_size;
     struct error_frame errors[20];
@@ -317,7 +319,7 @@ struct request_batch_item
     enum operation operation;
     struct byte_string *unique_batch_item_id;
     void *request_payload;
-    /* NOTE (peter-hamilton) Omitting the message extension field for now. */
+    /* NOTE (ph) Omitting the message extension field for now. */
 };
 
 struct response_batch_item
@@ -329,7 +331,7 @@ struct response_batch_item
     struct text_string *result_message;
     struct byte_string *asynchronous_correlation_value;
     void *response_payload;
-    /* NOTE (peter-hamilton) Omitting the message extension field for now. */
+    /* NOTE (ph) Omitting the message extension field for now. */
 };
 
 struct request_message

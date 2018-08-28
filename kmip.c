@@ -19,7 +19,7 @@
 #include <string.h>
 
 #include "kmip.h"
-#include "memset.h"
+#include "kmip_memset.h"
 
 /*
 Miscellaneous Utilities
@@ -688,7 +688,7 @@ check_enum_value(enum kmip_version version, enum tag t, int value)
             
             /* The following set is deprecated as of KMIP 1.3 */
             case KMIP_OBJTYPE_TEMPLATE:
-            /* TODO (peter-hamilton) What should happen if version >= 1.3? */
+            /* TODO (ph) What should happen if version >= 1.3? */
             return(KMIP_OK);
             break;
             
@@ -841,7 +841,7 @@ check_enum_value(enum kmip_version version, enum tag t, int value)
         break;
         
         case KMIP_TAG_TAG:
-        /* TODO (peter-hamilton) Fill this in. */
+        /* TODO (ph) Fill this in. */
         return(KMIP_OK);
         break;
         
@@ -953,11 +953,14 @@ kmip_init_error_message(struct kmip *ctx)
 void
 kmip_reset(struct kmip *ctx)
 {
+    /*
     uint8 *index = ctx->buffer;
     for(size_t i = 0; i < ctx->size; i++)
     {
         *index++ = 0;
     }
+    */
+    kmip_memset(ctx->buffer, 0, ctx->size);
     ctx->index = ctx->buffer;
     
     kmip_clear_errors(ctx);
@@ -974,7 +977,7 @@ kmip_rewind(struct kmip *ctx)
 void
 kmip_set_buffer(struct kmip *ctx, uint8 *buffer, size_t buffer_size)
 {
-    /* TODO (peter-hamilton) Add own_buffer if buffer == NULL? */
+    /* TODO (ph) Add own_buffer if buffer == NULL? */
     ctx->buffer = buffer;
     ctx->index = ctx->buffer;
     ctx->size = buffer_size;
@@ -1069,9 +1072,9 @@ is_tag_next(const struct kmip *ctx, enum tag t)
     
     uint32 tag = 0;
     
-    tag |= ((int32)*index++ << 16);
-    tag |= ((int32)*index++ << 8);
-    tag |= ((int32)*index++ << 0);
+    tag |= ((uint32)*index++ << 16);
+    tag |= ((uint32)*index++ << 8);
+    tag |= ((uint32)*index++ << 0);
     
     if(tag != t)
     {
@@ -1093,10 +1096,10 @@ is_tag_type_next(const struct kmip *ctx, enum tag t, enum type s)
     
     uint32 tag_type = 0;
     
-    tag_type |= ((int32)*index++ << 24);
-    tag_type |= ((int32)*index++ << 16);
-    tag_type |= ((int32)*index++ << 8);
-    tag_type |= ((int32)*index++ << 0);
+    tag_type |= ((uint32)*index++ << 24);
+    tag_type |= ((uint32)*index++ << 16);
+    tag_type |= ((uint32)*index++ << 8);
+    tag_type |= ((uint32)*index++ << 0);
     
     if(tag_type != TAG_TYPE(t, s))
     {
@@ -1150,6 +1153,39 @@ get_num_items_next(struct kmip *ctx, enum tag t)
 /*
 Initialization Functions
 */
+
+void
+init_protocol_version(struct protocol_version *value, enum kmip_version kmip_version)
+{
+    switch(kmip_version)
+    {
+        case KMIP_1_4:
+        value->major = 1;
+        value->minor = 4;
+        break;
+        
+        case KMIP_1_3:
+        value->major = 1;
+        value->minor = 3;
+        break;
+        
+        case KMIP_1_2:
+        value->major = 1;
+        value->minor = 2;
+        break;
+        
+        case KMIP_1_1:
+        value->major = 1;
+        value->minor = 1;
+        break;
+        
+        case KMIP_1_0:
+        default:
+        value->major = 1;
+        value->minor = 0;
+        break;
+    };
+}
 
 void
 init_attribute(struct attribute *value)
@@ -1236,15 +1272,16 @@ Printing Functions
 */
 
 void
-print_buffer(uint8 *buffer, int size)
+print_buffer(void *buffer, int size)
 {
+    uint8 *index = (uint8 *)buffer;
     for(int i = 0; i < size; i++)
     {
-        if(i % 8 == 0)
+        if(i % 16 == 0)
         {
             printf("\n0x");
         }
-        printf("%02X", buffer[i]);
+        printf("%02X", index[i]);
     }
 }
 
@@ -1313,6 +1350,22 @@ print_error_string(int value)
         
         case -12:
         printf("KMIP_MEMORY_ALLOC_FAILED");
+        break;
+
+        case -13:
+        printf("KMIP_IO_FAILURE");
+        break;
+
+        case -14:
+        printf("KMIP_EXCEED_MAX_MESSAGE_SIZE");
+        break;
+
+        case -15:
+        printf("KMIP_MALFORMED_RESPONSE");
+        break;
+
+        case -16:
+        printf("KMIP_OBJECT_MISMATCH");
         break;
         
         default:
@@ -3553,6 +3606,13 @@ print_response_message(struct response_message *value)
 /*
 Freeing Functions
 */
+
+void
+free_buffer(struct kmip *ctx, uint8 *buffer, size_t size)
+{
+    ctx->memset_func(buffer, 0, size);
+    ctx->free_func(ctx->state, buffer);
+}
 
 void
 free_text_string(struct kmip *ctx, struct text_string *value)
@@ -10924,9 +10984,12 @@ decode_response_batch_item(struct kmip *ctx,
     decode_int32_be(ctx, &length);
     CHECK_BUFFER_FULL(ctx, length);
     
-    result = decode_enum(ctx, KMIP_TAG_OPERATION, &value->operation);
-    CHECK_RESULT(ctx, result);
-    CHECK_ENUM(ctx, KMIP_TAG_OPERATION, value->operation);
+    if(is_tag_next(ctx, KMIP_TAG_OPERATION))
+    {
+        result = decode_enum(ctx, KMIP_TAG_OPERATION, &value->operation);
+        CHECK_RESULT(ctx, result);
+        CHECK_ENUM(ctx, KMIP_TAG_OPERATION, value->operation);
+    }
     
     if(is_tag_next(ctx, KMIP_TAG_UNIQUE_BATCH_ITEM_ID))
     {

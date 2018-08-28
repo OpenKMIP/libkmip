@@ -163,18 +163,18 @@ int get_num_items_next(struct kmip *, enum tag);
 Initialization Functions
 */
 
+void init_protocol_version(struct protocol_version *, enum kmip_version);
 void init_attribute(struct attribute *);
 void init_cryptographic_parameters(struct cryptographic_parameters *);
 void init_key_block(struct key_block *);
 void init_request_header(struct request_header *);
 void init_response_header(struct response_header *);
 
-
 /*
 Printing Functions
 */
 
-void print_buffer(uint8 *, int);
+void print_buffer(void *, int);
 void print_stack_trace(struct kmip *);
 void print_error_string(int);
 void print_batch_error_continuation_option(enum batch_error_continuation_option);
@@ -244,6 +244,7 @@ void print_response_message(struct response_message *);
 Freeing Functions
 */
 
+void free_buffer(struct kmip *, uint8 *, size_t);
 void free_text_string(struct kmip *, struct text_string *);
 void free_byte_string(struct kmip *, struct byte_string *);
 void free_name(struct kmip *, struct name *);

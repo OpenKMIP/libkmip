@@ -19,6 +19,7 @@
 #include <time.h>
 
 #include "kmip.h"
+#include "kmip_bio.h"
 
 int
 main(int argc, char **argv)
@@ -81,86 +82,19 @@ main(int argc, char **argv)
         return(result);
     }
     
-    uint8 observed[1024] = {0};
-    struct kmip kmip_ctx = {0};
-    kmip_init(&kmip_ctx, observed, ARRAY_LENGTH(observed), KMIP_1_0);
-    
-    struct protocol_version pv = {0};
-    pv.major = 1;
-    pv.minor = 0;
-    
-    struct request_header rh = {0};
-    init_request_header(&rh);
-    
-    rh.protocol_version = &pv;
-    rh.time_stamp = time(NULL);
-    rh.batch_count = 1;
-    
-    struct text_string uuid = {0};
-    uuid.value = argv[1];
-    uuid.size = kmip_strnlen_s(argv[1], 50);
-    
-    struct destroy_request_payload drp = {0};
-    drp.unique_identifier = &uuid;
-    
-    struct request_batch_item rbi = {0};
-    rbi.operation = KMIP_OP_DESTROY;
-    rbi.request_payload = &drp;
-    
-    struct request_message rm = {0};
-    rm.request_header = &rh;
-    rm.batch_items = &rbi;
-    rm.batch_count = 1;
-    
-    print_request_message(&rm);
-    printf("\n");
-    
-    int encode_result = encode_request_message(&kmip_ctx, &rm);
-    if(encode_result != KMIP_OK)
+    result = kmip_bio_destroy(bio, 4096, argv[1], kmip_strnlen_s(argv[1], 50));
+    if(result < 0)
     {
-        printf("Encoding failure detected. Aborting request.");
-        return(encode_result);
+        printf("An error occurred while deleting object: %s\n", argv[1]);
+        printf("Error Code: %d\n", result);
+    }
+    else if(result >= 0)
+    {
+        printf("The KMIP operation was executed with no errors.\n");
+        printf("Result: ");
+        print_result_status_enum(result);
+        printf(" (%d)\n", result);
     }
     
-    printf("Sending bytes: %ld\n", kmip_ctx.index - kmip_ctx.buffer);
-    
-    /* TODO (ph) Make response buffer dynamically sized off of response. */
-    uint8 response[300] = {0};
-    
-    BIO_write(bio, kmip_ctx.buffer, kmip_ctx.index - kmip_ctx.buffer);
-    int recv = BIO_read(bio, response, 300);
-    
-    printf("Received bytes: %d\n\n", recv);
-    
-    kmip_reset(&kmip_ctx);
-    kmip_set_buffer(&kmip_ctx, response, recv);
-    
-    struct response_message resp_m = {0};
-    
-    int decode_result = decode_response_message(&kmip_ctx, &resp_m);
-    if(decode_result != KMIP_OK)
-    {
-        printf("Decoding failure detected. Error: %d\n", decode_result);
-        printf("- error code: %d\n", decode_result);
-        printf("- error name: ");
-        print_error_string(decode_result);
-        printf("\n");;
-        printf("- context error: %s\n", kmip_ctx.error_message);
-        printf("Stack trace:\n");
-        print_stack_trace(&kmip_ctx);
-        return(decode_result);
-    }
-    else
-    {
-        printf("Decoding succeeded!\n\n");
-    }
-    
-    print_response_message(&resp_m);
-    
-    free_response_message(&kmip_ctx, &resp_m);
-    kmip_destroy(&kmip_ctx);
-    
-    return(0);
+    return(result);
 }
-
-

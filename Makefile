@@ -7,21 +7,23 @@ LDLIBS = -lm
 PREFIX = /usr/local
 
 all: demo_get demo_create demo_destroy test
-demo_get: demo_get.o kmip.o memset.o
-	$(CC) $(LDFLAGS) -L/usr/local/lib -o demo_get demo_get.o kmip.o memset.o $(LDLIBS) -lssl -lcrypto
-demo_create: demo_create.o kmip.o memset.o
-	$(CC) $(LDFLAGS) -L/usr/local/lib -o demo_create demo_create.o kmip.o memset.o $(LDLIBS) -lssl -lcrypto
-demo_destroy: demo_destroy.o kmip.o memset.o
-	$(CC) $(LDFLAGS) -L/usr/local/lib -o demo_destroy demo_destroy.o kmip.o memset.o $(LDLIBS) -lssl -lcrypto
-test: test.o kmip.o memset.o
-	$(CC) $(LDFLAGS) -o test test.o kmip.o memset.o $(LDLIBS)
+#all: test
+demo_get: demo_get.o kmip.o kmip_memset.o kmip_bio.o
+	$(CC) $(LDFLAGS) -L/usr/local/lib -o demo_get demo_get.o kmip.o kmip_memset.o kmip_bio.o $(LDLIBS) -lssl -lcrypto
+demo_create: demo_create.o kmip.o kmip_memset.o kmip_bio.o
+	$(CC) $(LDFLAGS) -L/usr/local/lib -o demo_create demo_create.o kmip.o kmip_memset.o kmip_bio.o $(LDLIBS) -lssl -lcrypto
+demo_destroy: demo_destroy.o kmip.o kmip_memset.o kmip_bio.o
+	$(CC) $(LDFLAGS) -L/usr/local/lib -o demo_destroy demo_destroy.o kmip.o kmip_memset.o kmip_bio.o $(LDLIBS) -lssl -lcrypto
+test: test.o kmip.o kmip_memset.o
+	$(CC) $(LDFLAGS) -o test test.o kmip.o kmip_memset.o $(LDLIBS)
 
-demo_get.o: demo_get.c memset.h kmip.h enums.h structs.h types.h
-demo_create.o: demo_create.c memset.h kmip.h enums.h structs.h types.h
-demo_destroy.o: demo_destroy.c memset.h kmip.h enums.h structs.h types.h
-kmip.o: kmip.c kmip.h memset.h enums.h structs.h types.h
-test.o: test.c memset.h kmip.h enums.h structs.h types.h
-memset.o: memset.c memset.h
+demo_get.o: demo_get.c kmip_memset.h kmip.h enums.h structs.h types.h
+demo_create.o: demo_create.c kmip_memset.h kmip.h enums.h structs.h types.h
+demo_destroy.o: demo_destroy.c kmip_memset.h kmip.h enums.h structs.h types.h
+kmip.o: kmip.c kmip.h kmip_memset.h enums.h structs.h types.h
+test.o: test.c kmip_memset.h kmip.h enums.h structs.h types.h
+kmip_bio.o: kmip_bio.c kmip_bio.h
+kmip_memset.o: kmip_memset.c kmip_memset.h
 
 clean:
 	rm -f *.o

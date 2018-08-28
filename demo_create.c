@@ -19,9 +19,11 @@
 #include <time.h>
 
 #include "kmip.h"
+#include "kmip_bio.h"
+#include "kmip_memset.h"
 
 int
-main(void)
+use_high_level_api(void)
 {
     SSL_CTX *ctx = NULL;
     SSL *ssl = NULL;
@@ -75,20 +77,110 @@ main(void)
         return(result);
     }
     
-    uint8 observed[1024] = {0};
-    struct kmip kmip_ctx = {0};
-    kmip_init(&kmip_ctx, observed, ARRAY_LENGTH(observed), KMIP_1_0);
+    struct attribute a[3] = {0};
+    for(int i = 0; i < 3; i++)
+    {
+        init_attribute(&a[i]);
+    }
     
-    struct protocol_version pv = {0};
-    pv.major = 1;
-    pv.minor = 0;
+    enum cryptographic_algorithm algorithm = KMIP_CRYPTOALG_AES;
+    a[0].type = KMIP_ATTR_CRYPTOGRAPHIC_ALGORITHM;
+    a[0].value = &algorithm;
     
-    struct request_header rh = {0};
-    init_request_header(&rh);
+    int32 length = 256;
+    a[1].type = KMIP_ATTR_CRYPTOGRAPHIC_LENGTH;
+    a[1].value = &length;
     
-    rh.protocol_version = &pv;
-    rh.time_stamp = time(NULL);
-    rh.batch_count = 1;
+    int32 mask = KMIP_CRYPTOMASK_ENCRYPT | KMIP_CRYPTOMASK_DECRYPT;
+    a[2].type = KMIP_ATTR_CRYPTOGRAPHIC_USAGE_MASK;
+    a[2].value = &mask;
+    
+    struct template_attribute ta = {0};
+    ta.attributes = a;
+    ta.attribute_count = ARRAY_LENGTH(a);
+    
+    char *id = NULL;
+    size_t id_size = 0;
+    
+    result = kmip_bio_create(bio, 4096, &ta, &id, &id_size);
+    
+    if(result < 0)
+    {
+        printf("An error occurred while creating the symmetric key.");
+        printf("Error Code: %d\n", result);
+    }
+    else if(result >= 0)
+    {
+        printf("The KMIP operation was executed with no errors.\n");
+        printf("Result: ");
+        print_result_status_enum(result);
+        printf(" (%d)\n\n", result);
+        printf("Symmetric Key ID: %s\n", id);
+    }
+    
+    if(id != NULL)
+    {
+        kmip_memset(id, 0, id_size);
+        kmip_free(NULL, id);
+    }
+    
+    return(result);
+}
+
+int
+use_mid_level_api(void)
+{
+    SSL_CTX *ctx = NULL;
+    SSL *ssl = NULL;
+    OPENSSL_init_ssl(0, NULL);
+    ctx = SSL_CTX_new(TLS_client_method());
+    
+    int result = SSL_CTX_use_certificate_file(
+        ctx,
+        "/etc/pykmip/certs/slugs/client_certificate_john_doe.pem",
+        SSL_FILETYPE_PEM);
+    if(result != 1)
+    {
+        printf("Loading the client certificate failed (%d)\n", result);
+        return(result);
+    }
+    result = SSL_CTX_use_PrivateKey_file(
+        ctx,
+        "/etc/pykmip/certs/slugs/client_key_john_doe.pem",
+        SSL_FILETYPE_PEM);
+    if(result != 1)
+    {
+        printf("Loading the client key failed (%d)\n", result);
+        return(result);
+    }
+    result = SSL_CTX_load_verify_locations(
+        ctx, 
+        "/etc/pykmip/certs/slugs/root_certificate.pem",
+        NULL);
+    if(result != 1)
+    {
+        printf("Loading the CA file failed (%d)\n", result);
+        return(result);
+    }
+    
+    BIO *bio = NULL;
+    bio = BIO_new_ssl_connect(ctx);
+    if(bio == NULL)
+    {
+        printf("BIO_new_ssl_connect failed\n");
+        return(-1);
+    }
+    
+    BIO_get_ssl(bio, &ssl);
+    SSL_set_mode(ssl, SSL_MODE_AUTO_RETRY);
+    BIO_set_conn_hostname(bio, "127.0.0.1");
+    BIO_set_conn_port(bio, "5696");
+    result = BIO_do_connect(bio);
+    if(result != 1)
+    {
+        printf("BIO_do_connect failed (%d)\n", result);
+        return(result);
+    }
     
     struct attribute a[3] = {0};
     for(int i = 0; i < 3; i++)
@@ -112,6 +204,144 @@ main(void)
     ta.attributes = a;
     ta.attribute_count = ARRAY_LENGTH(a);
     
+    char *id = NULL;
+    size_t id_size = 0;
+    
+    struct kmip kmip_context = {0};
+    kmip_init(&kmip_context, NULL, 0, KMIP_1_0);
+    
+    result = kmip_bio_create_with_context(&kmip_context, bio, 4096, &ta, &id,
+                                          &id_size);
+    
+    if(result < 0)
+    {
+        printf("An error occurred while creating the symmetric key.");
+        printf("Error Code: %d\n", result);
+        printf("Error Name: ");
+        print_error_string(result);
+        printf("\n");
+        printf("Context Error: %s\n", kmip_context.error_message);
+        printf("Stack trace:\n");
+        print_stack_trace(&kmip_context);
+    }
+    else if(result >= 0)
+    {
+        printf("The KMIP operation was executed with no errors.\n");
+        printf("Result: ");
+        print_result_status_enum(result);
+        printf(" (%d)\n\n", result);
+        
+        if(result == KMIP_STATUS_SUCCESS)
+        {
+            printf("Symmetric Key ID: %s\n", id);
+        }
+    }
+    
+    if(id != NULL)
+    {
+        kmip_memset(id, 0, id_size);
+        kmip_free(NULL, id);
+    }
+    
+    kmip_destroy(&kmip_context);
+    return(result);
+}
+
+int
+use_low_level_api(void)
+{
+    SSL_CTX *ctx = NULL;
+    SSL *ssl = NULL;
+    OPENSSL_init_ssl(0, NULL);
+    ctx = SSL_CTX_new(TLS_client_method());
+    
+    int result = SSL_CTX_use_certificate_file(
+        ctx,
+        "/etc/pykmip/certs/slugs/client_certificate_john_doe.pem",
+        SSL_FILETYPE_PEM);
+    if(result != 1)
+    {
+        printf("Loading the client certificate failed (%d)\n", result);
+        return(result);
+    }
+    result = SSL_CTX_use_PrivateKey_file(
+        ctx,
+        "/etc/pykmip/certs/slugs/client_key_john_doe.pem",
+        SSL_FILETYPE_PEM);
+    if(result != 1)
+    {
+        printf("Loading the client key failed (%d)\n", result);
+        return(result);
+    }
+    result = SSL_CTX_load_verify_locations(
+        ctx, 
+        "/etc/pykmip/certs/slugs/root_certificate.pem",
+        NULL);
+    if(result != 1)
+    {
+        printf("Loading the CA file failed (%d)\n", result);
+        return(result);
+    }
+    
+    BIO *bio = NULL;
+    bio = BIO_new_ssl_connect(ctx);
+    if(bio == NULL)
+    {
+        printf("BIO_new_ssl_connect failed\n");
+        return(-1);
+    }
+    
+    BIO_get_ssl(bio, &ssl);
+    SSL_set_mode(ssl, SSL_MODE_AUTO_RETRY);
+    BIO_set_conn_hostname(bio, "127.0.0.1");
+    BIO_set_conn_port(bio, "5696");
+    result = BIO_do_connect(bio);
+    if(result != 1)
+    {
+        printf("BIO_do_connect failed (%d)\n", result);
+        return(result);
+    }
+    
+    struct attribute a[3] = {0};
+    for(int i = 0; i < 3; i++)
+    {
+        init_attribute(&a[i]);
+    }
+    
+    enum cryptographic_algorithm algorithm = KMIP_CRYPTOALG_AES;
+    a[0].type = KMIP_ATTR_CRYPTOGRAPHIC_ALGORITHM;
+    a[0].value = &algorithm;
+    
+    int32 length = 256;
+    a[1].type = KMIP_ATTR_CRYPTOGRAPHIC_LENGTH;
+    a[1].value = &length;
+    
+    int32 mask = KMIP_CRYPTOMASK_ENCRYPT | KMIP_CRYPTOMASK_DECRYPT;
+    a[2].type = KMIP_ATTR_CRYPTOGRAPHIC_USAGE_MASK;
+    a[2].value = &mask;
+    
+    struct template_attribute ta = {0};
+    ta.attributes = a;
+    ta.attribute_count = ARRAY_LENGTH(a);
+    
+    char *id = NULL;
+    size_t id_size = 0;
+    
+    struct kmip kmip_context = {0};
+    kmip_init(&kmip_context, NULL, 0, KMIP_1_0);
+    
+    /* Build the request message. */
+    struct protocol_version pv = {0};
+    init_protocol_version(&pv, kmip_context.version);
+    
+    struct request_header rh = {0};
+    init_request_header(&rh);
+    
+    rh.protocol_version = &pv;
+    rh.maximum_response_size = 4096;
+    rh.time_stamp = time(NULL);
+    rh.batch_count = 1;
+    
     struct create_request_payload crp = {0};
     crp.object_type = KMIP_OBJTYPE_SYMMETRIC_KEY;
     crp.template_attribute = &ta;
@@ -125,55 +355,47 @@ main(void)
     rm.batch_items = &rbi;
     rm.batch_count = 1;
     
-    print_request_message(&rm);
-    printf("\n");
+    result = kmip_bio_send_request_encoding(&kmip_context, bio, 4096, &ta, &id,
+                                            &id_size);
     
-    int encode_result = encode_request_message(&kmip_ctx, &rm);
-    if(encode_result != KMIP_OK)
+    if(result < 0)
     {
-        printf("Encoding failure detected. Aborting request.");
-        return(encode_result);
-    }
-    
-    printf("Sending bytes: %ld\n", kmip_ctx.index - kmip_ctx.buffer);
-    
-    /* TODO (ph) Make response buffer dynamically sized off of response. */
-    uint8 response[300] = {0};
-    
-    BIO_write(bio, kmip_ctx.buffer, kmip_ctx.index - kmip_ctx.buffer);
-    int recv = BIO_read(bio, response, 300);
-    
-    printf("Received bytes: %d\n\n", recv);
-    
-    kmip_reset(&kmip_ctx);
-    kmip_set_buffer(&kmip_ctx, response, recv);
-    
-    struct response_message resp_m = {0};
-    
-    int decode_result = decode_response_message(&kmip_ctx, &resp_m);
-    if(decode_result != KMIP_OK)
-    {
-        printf("Decoding failure detected. Error: %d\n", decode_result);
-        printf("- error code: %d\n", decode_result);
-        printf("- error name: ");
-        print_error_string(decode_result);
-        printf("\n");;
-        printf("- context error: %s\n", kmip_ctx.error_message);
+        printf("An error occurred while creating the symmetric key.");
+        printf("Error Code: %d\n", result);
+        printf("Error Name: ");
+        print_error_string(result);
+        printf("\n");
+        printf("Context Error: %s\n", kmip_context.error_message);
         printf("Stack trace:\n");
-        print_stack_trace(&kmip_ctx);
-        return(decode_result);
+        print_stack_trace(&kmip_context);
     }
-    else
+    else if(result >= 0)
     {
-        printf("Decoding succeeded!\n\n");
+        printf("The KMIP operation was executed with no errors.\n");
+        printf("Result: ");
+        print_result_status_enum(result);
+        printf(" (%d)\n\n", result);
+        
+        if(result == KMIP_STATUS_SUCCESS)
+        {
+            printf("Symmetric Key ID: %s\n", id);
+        }
     }
     
-    print_response_message(&resp_m);
+    if(id != NULL)
+    {
+        kmip_memset(id, 0, id_size);
+        kmip_free(NULL, id);
+    }
     
-    free_response_message(&kmip_ctx, &resp_m);
-    kmip_destroy(&kmip_ctx);
-    
-    return(0);
+    kmip_destroy(&kmip_context);
+    return(result);
 }
 
-
+int
+main(void)
+{
+    /*use_high_level_api();*/
+    use_mid_level_api();
+    /*use_low_level_api();*/
+}

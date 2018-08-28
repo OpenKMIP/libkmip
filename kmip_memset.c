@@ -14,7 +14,7 @@
  * under the License.
  */
 
-#include "memset.h"
+#include "kmip_memset.h"
 
 void *
 kmip_base_memset(void *ptr, int value, size_t size)

@@ -14,28 +14,71 @@
  * under the License.
  */
 
+#ifndef KMIP_BIO_H
+#define KMIP_BIO_H
+
 #include <openssl/ssl.h>
 
 /*
 OpenSSH BIO API
 */
 
-int kmip_bio_create(BIO *bio, );
-int kmip_bio_destroy(BIO *bio, char *uuid);
-int kmip_bio_get(BIO *bio, char *uuid, char **key, int *key_size);
+int kmip_bio_create(BIO *,
+                    int,
+                    struct template_attribute *,
+                    char **,
+                    size_t *);
+int kmip_bio_destroy(BIO *,
+                     int,
+                     char *,
+                     size_t);
+int kmip_bio_get_symmetric_key(BIO *,
+                               int,
+                               char *,
+                               size_t,
+                               char **,
+                               size_t *);
 
-int kmip_bio_create_with_context(struct kmip *ctx, BIO *bio);
-int kmip_bio_destroy_with_context(struct kmip *ctx, BIO *bio, char *uuid);
-int kmip_bio_get_with_context(
-struct kmip *ctx,
-BIO *bio,
-char *uuid,
-char **key,
-int *key_size);
+int kmip_bio_create_with_context(struct kmip *,
+                                 BIO *,
+                                 int,
+                                 struct template_attribute *,
+                                 char **,
+                                 size_t *);
+int kmip_bio_destroy_with_context(struct kmip *,
+                                  BIO *,
+                                  int,
+                                  char *,
+                                  size_t);
+int kmip_bio_get_symmetric_key_with_context(struct kmip *,
+                                            BIO *,
+                                            int,
+                                            char *,
+                                            size_t,
+                                            char **,
+                                            size_t *);
 
-int kmip_bio_send_request(BIO *bio, char *request, int request_size);
-int kmip_bio_send_request_with_context(
-struct kmip *ctx,
-BIO *bio,
-char *request, 
-int request_size);
+int kmip_bio_send_request(BIO *,
+                          int,
+                          struct request_message *,
+                          struct response_message **);
+int kmip_bio_send_request_with_context(struct kmip *,
+                                       BIO *,
+                                       int,
+                                       struct request_message *,
+                                       struct response_message **);
+int kmip_bio_send_request_encoding(BIO *,
+                                   int,
+                                   char *,
+                                   size_t,
+                                   char **,
+                                   size_t *);
+int kmip_bio_send_request_encoding_with_context(struct kmip *,
+                                                BIO *,
+                                                int,
+                                                char *,
+                                                size_t,
+                                                char **,
+                                                size_t *);
+
+#endif  /* KMIP_BIO_H */
