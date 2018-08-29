@@ -58,27 +58,17 @@ int kmip_bio_get_symmetric_key_with_context(struct kmip *,
                                             char **,
                                             size_t *);
 
-int kmip_bio_send_request(BIO *,
+int kmip_bio_send_request(struct kmip *,
+                          BIO *,
                           int,
                           struct request_message *,
                           struct response_message **);
-int kmip_bio_send_request_with_context(struct kmip *,
-                                       BIO *,
-                                       int,
-                                       struct request_message *,
-                                       struct response_message **);
-int kmip_bio_send_request_encoding(BIO *,
+int kmip_bio_send_request_encoding(struct kmip *,
+                                   BIO *,
                                    int,
                                    char *,
                                    size_t,
                                    char **,
                                    size_t *);
-int kmip_bio_send_request_encoding_with_context(struct kmip *,
-                                                BIO *,
-                                                int,
-                                                char *,
-                                                size_t,
-                                                char **,
-                                                size_t *);
 
 #endif  /* KMIP_BIO_H */

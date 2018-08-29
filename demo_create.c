@@ -302,6 +302,25 @@ use_low_level_api(void)
         return(result);
     }
     
+    /* Set up the KMIP context and the initial encoding buffer. */
+    struct kmip kmip_context = {0};
+    kmip_init(&kmip_context, NULL, 0, KMIP_1_0);
+    
+    size_t buffer_blocks = 1;
+    size_t buffer_block_size = 1024;
+    size_t buffer_total_size = buffer_blocks * buffer_block_size;
+    
+    uint8 *encoding = kmip_context.calloc_func(
+        kmip_context.state, buffer_blocks,
+        buffer_block_size);
+    if(encoding == NULL)
+    {
+        kmip_destroy(&kmip_context);
+        return(KMIP_MEMORY_ALLOC_FAILED);
+    }
+    kmip_set_buffer(&kmip_context, encoding, buffer_total_size);
+    
+    /* Build the request message. */
     struct attribute a[3] = {0};
     for(int i = 0; i < 3; i++)
     {
@@ -324,13 +343,6 @@ use_low_level_api(void)
     ta.attributes = a;
     ta.attribute_count = ARRAY_LENGTH(a);
     
-    char *id = NULL;
-    size_t id_size = 0;
-    
-    struct kmip kmip_context = {0};
-    kmip_init(&kmip_context, NULL, 0, KMIP_1_0);
-    
-    /* Build the request message. */
     struct protocol_version pv = {0};
     init_protocol_version(&pv, kmip_context.version);
     
@@ -355,8 +367,53 @@ use_low_level_api(void)
     rm.batch_items = &rbi;
     rm.batch_count = 1;
     
-    result = kmip_bio_send_request_encoding(&kmip_context, bio, 4096, &ta, &id,
-                                            &id_size);
+    /* Encode the request message. Dynamically resize the encoding buffer */
+    /* if it's not big enough. Once encoding succeeds, send the request   */
+    /* message.                                                           */
+    int encode_result = encode_request_message(&kmip_context, &rm);
+    while(encode_result == KMIP_ERROR_BUFFER_FULL)
+    {
+        kmip_reset(&kmip_context);
+        kmip_context.free_func(kmip_context.state, encoding);
+        
+        buffer_blocks += 1;
+        buffer_total_size = buffer_blocks * buffer_block_size;
+        
+        encoding = kmip_context.calloc_func(
+            kmip_context.state, buffer_blocks,
+            buffer_block_size);
+        if(encoding == NULL)
+        {
+            kmip_destroy(&kmip_context);
+            return(KMIP_MEMORY_ALLOC_FAILED);
+        }
+        
+        kmip_set_buffer(
+            &kmip_context,
+            encoding,
+            buffer_total_size);
+        encode_result = encode_request_message(&kmip_context, &rm);
+    }
+    
+    if(encode_result != KMIP_OK)
+    {
+        free_buffer(&kmip_context, encoding, buffer_total_size);
+        encoding = NULL;
+        kmip_set_buffer(&kmip_context, NULL, 0);
+        kmip_destroy(&kmip_context);
+        return(encode_result);
+    }
+    
+    print_request_message(&rm);
+    printf("\n");
+    
+    char *response = NULL;
+    size_t response_size = 0;
+    
+    result = kmip_bio_send_request_encoding(
+        &kmip_context, bio, 4096,
+        (char *)encoding, buffer_total_size,
+        &response, &response_size);
     
     if(result < 0)
     {
@@ -368,34 +425,85 @@ use_low_level_api(void)
         printf("Context Error: %s\n", kmip_context.error_message);
         printf("Stack trace:\n");
         print_stack_trace(&kmip_context);
-    }
-    else if(result >= 0)
-    {
-        printf("The KMIP operation was executed with no errors.\n");
-        printf("Result: ");
-        print_result_status_enum(result);
-        printf(" (%d)\n\n", result);
         
-        if(result == KMIP_STATUS_SUCCESS)
+        free_buffer(&kmip_context, encoding, buffer_total_size);
+        free_buffer(&kmip_context, response, response_size);
+        encoding = NULL;
+        response = NULL;
+        kmip_set_buffer(&kmip_context, NULL, 0);
+        kmip_destroy(&kmip_context);
+        return(result);
+    }
+    
+    free_buffer(&kmip_context, encoding, buffer_total_size);
+    encoding = NULL;
+    kmip_set_buffer(&kmip_context, response, response_size);
+    
+    /* Decode the response message and retrieve the operation results. */
+    struct response_message resp_m = {0};
+    int decode_result = decode_response_message(&kmip_context, &resp_m);
+    if(decode_result != KMIP_OK)
+    {
+        free_response_message(&kmip_context, &resp_m);
+        free_buffer(&kmip_context, response, response_size);
+        response = NULL;
+        kmip_set_buffer(&kmip_context, NULL, 0);
+        kmip_destroy(&kmip_context);
+        return(decode_result);
+    }
+    
+    print_response_message(&resp_m);
+    printf("\n");
+    
+    enum result_status result_status = KMIP_STATUS_OPERATION_FAILED;
+    if(resp_m.batch_count != 1 || resp_m.batch_items == NULL)
+    {
+        free_response_message(&kmip_context, &resp_m);
+        free_buffer(&kmip_context, response, response_size);
+        response = NULL;
+        kmip_set_buffer(&kmip_context, NULL, 0);
+        kmip_destroy(&kmip_context);
+        return(KMIP_MALFORMED_RESPONSE);
+    }
+    
+    struct response_batch_item req = resp_m.batch_items[0];
+    result_status = req.result_status;
+    
+    printf("The KMIP operation was executed with no errors.\n");
+    printf("Result: ");
+    print_result_status_enum(result);
+    printf(" (%d)\n\n", result);
+    
+    if(result == KMIP_STATUS_SUCCESS)
+    {
+        struct create_response_payload *pld = 
+            (struct create_response_payload *)req.response_payload;
+        if(pld != NULL)
         {
-            printf("Symmetric Key ID: %s\n", id);
+            struct text_string *uuid = pld->unique_identifier;
+            
+            if(uuid != NULL)
+            {
+                printf("Symmetric Key ID: %s\n", uuid->value);
+            }
         }
     }
     
-    if(id != NULL)
-    {
-        kmip_memset(id, 0, id_size);
-        kmip_free(NULL, id);
-    }
-    
+    /* Clean up the response message, the response buffer, and the KMIP */
+    /* context.                                                         */
+    free_response_message(&kmip_context, &resp_m);
+    free_buffer(&kmip_context, response, response_size);
+    response = NULL;
+    kmip_set_buffer(&kmip_context, NULL, 0);
     kmip_destroy(&kmip_context);
-    return(result);
+    
+    return(result_status);
 }
 
 int
 main(void)
 {
     /*use_high_level_api();*/
-    use_mid_level_api();
-    /*use_low_level_api();*/
+    /*use_mid_level_api();*/
+    use_low_level_api();
 }

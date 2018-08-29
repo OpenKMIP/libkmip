@@ -953,14 +953,10 @@ kmip_init_error_message(struct kmip *ctx)
 void
 kmip_reset(struct kmip *ctx)
 {
-    /*
-    uint8 *index = ctx->buffer;
-    for(size_t i = 0; i < ctx->size; i++)
+    if(ctx->buffer != NULL)
     {
-        *index++ = 0;
+        kmip_memset(ctx->buffer, 0, ctx->size);
     }
-    */
-    kmip_memset(ctx->buffer, 0, ctx->size);
     ctx->index = ctx->buffer;
     
     kmip_clear_errors(ctx);
@@ -975,10 +971,10 @@ kmip_rewind(struct kmip *ctx)
 }
 
 void
-kmip_set_buffer(struct kmip *ctx, uint8 *buffer, size_t buffer_size)
+kmip_set_buffer(struct kmip *ctx, void *buffer, size_t buffer_size)
 {
     /* TODO (ph) Add own_buffer if buffer == NULL? */
-    ctx->buffer = buffer;
+    ctx->buffer = (uint8 *)buffer;
     ctx->index = ctx->buffer;
     ctx->size = buffer_size;
 }
@@ -987,6 +983,7 @@ void
 kmip_destroy(struct kmip *ctx)
 {
     kmip_reset(ctx);
+    kmip_set_buffer(ctx, NULL, 0);
     
     ctx->calloc_func = NULL;
     ctx->realloc_func = NULL;
@@ -3608,7 +3605,7 @@ Freeing Functions
 */
 
 void
-free_buffer(struct kmip *ctx, uint8 *buffer, size_t size)
+free_buffer(struct kmip *ctx, void *buffer, size_t size)
 {
     ctx->memset_func(buffer, 0, size);
     ctx->free_func(ctx->state, buffer);

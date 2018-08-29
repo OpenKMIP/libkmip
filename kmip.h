@@ -149,7 +149,7 @@ void kmip_init(struct kmip *, uint8 *, size_t, enum kmip_version);
 void kmip_init_error_message(struct kmip *);
 void kmip_reset(struct kmip *);
 void kmip_rewind(struct kmip *);
-void kmip_set_buffer(struct kmip *, uint8 *, size_t);
+void kmip_set_buffer(struct kmip *, void *, size_t);
 void kmip_destroy(struct kmip *);
 void kmip_push_error_frame(struct kmip *, const char *, const int);
 void set_enum_error_message(struct kmip *, enum tag, int, int);
@@ -244,7 +244,7 @@ void print_response_message(struct response_message *);
 Freeing Functions
 */
 
-void free_buffer(struct kmip *, uint8 *, size_t);
+void free_buffer(struct kmip *, void *, size_t);
 void free_text_string(struct kmip *, struct text_string *);
 void free_byte_string(struct kmip *, struct byte_string *);
 void free_name(struct kmip *, struct name *);
