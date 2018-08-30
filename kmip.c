@@ -45,6 +45,61 @@ kmip_strnlen_s(const char *str, size_t strsz)
     return(length);
 }
 
+struct linked_list_item *
+linked_list_pop(struct linked_list *list)
+{
+    if(list == NULL)
+    {
+        return(NULL);
+    }
+    
+    struct linked_list_item *popped = list->head;
+    
+    if(popped != NULL)
+    {
+        list->head = popped->next;
+        popped->next = NULL;
+        popped->prev = NULL;
+        
+        if(list->head != NULL)
+        {
+            list->head->prev = NULL;
+        }
+        
+        if(list->size > 0)
+        {
+            list->size -= 1;
+        }
+    }
+    else
+    {
+        if(list->size != 0)
+        {
+            list->size = 0;
+        }
+    }
+    
+    return(popped);
+}
+
+void
+linked_list_push(struct linked_list *list, struct linked_list_item *item)
+{
+    if(list != NULL && item != NULL)
+    {
+        struct linked_list_item *head = list->head;
+        list->head = item;
+        item->next = head;
+        item->prev = NULL;
+        list->size += 1;
+        
+        if(head != NULL)
+        {
+            head->prev = item;
+        }
+    }
+}
+
 /*
 Memory Handlers
 */
@@ -930,10 +985,16 @@ kmip_init(struct kmip *ctx, uint8 *buffer, size_t buffer_size,
     if(ctx->free_func == NULL)
         ctx->free_func = &kmip_free;
     
+    ctx->max_message_size = 8192;
     ctx->error_message_size = 200;
     ctx->error_message = NULL;
     
     ctx->error_frame_count = 20;
+    
+    ctx->credential_list = ctx->calloc_func(
+        ctx->state,
+        1,
+        sizeof(struct linked_list));
     
     kmip_clear_errors(ctx);
 }
@@ -947,6 +1008,36 @@ kmip_init_error_message(struct kmip *ctx)
             ctx->state,
             ctx->error_message_size,
             sizeof(char));
+    }
+}
+
+int
+kmip_add_credential(struct kmip *ctx, struct credential *cred)
+{
+    struct linked_list_item *item = ctx->calloc_func(
+        ctx->state,
+        1,
+        sizeof(struct linked_list_item));
+    if(item != NULL)
+    {
+        item->data = cred;
+        linked_list_push(ctx->credential_list, item);
+        return(KMIP_OK);
+    }
+    
+    return(KMIP_UNSET);
+}
+
+void
+kmip_remove_credentials(struct kmip *ctx)
+{
+    struct linked_list_item *item = linked_list_pop(ctx->credential_list);
+    while(item != NULL)
+    {
+        ctx->memset_func(item, 0, sizeof(struct linked_list_item));
+        ctx->free_func(ctx->state, item);
+        
+        item = linked_list_pop(ctx->credential_list);
     }
 }
 
@@ -984,6 +1075,10 @@ kmip_destroy(struct kmip *ctx)
 {
     kmip_reset(ctx);
     kmip_set_buffer(ctx, NULL, 0);
+
+    kmip_remove_credentials(ctx);
+    ctx->memset_func(ctx->credential_list, 0, sizeof(struct linked_list));
+    ctx->free_func(ctx->state, ctx->credential_list);
     
     ctx->calloc_func = NULL;
     ctx->realloc_func = NULL;

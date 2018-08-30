@@ -124,6 +124,8 @@ Miscellaneous Utilities
 */
 
 size_t kmip_strnlen_s(const char *, size_t);
+struct linked_list_item *linked_list_pop(struct linked_list *);
+void linked_list_push(struct linked_list *, struct linked_list_item *);
 
 /*
 Memory Handlers
@@ -147,6 +149,8 @@ Context Utilities
 void kmip_clear_errors(struct kmip *);
 void kmip_init(struct kmip *, uint8 *, size_t, enum kmip_version);
 void kmip_init_error_message(struct kmip *);
+int kmip_add_credential(struct kmip *, struct credential *);
+void kmip_remove_credentials(struct kmip *);
 void kmip_reset(struct kmip *);
 void kmip_rewind(struct kmip *);
 void kmip_set_buffer(struct kmip *, void *, size_t);

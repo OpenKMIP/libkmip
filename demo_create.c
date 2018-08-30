@@ -102,7 +102,7 @@ use_high_level_api(void)
     char *id = NULL;
     size_t id_size = 0;
     
-    result = kmip_bio_create(bio, 4096, &ta, &id, &id_size);
+    result = kmip_bio_create(bio, &ta, &id, &id_size);
     
     if(result < 0)
     {
@@ -210,8 +210,10 @@ use_mid_level_api(void)
     struct kmip kmip_context = {0};
     kmip_init(&kmip_context, NULL, 0, KMIP_1_0);
     
-    result = kmip_bio_create_with_context(&kmip_context, bio, 4096, &ta, &id,
-                                          &id_size);
+    result = kmip_bio_create_with_context(
+        &kmip_context, bio,
+        &ta,
+        &id, &id_size);
     
     if(result < 0)
     {
@@ -255,31 +257,40 @@ use_low_level_api(void)
     OPENSSL_init_ssl(0, NULL);
     ctx = SSL_CTX_new(TLS_client_method());
     
+    char *client_certificate = "/etc/pykmip/certs/slugs/client_certificate_john_doe.pem";
+    char *client_key = "/etc/pykmip/certs/slugs/client_key_john_doe.pem";
+    char *ca_certificate = "/etc/pykmip/certs/slugs/root_certificate.pem";
+    
+    printf("Loading the client certificate: %s\n", client_certificate);
     int result = SSL_CTX_use_certificate_file(
         ctx,
-        "/etc/pykmip/certs/slugs/client_certificate_john_doe.pem",
+        client_certificate,
         SSL_FILETYPE_PEM);
     if(result != 1)
     {
-        printf("Loading the client certificate failed (%d)\n", result);
+        printf("Loading the client certificate failed (error: %d)\n", result);
         return(result);
     }
+    
+    printf("Loading the client key: %s\n", client_key);
     result = SSL_CTX_use_PrivateKey_file(
         ctx,
-        "/etc/pykmip/certs/slugs/client_key_john_doe.pem",
+        client_key,
         SSL_FILETYPE_PEM);
     if(result != 1)
     {
-        printf("Loading the client key failed (%d)\n", result);
+        printf("Loading the client key failed (error: %d)\n", result);
         return(result);
     }
+    
+    printf("Loading the CA certificate: %s\n", ca_certificate);
     result = SSL_CTX_load_verify_locations(
         ctx, 
-        "/etc/pykmip/certs/slugs/root_certificate.pem",
+        ca_certificate,
         NULL);
     if(result != 1)
     {
-        printf("Loading the CA file failed (%d)\n", result);
+        printf("Loading the CA certificate failed (error: %d)\n", result);
         return(result);
     }
     
@@ -301,6 +312,8 @@ use_low_level_api(void)
         printf("BIO_do_connect failed (%d)\n", result);
         return(result);
     }
+    
+    printf("\n");
     
     /* Set up the KMIP context and the initial encoding buffer. */
     struct kmip kmip_context = {0};
@@ -350,7 +363,7 @@ use_low_level_api(void)
     init_request_header(&rh);
     
     rh.protocol_version = &pv;
-    rh.maximum_response_size = 4096;
+    rh.maximum_response_size = kmip_context.max_message_size;
     rh.time_stamp = time(NULL);
     rh.batch_count = 1;
     
@@ -411,7 +424,7 @@ use_low_level_api(void)
     size_t response_size = 0;
     
     result = kmip_bio_send_request_encoding(
-        &kmip_context, bio, 4096,
+        &kmip_context, bio,
         (char *)encoding, buffer_total_size,
         &response, &response_size);
     

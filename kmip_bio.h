@@ -24,16 +24,13 @@ OpenSSH BIO API
 */
 
 int kmip_bio_create(BIO *,
-                    int,
                     struct template_attribute *,
                     char **,
                     size_t *);
 int kmip_bio_destroy(BIO *,
-                     int,
                      char *,
                      size_t);
 int kmip_bio_get_symmetric_key(BIO *,
-                               int,
                                char *,
                                size_t,
                                char **,
@@ -41,18 +38,15 @@ int kmip_bio_get_symmetric_key(BIO *,
 
 int kmip_bio_create_with_context(struct kmip *,
                                  BIO *,
-                                 int,
                                  struct template_attribute *,
                                  char **,
                                  size_t *);
 int kmip_bio_destroy_with_context(struct kmip *,
                                   BIO *,
-                                  int,
                                   char *,
                                   size_t);
 int kmip_bio_get_symmetric_key_with_context(struct kmip *,
                                             BIO *,
-                                            int,
                                             char *,
                                             size_t,
                                             char **,
@@ -60,12 +54,10 @@ int kmip_bio_get_symmetric_key_with_context(struct kmip *,
 
 int kmip_bio_send_request(struct kmip *,
                           BIO *,
-                          int,
                           struct request_message *,
                           struct response_message **);
 int kmip_bio_send_request_encoding(struct kmip *,
                                    BIO *,
-                                   int,
                                    char *,
                                    size_t,
                                    char **,

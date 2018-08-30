@@ -34,7 +34,8 @@ struct kmip
     
     enum kmip_version version;
     
-    struct authentication *auth;
+    int max_message_size;
+    struct linked_list *credential_list;
     
     char *error_message;
     size_t error_message_size;
@@ -48,6 +49,20 @@ struct kmip
     void *state;
     
     void *(*memset_func)(void *ptr, int value, size_t size);
+};
+
+struct linked_list_item
+{
+    struct linked_list_item *next;
+    struct linked_list_item *prev;
+    
+    void *data;
+};
+
+struct linked_list
+{
+    struct linked_list_item *head;
+    size_t size;
 };
 
 struct template_attribute
