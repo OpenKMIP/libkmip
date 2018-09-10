@@ -1,3 +1,6 @@
+##
+## Makefile for libkmip
+##
 .POSIX:
 .SUFFIXES:
 CC      = cc
@@ -5,24 +8,28 @@ CC      = cc
 CFLAGS  = -std=c11 -pedantic -g3 -Wall -Wextra
 LDFLAGS = -L/usr/local/lib
 LDLIBS  = -lssl -lcrypto
+DESTDIR = 
 PREFIX  = /usr/local
 KMIP    = kmip
 
-all: demo_get demo_create demo_destroy test
+all: demo test
 #all: test
 
 install:
 	mkdir -p $(DESTDIR)$(PREFIX)/bin/$(KMIP)
 	mkdir -p $(DESTDIR)$(PREFIX)/include/$(KMIP)
+	mkdir -p $(DESTDIR)$(PREFIX)/lib/$(KMIP)
 	mkdir -p $(DESTDIR)$(PREFIX)/src/$(KMIP)
 	mkdir -p $(DESTDIR)$(PREFIX)/share/doc/$(KMIP)/src
 	mkdir -p $(DESTDIR)$(PREFIX)/share/doc/$(KMIP)/html
 uninstall:
 	rm -rf $(DESTDIR)$(PREFIX)/bin/$(KMIP)
 	rm -rf $(DESTDIR)$(PREFIX)/include/$(KMIP)
+	rm -rf $(DESTDIR)$(PREFIX)/lib/$(KMIP)
 	rm -rf $(DESTDIR)$(PREFIX)/src/$(KMIP)
 	rm -rf $(DESTDIR)$(PREFIX)/share/doc/$(KMIP)
 
+demo: demo_create demo_get demo_destroy
 demo_get: demo_get.o kmip.o kmip_memset.o kmip_bio.o
 	$(CC) $(LDFLAGS) -o demo_get demo_get.o kmip.o kmip_memset.o kmip_bio.o $(LDLIBS)
 demo_create: demo_create.o kmip.o kmip_memset.o kmip_bio.o
