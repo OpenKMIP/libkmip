@@ -1,21 +1,36 @@
 .POSIX:
 .SUFFIXES:
-CC     = cc
+CC      = cc
 #CFLAGS = -std=c11 -pedantic -g3 -Og -Wall -Wextra
-CFLAGS = -std=c11 -pedantic -g3 -Wall -Wextra
-LDLIBS = -lm
-PREFIX = /usr/local
+CFLAGS  = -std=c11 -pedantic -g3 -Wall -Wextra
+LDFLAGS = -L/usr/local/lib
+LDLIBS  = -lssl -lcrypto
+PREFIX  = /usr/local
+KMIP    = kmip
 
 all: demo_get demo_create demo_destroy test
 #all: test
+
+install:
+	mkdir -p $(DESTDIR)$(PREFIX)/bin/$(KMIP)
+	mkdir -p $(DESTDIR)$(PREFIX)/include/$(KMIP)
+	mkdir -p $(DESTDIR)$(PREFIX)/src/$(KMIP)
+	mkdir -p $(DESTDIR)$(PREFIX)/share/doc/$(KMIP)/src
+	mkdir -p $(DESTDIR)$(PREFIX)/share/doc/$(KMIP)/html
+uninstall:
+	rm -rf $(DESTDIR)$(PREFIX)/bin/$(KMIP)
+	rm -rf $(DESTDIR)$(PREFIX)/include/$(KMIP)
+	rm -rf $(DESTDIR)$(PREFIX)/src/$(KMIP)
+	rm -rf $(DESTDIR)$(PREFIX)/share/doc/$(KMIP)
+
 demo_get: demo_get.o kmip.o kmip_memset.o kmip_bio.o
-	$(CC) $(LDFLAGS) -L/usr/local/lib -o demo_get demo_get.o kmip.o kmip_memset.o kmip_bio.o $(LDLIBS) -lssl -lcrypto
+	$(CC) $(LDFLAGS) -o demo_get demo_get.o kmip.o kmip_memset.o kmip_bio.o $(LDLIBS)
 demo_create: demo_create.o kmip.o kmip_memset.o kmip_bio.o
-	$(CC) $(LDFLAGS) -L/usr/local/lib -o demo_create demo_create.o kmip.o kmip_memset.o kmip_bio.o $(LDLIBS) -lssl -lcrypto
+	$(CC) $(LDFLAGS) -o demo_create demo_create.o kmip.o kmip_memset.o kmip_bio.o $(LDLIBS)
 demo_destroy: demo_destroy.o kmip.o kmip_memset.o kmip_bio.o
-	$(CC) $(LDFLAGS) -L/usr/local/lib -o demo_destroy demo_destroy.o kmip.o kmip_memset.o kmip_bio.o $(LDLIBS) -lssl -lcrypto
+	$(CC) $(LDFLAGS) -o demo_destroy demo_destroy.o kmip.o kmip_memset.o kmip_bio.o $(LDLIBS)
 test: test.o kmip.o kmip_memset.o
-	$(CC) $(LDFLAGS) -o test test.o kmip.o kmip_memset.o $(LDLIBS)
+	$(CC) $(LDFLAGS) -o test test.o kmip.o kmip_memset.o
 
 demo_get.o: demo_get.c kmip_memset.h kmip.h enums.h structs.h types.h
 demo_create.o: demo_create.c kmip_memset.h kmip.h enums.h structs.h types.h
