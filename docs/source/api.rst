@@ -14,18 +14,11 @@ manage the library context and its associated structures which are used by the
 client library. Together, these components can be used to conduct secure key
 management operations.
 
-KMIP operation requests are built by the client using libkmip structures,
-transformed into a binary encoding using the libkmip encoding library, and
-then sent to the target KMIP appliance using OpenSSL BIO. The target KMIP
-appliance sends back an encoded KMIP operation response, which is decoded into
-libkmip structures using the libkmip decoding library. The resulting response
-structure can then be used by the parent application as needed.
-
 .. _client-api:
 
 Client API
 ----------
-The libkmip client API supports varying levels of granularity, allowing parent
+The libkmip Client API supports varying levels of granularity, allowing parent
 applications access to everything from the low-level encoded message buffer
 up to high-level KMIP operation functions that handle all of the message
 building and encoding details automatically.
@@ -84,7 +77,7 @@ provided below.
 
     :param BIO*: An OpenSSL ``BIO`` structure containing a connection to the
         KMIP server that will create the symmetric key.
-    :param TemplateAttribute*: A libkmip :class:`TemplateAttribute` structure
+    :param TemplateAttribute*: A libkmip ``TemplateAttribute`` structure
         containing the attributes for the symmetric key (e.g., cryptographic
         algorithm, cryptographic length).
     :param char**: A double pointer that can be used to access the UUID of the
@@ -101,8 +94,8 @@ provided below.
     :return: A status code indicating success or failure of the operation. The
         following codes are returned explicitly by this function. If the code
         returned is not listed here, it is the result of the request encoding
-        or response decoding process. See (ref here) for all possible status
-        code values.
+        or response decoding process. See :ref:`status-codes` for all possible
+        status code values.
 
         * ``KMIP_ARG_INVALID``
             One or more of the function arguments are invalid or unset and no
@@ -161,8 +154,8 @@ provided below.
     :return: A status code indicating success or failure of the operation. The
         following codes are returned explicitly by this function. If the code
         returned is not listed here, it is the result of the request encoding
-        or response decoding process. See (ref here) for all possible status
-        code values.
+        or response decoding process. See :ref:`status-codes` for all possible
+        status code values.
 
         * ``KMIP_ARG_INVALID``
             One or more of the function arguments are invalid or unset and no
@@ -212,8 +205,8 @@ provided below.
     :return: A status code indicating success or failure of the operation. The
         following codes are returned explicitly by this function. If the code
         returned is not listed here, it is the result of the request encoding
-        or response decoding process. See (ref here) for all possible status
-        code values.
+        or response decoding process. See :ref:`status-codes` for all possible
+        status code values.
 
         * ``KMIP_ARG_INVALID``
             One or more of the function arguments are invalid or unset and no
@@ -315,8 +308,8 @@ provided below.
     :return: A status code indicating success or failure of the operation. The
         following codes are returned explicitly by this function. If the code
         returned is not listed here, it is the result of the request encoding
-        or response decoding process. See (ref here) for all possible status
-        code values.
+        or response decoding process. See :ref:`status-codes` for all possible
+        status code values.
 
         * ``KMIP_ARG_INVALID``
             One or more of the function arguments are invalid or unset and no
@@ -383,8 +376,8 @@ provided below.
     :return: A status code indicating success or failure of the operation. The
         following codes are returned explicitly by this function. If the code
         returned is not listed here, it is the result of the request encoding
-        or response decoding process. See (ref here) for all possible status
-        code values.
+        or response decoding process. See :ref:`status-codes` for all possible
+        status code values.
 
         * ``KMIP_ARG_INVALID``
             One or more of the function arguments are invalid or unset and no
@@ -443,8 +436,8 @@ provided below.
     :return: A status code indicating success or failure of the operation. The
         following codes are returned explicitly by this function. If the code
         returned is not listed here, it is the result of the request encoding
-        or response decoding process. See (ref here) for all possible status
-        code values.
+        or response decoding process. See :ref:`status-codes` for all possible
+        status code values.
 
         * ``KMIP_ARG_INVALID``
             One or more of the function arguments are invalid or unset and no
@@ -563,11 +556,40 @@ The function header details for the low-level API function is provided below.
             maximum allowed message size defined in the provided libkmip
             library context.
 
+.. _status-codes:
+
+Status Codes
+~~~~~~~~~~~~
+The following table lists the status codes that can be returned by the client
+API functions.
+
+============================  =====
+Status Code                   Value
+============================  =====
+KMIP_OK                       0
+KMIP_NOT_IMPLEMENTED          -1
+KMIP_ERROR_BUFFER_FULL        -2
+KMIP_ERROR_ATTR_UNSUPPORTED   -3
+KMIP_TAG_MISMATCH             -4
+KMIP_TYPE_MISMATCH            -5
+KMIP_LENGTH_MISMATCH          -6
+KMIP_PADDING_MISMATCH         -7
+KMIP_BOOLEAN_MISMATCH         -8
+KMIP_ENUM_MISMATCH            -9
+KMIP_ENUM_UNSUPPORTED         -10
+KMIP_INVALID_FOR_VERSION      -11
+KMIP_MEMORY_ALLOC_FAILED      -12
+KMIP_IO_FAILURE               -13
+KMIP_EXCEED_MAX_MESSAGE_SIZE  -14
+KMIP_MALFORMED_RESPONSE       -15
+KMIP_OBJECT_MISMATCH          -16
+============================  =====
+
 .. _encoding-api:
 
 Encoding API
 ------------
-The libkmip encoding API supports encoding and decoding a variety of message
+The libkmip Encoding API supports encoding and decoding a variety of message
 structures and substructures to and from the KMIP TTLV encoding format. The
 :ref:`client-api` functions use the resulting encoded messages to communicate
 KMIP operation instructions to the KMIP server. While each substructure
@@ -589,13 +611,59 @@ provided below.
 
 .. c:function:: int kmip_encode_request_message(KMIP *, const RequestMessage *)
 
+    Encode the request message and store the encoding in the library context.
+
+    :param KMIP*: A libkmip ``KMIP`` structure containing the context
+        information needed to encode and decode message structures.
+    :param RequestMessage*: A libkmip ``RequestMessage`` structure containing
+        the request message information that will be encoded. The structure
+        will not be modified during the encoding process.
+
+    :return: A status code indicating success or failure of the encoding
+        process. See :ref:`status-codes` for all possible status code values.
+        If ``KMIP_OK`` is returned, the encoding succeeded.
+
 .. c:function:: int kmip_decode_response_message(KMIP *, ResponseMessage *)
+
+    Decode the encoding in the library context into the response message.
+
+    :param KMIP*: A libkmip ``KMIP`` structure containing the context
+        information needed to encode and decode message structures.
+    :param ResponseMessage*: A libkmip ``ResponseMessage`` structure
+        that will be filled out by the decoding process.
+
+        .. note::
+           This structure will contain pointers to newly allocated
+           substructures created during the decoding process. The calling
+           function is responsible for clearing and freeing these
+           substructures once it is done processing the response message.
+           See (ref here) for more information.
+
+        .. warning::
+           Any attributes set in the structure before it is passed in to this
+           decoding function will be overwritten and lost during the decoding
+           process. Best practice is to pass in a pointer to a freshly
+           initialized, empty structure to ensure this does not cause
+           application errors.
+
+    :return: A status code indicating success or failure of the decoding
+        process. See :ref:`status-codes` for all possible status code values.
+        If ``KMIP_OK`` is returned, the decoding succeeded.
 
 .. _utilities-api:
 
 Utilities API
 -------------
-TBD
+The libkmip Utilities API supports a wide variety of helper functions and
+structures that are used throughout libkmip, ranging from the core library
+context structure that is used for all encoding and decoding operations to
+structure initializers, deallocators, and debugging aides.
+
+.. warning::
+   Additional capabilities are included in libkmip that may not be discussed
+   here. These capabilities are generally for internal library use only and
+   are subject to change in any release. Parent applications that use these
+   undocumented features should not expect API stability.
 
 .. _the-libkmip-context:
 
@@ -645,9 +713,11 @@ It should never be accessed or manipulated directly.
 KMIP Message Settings
 `````````````````````
 The library context contains several attributes that are used throughout the
-encoding and decoding process to control what KMIP structures are included in
-operation request and response messages. The ``version`` enum attribute should
-be set by the parent application to the desired KMIP version:
+encoding and decoding process.
+
+The ``version`` enum attribute is used to control what KMIP structures are
+included in operation request and response messages. It should be set by the
+parent application to the desired KMIP version:
 
 .. code-block:: c
 
@@ -668,8 +738,8 @@ its operation.
 
 The ``credentials`` list is intended to store a set of authentication
 credentials that should be included in any request message created with the
-library context. This is primarily intended for use with the mid-level client
-API (TBD link here).
+library context. This is primarily intended for use with the
+:ref:`mid-level-api`.
 
 Each of these attributes will be set to reasonable defaults by the
 ``kmip_init`` context utility and can be overridden as needed.
@@ -694,28 +764,34 @@ debugging.
 The original error message will be captured in the ``error_message``
 attribute for use in logging or user-facing status messages.
 
-TBD - See the context functions below for using and accessing this error information.
-
+See the context functions below for using and accessing this error
+information.
 
 Memory Management
 `````````````````
 The library context contains several function pointers that can be used to
 wrap or substitute common memory management utilities. All memory management
 done by libkmip is done through these function pointers, allowing the calling
-application to easily substitute its own memory management system. The
-``kmip_init`` utility function will automatically set these hooks to the default memory
+application to easily substitute its own memory management system. Note
+specifically the ``void *state`` attribute in the library context; it is
+intended to contain a reference to the parent application's custom memory
+management system, if one exists. This attribute is passed to every call made
+through the context's memory management hooks, allowing the parent application
+complete control of the memory allocation process. By default, the ``state``
+attribute is ignored in the default memory management hooks. The ``kmip_init``
+utility function will automatically set these hooks to the default memory
 management functions if any of them are unset.
 
 .. _context-functions:
 
-Context Functions
+Utility Functions
 ~~~~~~~~~~~~~~~~~
-TBD
+The following function signatures define the Utilities API and can be found
+in ``kmip.h``:
 
 .. code-block:: c
 
-   #include <kmip/kmip.h>
-
+   /* Library context utilities */
    void kmip_clear_errors(KMIP *);
    void kmip_init(KMIP *, void *, size_t, enum kmip_version);
    void kmip_init_error_message(KMIP *);
@@ -727,8 +803,338 @@ TBD
    void kmip_destroy(KMIP *);
    void kmip_push_error_frame(KMIP *, const char *, const int);
 
-ADD REMAINING FUNCTIONS HERE
+   /* Message structure initializers */
+   void kmip_init_protocol_version(ProtocolVersion *, enum kmip_version);
+   void kmip_init_attribute(Attribute *);
+   void kmip_init_request_header(RequestHeader *);
+   void kmip_init_response_header(ResponseHeader *);
 
-ADD MORE DETAILS HERE
+   /* Message structure deallocators */
+   void kmip_free_request_message(KMIP *, RequestMessage *);
+   void kmip_free_response_message(KMIP *, ResponseMessage *);
+
+   /* Message structure debugging utilities */
+   void kmip_print_request_message(RequestMessage *);
+   void kmip_print_response_message(ResponseMessage *);
+
+Library Context Utilities
+`````````````````````````
+The libkmip context contains various fields and attributes used in various
+ways throughout the encoding and decoding process. In general, the context
+fields should not be modified directly. All modifications should be done
+using one of the context utility functions described below.
+
+The function header details for each of the relevant context utility functions
+are provided below.
+
+.. c:function:: void kmip_init(KMIP *, void *, size_t, enum kmip_version)
+
+    Initialize the ``KMIP`` context.
+
+    This function initializes the different fields and attributes used by the
+    context to encode and decode KMIP messages. Reasonable defaults are chosen
+    for certain fields, like the maximum message size and the error message
+    size. If any of the memory allocation function hooks are ``NULL``, they
+    will be set to system defaults.
+
+    :param KMIP*: The libkmip ``KMIP`` context to be initialized. If ``NULL``,
+        the function does nothing and returns.
+    :param void*: A ``void`` pointer to a buffer to be used for encoding and
+        decoding KMIP messages. If setting up the context for use with the
+        :ref:`mid-level-api` it is fine to use ``NULL`` here.
+    :param size_t: The size of the above buffer. If setting up the context for
+        use with the :ref:`mid-level-api` it is fine to use 0 here.
+    :param enum kmip_version: A KMIP version enumeration that will be used by
+        the context to decide how to encode and decode messages.
+
+    :return: None
+
+.. c:function:: void kmip_clear_errors(KMIP *)
+
+    Clean up any error-related information stored in the ``KMIP`` context.
+
+    This function clears and frees any error-related information or structures
+    contained in the context, should any exist. It is intended to be used
+    between encoding or decoding operations so that repeated use of the
+    context is possible without causing errors. It is often used by other
+    context handling utilities. See the utility source code for more details.
+
+    :param KMIP*: The libkmip ``KMIP`` context containing error-related
+        information to be cleared.
+
+    :return: None
+
+.. c:function:: void kmip_init_error_message(KMIP *)
+
+    Initialize the error message field of the ``KMIP`` context.
+
+    This function allocates memory required to store the error message string
+    in the library context. If an error message string already exists, nothing
+    is done. Primarily used internally by other utility functions.
+
+    :param KMIP*: The libkmip ``KMIP`` context whose error message memory
+        should be allocated.
+
+    :return: None
+
+.. c:function:: int kmip_add_credential(KMIP *, Credential *)
+
+    Add a ``Credential`` structure to the list of credentials used by the
+    ``KMIP`` context.
+
+    This function dynamically adds a node to the ``LinkedList`` of
+    ``Credential`` structures stored by the context. These credentials are
+    used automatically by the :ref:`mid-level-api` when creating KMIP
+    operation requests.
+
+    :param KMIP*: The libkmip ``KMIP`` context to add a credential to.
+    :param Credential*: The libkmip ``Credential`` structure to add to the
+        list of credentials stored by the context.
+
+    :return: A status code indicating if the credential was added to the
+        context. The code will be one of the following:
+
+        * ``KMIP_OK``
+            The credential was added successfully.
+        * ``KMIP_UNSET``
+            The credential was not added successfully.
+
+.. c:function:: void kmip_remove_credentials(KMIP *)
+
+    Remove all ``Credential`` structures stored by the ``KMIP`` context.
+
+    This function clears and frees all of the ``LinkedList`` nodes used to
+    store the ``Credential`` structures associated with the context.
+
+    .. note:: 
+        If the underlying ``Credential`` structures were themselves
+        dynamically allocatted, they must be freed separately by the parent
+        application.
+
+    :param KMIP*: The libkmip ``KMIP`` context containing credentials to
+        be removed.
+
+    :return: None
+
+.. c:function:: void kmip_reset(KMIP *)
+
+    Reset the ``KMIP`` context buffer so that encoding can be reattempted.
+
+    This function resets the context buffer to its initial empty starting
+    state, allowing the context to be used for another encoding attempt if
+    the prior attempt failed. The buffer will be overwritten with zeros to
+    ensure that no information leaks across encoding attempts. This function
+    also calls ``kmip_clear_errors`` to clear out any error information that
+    was generated by the encoding failure.
+
+    :param KMIP*: The libkmip ``KMIP`` context that contains the buffer
+        needing to be reset.
+
+    :return: None
+
+.. c:function:: void kmip_rewind(KMIP *)
+
+    Rewind the ``KMIP`` context buffer so that decoding can be reattempted.
+
+    This function rewinds the context buffer to its initial starting state,
+    allowing the context to be used for another decoding attempt if the
+    prior attempt failed. This function also calls ``kmip_clear_errors`` to
+    clear out any error information that was generated by the decoding
+    failure.
+
+    :param KMIP*: The libkmip ``KMIP`` context that contains the buffer
+        needing to be rewound.
+
+    :return: None
+
+.. c:function:: void kmip_set_buffer(KMIP *, void *, size_t)
+
+    Set the encoding buffer used by the ``KMIP`` context.
+
+    :param KMIP*: The libkmip ``KMIP`` context that will contain the buffer.
+    :param void*: A ``void`` pointer to a buffer to be used for encoding and
+        decoding KMIP messages.
+    :param size_t: The size of the above buffer.
+
+    :return: None
+
+.. c:function:: void kmip_destroy(KMIP *)
+
+    Deallocate the content of the ``KMIP`` context.
+
+    This function resets and deallocates all of the fields contained in the
+    context. It calls ``kmip_reset`` and ``kmip_set_buffer`` to clear the
+    buffer and overwrite any leftover pointers to it. It calls
+    ``kmip_clear_credentials`` to clear out any referenced credential
+    information. It also unsets all of the memory allocation function hooks.
+
+    .. note::
+       The buffer memory itself will not be deallocated by this function, nor
+       will any of the ``Credential`` structures if they are dynamically
+       allocatted. The parent application is responsible for clearing and
+       deallocating those segments of memory.
+
+.. c:function:: void kmip_push_error_frame(KMIP *, const char *, const int)
+
+    Add an error frame to the stack trace contained in the ``KMIP`` context.
+
+    This function dynamically adds a new error frame to the context stack
+    trace, using the information provided to record where an error occurred.
+
+    :param KMIP*: The libkmip ``KMIP`` context containing the stack trace.
+    :param char*: The string containing the function name for the new
+        stack trace error frame.
+    :param int: The line number for the new stack trace error frame.
+
+    :return: None
+
+Message Structure Initializers
+``````````````````````````````
+There are many different KMIP message structures and substructures that are
+defined and supported by libkmip. In general, the parent application should
+zero initialize any libkmip structures before using them, like so:
+
+.. code-block:: c
+
+   RequestMessage message = {0};
+
+In most cases, optional fields in KMIP substructures are excluded from the
+encoding process when set to 0. However, in some cases 0 is a valid value
+for a specific optional field. In these cases, we set these values to
+``KMIP_UNSET``. The parent application should never need to worry about
+manually initialize these types of fields. Instead, the following initializer
+functions should be used for the associated structures to handle properly
+setting default field values.
+
+The function header details for each of the relevant initializer functions
+are provided below.
+
+.. c:function:: void kmip_init_protocol_version(ProtocolVersion *, enum kmip_version)
+
+    Initialize a ``ProtocolVersion`` structure with a KMIP version
+    enumeration.
+
+    :param ProtocolVersion*: A libkmip ``ProtocolVersion`` structure to be
+        initialized.
+    :param enum kmip_version: A KMIP version enumeration whose value will be
+        used to initialize the ProtocolVersion structure.
+
+    :return: None
+
+.. c:function:: void kmip_init_attribute(Attribute *)
+
+    Initialize an ``Attribute`` structure.
+
+    :param Attribute*: A libkmip ``Attribute`` structure to be initialized.
+
+    :return: None
+
+.. c:function:: void kmip_init_request_header(RequestHeader *)
+
+    Initialize a ``RequestHeader`` structure.
+
+    :param RequestHeader*: A libkmip ``RequestHeader`` structure to be
+        initialized.
+
+    :return: None
+
+.. c:function:: void kmip_init_response_header(ResponseHeader *)
+
+    Initialize a ``ResponseHeader`` structure.
+
+    :param ResponseHeader*: A libkmip ``ResponseHeader`` structure to be
+        initialized.
+
+    :return: None
+
+Message Structure Deallocators
+``````````````````````````````
+Along with structure initializers, there are corresponding structure
+deallocators for every supported KMIP structure. The deallocator behaves
+like the initializer; it takes in a pointer to a specific libkmip structure
+and will set all structure fields to safe, initial defaults. If a structure
+field is a non ``NULL`` pointer, the deallocator will attempt to clear and
+free the associated memory.
+
+.. note::
+   A deallocator will not free the actual structure passed to it. It will
+   only attempt to free memory referenced by the structure fields. The parent
+   application is responsible for freeing the structure memory if it was
+   dynamically allocated and should set any pointers to the structure to
+   ``NULL`` once it is done with the structure.
+
+Given how deallocators handle memory, they should only ever be used on
+structures that are created from the decoding process (i.e., structures
+created on the heap). The decoding process dynamically allocates memory to
+build out the message structure in the target encoding and it is beyond the
+capabilities of the client API or the parent application to manually free
+all of this memory directly.
+
+.. warning::
+   If you use a deallocator on a structure allocated fully or in part on the
+   stack, the deallocator will attempt to free stack memory and will trigger
+   undefined behavior. This can lead to program instability and may cause
+   the application to crash.
+
+While there are deallocators for every supported structure, parent
+applications should only need to use the deallocators for request and response
+messages. Given these are the root KMIP structures, using these will free
+all associated substructures used to represent the message.
+
+The function header details for each of the deallocator functions are provided
+below.
+
+.. c:function:: void kmip_free_request_message(KMIP *, RequestMessage *)
+
+    Deallocate the content of a ``RequestMessage`` structure.
+
+    :param KMIP*: A libkmip ``KMIP`` structure containing the context
+        information needed to encode and decode message structures. Primarily
+        used here for memory handlers.
+    :param RequestMessage*: A libkmip ``RequestMessage`` structure whose
+        content should be reset and/or freed.
+
+    :return: None
+
+.. c:function:: void kmip_free_response_message(KMIP *, ResponseMessage *)
+
+    Deallocate the content of a ``ResponseMessage`` structure.
+
+    :param KMIP*: A libkmip ``KMIP`` structure containing the context
+        information needed to encode and decode message structures. Primarily
+        used here for memory handlers.
+    :param ResponseMessage*: A libkmip ``ResponseMessage`` structure whose
+        content should be reset and/or freed.
+
+    :return: None
+
+Message Structure Debugging Utilities
+`````````````````````````````````````
+If the parent application is using the :ref:`low-level-api`, it will have
+access to the ``RequestMessage`` and ``ResponseMessage`` structures used to
+generate the KMIP operation encodings. These structures can be used with
+basic printing utilities to display the content of these structures in an
+easy to view and debug format.
+
+The function header details for each of the printing utilities are provided
+below.
+
+.. c:function:: void kmip_print_request_message(RequestMessage *)
+
+    Print the contents of a ``RequestMessage`` structure.
+
+    :param RequestMessage*: A libkmip ``RequestMessage`` structure to be
+        displayed.
+
+    :return: None
+
+.. c:function:: void kmip_print_response_message(ResponseMessage *)
+
+    Print the contents of a ``ResponseMessage`` structure.
+
+    :param ResponseMessage*: A libkmip ``ResponseMessage`` structure to be
+        displayed.
+
+    :return: None
 
 .. _`OpenSSL BIO library`: https://www.openssl.org/docs/man1.1.0/crypto/bio.html

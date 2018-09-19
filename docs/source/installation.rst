@@ -11,6 +11,8 @@ These may come installed by default on your target system or they may require
 separate installation procedures. See each individual dependency's
 documentation for more details.
 
+.. _building-libkmip-on-linux:
+
 Building libkmip on Linux
 -------------------------
 You can install libkmip from source via ``git``:
@@ -70,9 +72,11 @@ This would create all of the normal installation directories (e.g., ``bin``,
 ``include``, ``lib``) under ``$HOME/.local`` instead of ``/usr/local``.
 
 To ensure that your system is up-to-date after you install libkmip, make sure
-to run 
+to run ``ldconfig`` to update the dynamic linker's run-time bindings.
 
-TBD
+.. code-block:: console
+
+    $ ldconfig
 
 For more information see the project Makefile (insert link here).
 
@@ -87,10 +91,11 @@ You can uninstall libkmip using the provided ``make uninstall`` target:
 
 This will simply remove all of the installation directories and files created
 during the above installation process. Like with ``make install``, the default
-build settings will direct ``make`` to remove libkmip from under ``/usr/local``, which may require ``sudo`` access.
+build settings will direct ``make`` to remove libkmip from under
+``/usr/local``, which may require ``sudo`` access. If you customize the
+installation settings, be sure to use those same settings when uninstalling.
 
-TBD
-
-To ensure that your system 
+Like the installation process, run ``ldconfig`` again after uninstall to make
+the dynamic linker is up-to-date.
 
 .. _`OpenSSL 1.1.0`: https://www.openssl.org/docs/man1.1.0/

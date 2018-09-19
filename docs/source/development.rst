@@ -32,7 +32,7 @@ branch was created, be sure to rebase your work on the current state of
 New code should generally follow the style used in the surrounding libkmip
 codebase.
 
-.. writing-docs:
+.. _writing-docs:
 
 Writing Documentation
 ---------------------
@@ -91,9 +91,14 @@ up to and including ``master``.
 Running Tests
 -------------
 libkmip comes with its own testing application that primarily covers the
-encoding/decoding functionality of the library.
+encoding/decoding functionality of the library. It is built with the default
+``make`` target and can be run locally by invoking the ``tests`` binary:
 
-TBD
+.. code-block:: console
+
+    $ cd libkmip
+    $ make
+    $ ./tests
 
 .. _`issue tracker`: https://github.com/openkmip/libkmip/issues
 .. _`RST`: http://docutils.sourceforge.net/rst.html

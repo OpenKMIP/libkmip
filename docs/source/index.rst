@@ -37,7 +37,9 @@ out the various articles below:
    changelog
    faq
    development
+   security
    api
+   examples
 
 .. _`OASIS`: https://www.oasis-open.org
 .. _`OASIS KMIP Technical Committee`: https://www.oasis-open.org/committees/tc_home.php?wg_abbrev=kmip
