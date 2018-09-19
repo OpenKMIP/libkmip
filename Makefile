@@ -39,11 +39,11 @@ demo_destroy: demo_destroy.o kmip.o kmip_memset.o kmip_bio.o
 test: test.o kmip.o kmip_memset.o
 	$(CC) $(LDFLAGS) -o test test.o kmip.o kmip_memset.o
 
-demo_get.o: demo_get.c kmip_memset.h kmip.h enums.h structs.h types.h
-demo_create.o: demo_create.c kmip_memset.h kmip.h enums.h structs.h types.h
-demo_destroy.o: demo_destroy.c kmip_memset.h kmip.h enums.h structs.h types.h
-kmip.o: kmip.c kmip.h kmip_memset.h enums.h structs.h types.h
-test.o: test.c kmip_memset.h kmip.h enums.h structs.h types.h
+demo_get.o: demo_get.c kmip_memset.h kmip.h
+demo_create.o: demo_create.c kmip_memset.h kmip.h
+demo_destroy.o: demo_destroy.c kmip_memset.h kmip.h
+kmip.o: kmip.c kmip.h kmip_memset.h
+test.o: test.c kmip_memset.h kmip.h
 kmip_bio.o: kmip_bio.c kmip_bio.h
 kmip_memset.o: kmip_memset.c kmip_memset.h
 
