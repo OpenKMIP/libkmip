@@ -37,6 +37,7 @@ use_high_level_api(void)
     if(result != 1)
     {
         printf("Loading the client certificate failed (%d)\n", result);
+        SSL_CTX_free(ctx);
         return(result);
     }
     result = SSL_CTX_use_PrivateKey_file(
@@ -46,6 +47,7 @@ use_high_level_api(void)
     if(result != 1)
     {
         printf("Loading the client key failed (%d)\n", result);
+        SSL_CTX_free(ctx);
         return(result);
     }
     result = SSL_CTX_load_verify_locations(
@@ -55,6 +57,7 @@ use_high_level_api(void)
     if(result != 1)
     {
         printf("Loading the CA file failed (%d)\n", result);
+        SSL_CTX_free(ctx);
         return(result);
     }
     
@@ -63,6 +66,7 @@ use_high_level_api(void)
     if(bio == NULL)
     {
         printf("BIO_new_ssl_connect failed\n");
+        SSL_CTX_free(ctx);
         return(-1);
     }
     
@@ -74,6 +78,8 @@ use_high_level_api(void)
     if(result != 1)
     {
         printf("BIO_do_connect failed (%d)\n", result);
+        BIO_free_all(bio);
+        SSL_CTX_free(ctx);
         return(result);
     }
     
@@ -103,6 +109,9 @@ use_high_level_api(void)
     size_t id_size = 0;
     
     result = kmip_bio_create(bio, &ta, &id, &id_size);
+    
+    BIO_free_all(bio);
+    SSL_CTX_free(ctx);
     
     if(result < 0)
     {
@@ -142,6 +151,7 @@ use_mid_level_api(void)
     if(result != 1)
     {
         printf("Loading the client certificate failed (%d)\n", result);
+        SSL_CTX_free(ctx);
         return(result);
     }
     result = SSL_CTX_use_PrivateKey_file(
@@ -151,6 +161,7 @@ use_mid_level_api(void)
     if(result != 1)
     {
         printf("Loading the client key failed (%d)\n", result);
+        SSL_CTX_free(ctx);
         return(result);
     }
     result = SSL_CTX_load_verify_locations(
@@ -160,6 +171,7 @@ use_mid_level_api(void)
     if(result != 1)
     {
         printf("Loading the CA file failed (%d)\n", result);
+        SSL_CTX_free(ctx);
         return(result);
     }
     
@@ -168,6 +180,7 @@ use_mid_level_api(void)
     if(bio == NULL)
     {
         printf("BIO_new_ssl_connect failed\n");
+        SSL_CTX_free(ctx);
         return(-1);
     }
     
@@ -179,6 +192,8 @@ use_mid_level_api(void)
     if(result != 1)
     {
         printf("BIO_do_connect failed (%d)\n", result);
+        BIO_free_all(bio);
+        SSL_CTX_free(ctx);
         return(result);
     }
     
@@ -214,6 +229,9 @@ use_mid_level_api(void)
         &kmip_context, bio,
         &ta,
         &id, &id_size);
+    
+    BIO_free_all(bio);
+    SSL_CTX_free(ctx);
     
     if(result < 0)
     {
@@ -269,6 +287,7 @@ use_low_level_api(void)
     if(result != 1)
     {
         printf("Loading the client certificate failed (error: %d)\n", result);
+        SSL_CTX_free(ctx);
         return(result);
     }
     
@@ -280,6 +299,7 @@ use_low_level_api(void)
     if(result != 1)
     {
         printf("Loading the client key failed (error: %d)\n", result);
+        SSL_CTX_free(ctx);
         return(result);
     }
     
@@ -291,6 +311,7 @@ use_low_level_api(void)
     if(result != 1)
     {
         printf("Loading the CA certificate failed (error: %d)\n", result);
+        SSL_CTX_free(ctx);
         return(result);
     }
     
@@ -299,6 +320,7 @@ use_low_level_api(void)
     if(bio == NULL)
     {
         printf("BIO_new_ssl_connect failed\n");
+        SSL_CTX_free(ctx);
         return(-1);
     }
     
@@ -310,6 +332,8 @@ use_low_level_api(void)
     if(result != 1)
     {
         printf("BIO_do_connect failed (%d)\n", result);
+        BIO_free_all(bio);
+        SSL_CTX_free(ctx);
         return(result);
     }
     
@@ -329,6 +353,8 @@ use_low_level_api(void)
     if(encoding == NULL)
     {
         kmip_destroy(&kmip_context);
+        BIO_free_all(bio);
+        SSL_CTX_free(ctx);
         return(KMIP_MEMORY_ALLOC_FAILED);
     }
     kmip_set_buffer(&kmip_context, encoding, buffer_total_size);
@@ -398,6 +424,8 @@ use_low_level_api(void)
         if(encoding == NULL)
         {
             kmip_destroy(&kmip_context);
+            BIO_free_all(bio);
+            SSL_CTX_free(ctx);
             return(KMIP_MEMORY_ALLOC_FAILED);
         }
         
@@ -414,6 +442,8 @@ use_low_level_api(void)
         encoding = NULL;
         kmip_set_buffer(&kmip_context, NULL, 0);
         kmip_destroy(&kmip_context);
+        BIO_free_all(bio);
+        SSL_CTX_free(ctx);
         return(encode_result);
     }
     
@@ -427,6 +457,9 @@ use_low_level_api(void)
         &kmip_context, bio,
         (char *)encoding, buffer_total_size,
         &response, &response_size);
+    
+    BIO_free_all(bio);
+    SSL_CTX_free(ctx);
     
     if(result < 0)
     {
