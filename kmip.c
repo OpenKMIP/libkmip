@@ -1013,7 +1013,7 @@ kmip_init_error_message(struct kmip *ctx)
 
 int
 kmip_add_credential(struct kmip *ctx, struct credential *cred)
-{
+{   
     struct linked_list_item *item = ctx->calloc_func(
         ctx->state,
         1,
@@ -1030,7 +1030,7 @@ kmip_add_credential(struct kmip *ctx, struct credential *cred)
 
 void
 kmip_remove_credentials(struct kmip *ctx)
-{
+{   
     struct linked_list_item *item = linked_list_pop(ctx->credential_list);
     while(item != NULL)
     {
@@ -1071,13 +1071,13 @@ kmip_set_buffer(struct kmip *ctx, void *buffer, size_t buffer_size)
 }
 
 void
-kmip_destroy(struct kmip *ctx)
+kmip_destroy(KMIP *ctx)
 {
     kmip_reset(ctx);
     kmip_set_buffer(ctx, NULL, 0);
 
     kmip_remove_credentials(ctx);
-    ctx->memset_func(ctx->credential_list, 0, sizeof(struct linked_list));
+    ctx->memset_func(ctx->credential_list, 0, sizeof(LinkedList));
     ctx->free_func(ctx->state, ctx->credential_list);
     
     ctx->calloc_func = NULL;

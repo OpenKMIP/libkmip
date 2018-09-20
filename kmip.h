@@ -579,13 +579,39 @@ enum wrapping_method
 Structures
 */
 
-struct error_frame
+typedef struct linked_list_item
+{
+    struct linked_list_item *next;
+    struct linked_list_item *prev;
+    
+    void *data;
+} LinkedListItem;
+
+typedef struct linked_list
+{
+    LinkedListItem *head;
+    size_t size;
+} LinkedList;
+
+typedef struct text_string
+{
+    char *value;
+    size_t size;
+} TextString;
+
+typedef struct byte_string
+{
+    uint8 *value;
+    size_t size;
+} ByteString;
+
+typedef struct error_frame
 {
     char function[100];
     int line;
-};
+} ErrorFrame;
 
-struct kmip
+typedef struct kmip
 {
     uint8 *buffer;
     uint8 *index;
@@ -594,11 +620,11 @@ struct kmip
     enum kmip_version version;
     
     int max_message_size;
-    struct linked_list *credential_list;
+    LinkedList *credential_list;
     
     char *error_message;
     size_t error_message_size;
-    struct error_frame errors[20];
+    ErrorFrame errors[20];
     size_t error_frame_count;
     struct error_frame *frame_index;
     
@@ -608,62 +634,37 @@ struct kmip
     void *state;
     
     void *(*memset_func)(void *ptr, int value, size_t size);
-};
+} KMIP;
 
-struct linked_list_item
-{
-    struct linked_list_item *next;
-    struct linked_list_item *prev;
-    
-    void *data;
-};
-
-struct linked_list
-{
-    struct linked_list_item *head;
-    size_t size;
-};
-
-struct template_attribute
-{
-    struct name *names;
-    size_t name_count;
-    struct attribute *attributes;
-    size_t attribute_count;
-};
-
-struct attribute
+typedef struct attribute
 {
     enum attribute_type type;
     int32 index;
     void *value;
-};
+} Attribute;
 
-struct name
+typedef struct name
 {
     struct text_string *value;
     enum name_type type;
-};
+} Name;
 
-struct text_string
+typedef struct template_attribute
 {
-    char *value;
-    size_t size;
-};
+    /* TODO (ph) Change these to linked lists */
+    Name *names;
+    size_t name_count;
+    Attribute *attributes;
+    size_t attribute_count;
+} TemplateAttribute;
 
-struct byte_string
-{
-    uint8 *value;
-    size_t size;
-};
-
-struct protocol_version
+typedef struct protocol_version
 {
     int32 major;
     int32 minor;
-};
+} ProtocolVersion;
 
-struct cryptographic_parameters
+typedef struct cryptographic_parameters
 {
     /* KMIP 1.0 */
     enum block_cipher_mode block_cipher_mode;
@@ -684,47 +685,48 @@ struct cryptographic_parameters
     int32 salt_length;
     enum mask_generator mask_generator;
     enum hashing_algorithm mask_generator_hashing_algorithm;
-    struct byte_string *p_source;
+    ByteString *p_source;
     int32 trailer_field;
-};
+} CryptographicParameters;
 
-struct encryption_key_information
+typedef struct encryption_key_information
 {
-    struct text_string *unique_identifier;
-    struct cryptographic_parameters *cryptographic_parameters;
-};
+    TextString *unique_identifier;
+    CryptographicParameters *cryptographic_parameters;
+} EncryptionKeyInformation;
 
-struct mac_signature_key_information
+typedef struct mac_signature_key_information
 {
-    struct text_string *unique_identifier;
-    struct cryptographic_parameters *cryptographic_parameters;
-};
+    TextString *unique_identifier;
+    CryptographicParameters *cryptographic_parameters;
+} MACSignatureKeyInformation;
 
-struct key_wrapping_data
+typedef struct key_wrapping_data
 {
     /* KMIP 1.0 */
     enum wrapping_method wrapping_method;
-    struct encryption_key_information *encryption_key_info;
-    struct mac_signature_key_information *mac_signature_key_info;
-    struct byte_string *mac_signature;
-    struct byte_string *iv_counter_nonce;
+    EncryptionKeyInformation *encryption_key_info;
+    MACSignatureKeyInformation *mac_signature_key_info;
+    ByteString *mac_signature;
+    ByteString *iv_counter_nonce;
     /* KMIP 1.1 */
     enum encoding_option encoding_option;
-};
+} KeyWrappingData;
 
-struct transparent_symmetric_key
+typedef struct transparent_symmetric_key
 {
-    struct byte_string *key;
-};
+    ByteString *key;
+} TransparentSymmetricKey;
 
-struct key_value
+typedef struct key_value
 {
     void *key_material;
-    struct attribute *attributes;
+    /* TODO (ph) Change this to a linked list */
+    Attribute *attributes;
     size_t attribute_count;
-};
+} KeyValue;
 
-struct key_block
+typedef struct key_block
 {
     enum key_format_type key_format_type;
     enum key_compression_type key_compression_type;
@@ -732,134 +734,136 @@ struct key_block
     enum type key_value_type;
     enum cryptographic_algorithm cryptographic_algorithm;
     int32 cryptographic_length;
-    struct key_wrapping_data *key_wrapping_data;
-};
+    KeyWrappingData *key_wrapping_data;
+} KeyBlock;
 
-struct symmetric_key
+typedef struct symmetric_key
 {
-    struct key_block *key_block;
-};
+    KeyBlock *key_block;
+} SymmetricKey;
 
-struct public_key
+typedef struct public_key
 {
-    struct key_block *key_block;
-};
+    KeyBlock *key_block;
+} PublicKey;
 
-struct private_key
+typedef struct private_key
 {
-    struct key_block *key_block;
-};
+    KeyBlock *key_block;
+} PrivateKey;
 
-struct key_wrapping_specification
+typedef struct key_wrapping_specification
 {
     /* KMIP 1.0 */
     enum wrapping_method wrapping_method;
-    struct encryption_key_information *encryption_key_info;
-    struct mac_signature_key_information *mac_signature_key_info;
-    struct text_string *attribute_names;
+    EncryptionKeyInformation *encryption_key_info;
+    MACSignatureKeyInformation *mac_signature_key_info;
+    /* TODO (ph) Change this to a linked list */
+    TextString *attribute_names;
     size_t attribute_name_count;
     /* KMIP 1.1 */
     enum encoding_option encoding_option;
-};
+} KeyWrappingSpecification;
 
-struct nonce
+typedef struct nonce
 {
-    struct byte_string *nonce_id;
-    struct byte_string *nonce_value;
-};
+    ByteString *nonce_id;
+    ByteString *nonce_value;
+} Nonce;
 
 /* Operation Payloads */
 
-struct create_request_payload
+typedef struct create_request_payload
 {
     enum object_type object_type;
-    struct template_attribute *template_attribute;
-};
+    TemplateAttribute *template_attribute;
+} CreateRequestPayload;
 
-struct create_response_payload
+typedef struct create_response_payload
 {
     enum object_type object_type;
-    struct text_string *unique_identifier;
-    struct template_attribute *template_attribute;
-};
+    TextString *unique_identifier;
+    TemplateAttribute *template_attribute;
+} CreateResponsePayload;
 
-struct get_request_payload
+typedef struct get_request_payload
 {
     /* KMIP 1.0 */
-    struct text_string *unique_identifier;
+    TextString *unique_identifier;
     enum key_format_type key_format_type;
     enum key_compression_type key_compression_type;
-    struct key_wrapping_specification *key_wrapping_spec;
+    KeyWrappingSpecification *key_wrapping_spec;
     /* KMIP 1.4 */
     enum key_wrap_type key_wrap_type;
-};
+} GetRequestPayload;
 
-struct get_response_payload
+typedef struct get_response_payload
 {
     enum object_type object_type;
-    struct text_string *unique_identifier;
+    TextString *unique_identifier;
     void *object;
-};
+} GetResponsePayload;
 
-struct destroy_request_payload
+typedef struct destroy_request_payload
 {
-    struct text_string *unique_identifier;
-};
+    TextString *unique_identifier;
+} DestroyRequestPayload;
 
-struct destroy_response_payload
+typedef struct destroy_response_payload
 {
-    struct text_string *unique_identifier;
-};
+    TextString *unique_identifier;
+} DestroyResponsePayload;
 
 /* Authentication Structures */
 
-struct credential
+typedef struct credential
 {
     enum credential_type credential_type;
     void *credential_value;
-};
+} Credential;
 
-struct username_password_credential
+typedef struct username_password_credential
 {
-    struct text_string *username;
-    struct text_string *password;
-};
+    TextString *username;
+    TextString *password;
+} UsernamePasswordCredential;
 
-struct device_credential
+typedef struct device_credential
 {
-    struct text_string *device_serial_number;
-    struct text_string *password;
-    struct text_string *device_identifier;
-    struct text_string *network_identifier;
-    struct text_string *machine_identifier;
-    struct text_string *media_identifier;
-};
+    TextString *device_serial_number;
+    TextString *password;
+    TextString *device_identifier;
+    TextString *network_identifier;
+    TextString *machine_identifier;
+    TextString *media_identifier;
+} DeviceCredential;
 
-struct attestation_credential
+typedef struct attestation_credential
 {
-    struct nonce *nonce;
+    Nonce *nonce;
     enum attestation_type attestation_type;
-    struct byte_string *attestation_measurement;
-    struct byte_string *attestation_assertion;
-};
+    ByteString *attestation_measurement;
+    ByteString *attestation_assertion;
+} AttestationCredential;
 
-struct authentication
+typedef struct authentication
 {
     /* NOTE (ph) KMIP 1.2+ supports multiple credentials here. */
     /* NOTE (ph) Polymorphism makes this tricky. Omitting for now. */
     /* TODO (ph) Credential structs are constant size, so no problem here. */
-    struct credential *credential;
-};
+    /* TODO (ph) Change this to a linked list */
+    Credential *credential;
+} Authentication;
 
 /* Message Structures */
 
-struct request_header
+typedef struct request_header
 {
     /* KMIP 1.0 */
-    struct protocol_version *protocol_version;
+    ProtocolVersion *protocol_version;
     int32 maximum_response_size;
     bool32 asynchronous_indicator;
-    struct authentication *authentication;
+    Authentication *authentication;
     enum batch_error_continuation_option batch_error_continuation_option;
     bool32 batch_order_option;
     uint64 time_stamp;
@@ -869,58 +873,61 @@ struct request_header
     enum attestation_type *attestation_types;
     size_t attestation_type_count;
     /* KMIP 1.4 */
-    struct text_string *client_correlation_value;
-    struct text_string *server_correlation_value;
-};
+    TextString *client_correlation_value;
+    TextString *server_correlation_value;
+} RequestHeader;
 
-struct response_header
+typedef struct response_header
 {
     /* KMIP 1.0 */
-    struct protocol_version *protocol_version;
+    ProtocolVersion *protocol_version;
     uint64 time_stamp;
     int32 batch_count;
     /* KMIP 1.2 */
-    struct nonce *nonce;
+    Nonce *nonce;
+    /* TODO (ph) Change this to a linked list */
     enum attestation_type *attestation_types;
     size_t attestation_type_count;
     /* KMIP 1.4 */
-    struct text_string *client_correlation_value;
-    struct text_string *server_correlation_value;
-};
+    TextString *client_correlation_value;
+    TextString *server_correlation_value;
+} ResponseHeader;
 
-struct request_batch_item
+typedef struct request_batch_item
 {
     enum operation operation;
-    struct byte_string *unique_batch_item_id;
+    ByteString *unique_batch_item_id;
     void *request_payload;
     /* NOTE (ph) Omitting the message extension field for now. */
-};
+} RequestBatchItem;
 
-struct response_batch_item
+typedef struct response_batch_item
 {
     enum operation operation;
-    struct byte_string *unique_batch_item_id;
+    ByteString *unique_batch_item_id;
     enum result_status result_status;
     enum result_reason result_reason;
-    struct text_string *result_message;
-    struct byte_string *asynchronous_correlation_value;
+    TextString *result_message;
+    ByteString *asynchronous_correlation_value;
     void *response_payload;
     /* NOTE (ph) Omitting the message extension field for now. */
-};
+} ResponseBatchItem;
 
-struct request_message
+typedef struct request_message
 {
-    struct request_header *request_header;
-    struct request_batch_item *batch_items;
+    RequestHeader *request_header;
+    /* TODO (ph) Change this to a linked list */
+    RequestBatchItem *batch_items;
     size_t batch_count;
-};
+} RequestMessage;
 
-struct response_message
+typedef struct response_message
 {
-    struct response_header *response_header;
-    struct response_batch_item *batch_items;
+    ResponseHeader *response_header;
+    /* TODO (ph) Change this to a linked list */
+    ResponseBatchItem *batch_items;
     size_t batch_count;
-};
+} ResponseMessage;
 
 /*
 Macros
