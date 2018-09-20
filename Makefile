@@ -3,17 +3,27 @@
 ##
 .POSIX:
 .SUFFIXES:
+
+SRCDIR = .
+BINDIR = $(SRCDIR)/bin
+
+MAJOR   = 0
+MINOR   = 1
+MICRO   = 0
+VERSION = $(MAJOR).$(MINOR).$(MICRO)
+SONAME  = libkmip.so.$(MAJOR)
+LIBNAME = libkmip.so.$(VERSION)
+
 CC      = cc
 #CFLAGS = -std=c11 -pedantic -g3 -Og -Wall -Wextra
 CFLAGS  = -std=c11 -pedantic -g3 -Wall -Wextra
+LOFLAGS = -fPIC
+SOFLAGS = -shared -Wl,-soname,$(SONAME) -o
 LDFLAGS = -L/usr/local/lib
 LDLIBS  = -lssl -lcrypto
 DESTDIR = 
 PREFIX  = /usr/local
 KMIP    = kmip
-
-SRCDIR = .
-BINDIR = $(SRCDIR)/bin
 
 all: demo tests
 
@@ -62,19 +72,29 @@ tests: tests.o kmip.o kmip_memset.o
 demo_get.o: demo_get.c kmip_memset.h kmip.h
 demo_create.o: demo_create.c kmip_memset.h kmip.h
 demo_destroy.o: demo_destroy.c kmip_memset.h kmip.h
-kmip.o: kmip.c kmip.h kmip_memset.h
 tests.o: tests.c kmip_memset.h kmip.h
-kmip_bio.o: kmip_bio.c kmip_bio.h
+
+kmip.o: kmip.c kmip.h kmip_memset.h
+kmip.lo: kmip.c kmip.h kmip_memset.h
+
 kmip_memset.o: kmip_memset.c kmip_memset.h
+kmip_memset.lo: kmip_memset.c kmip_memset.h
+
+kmip_bio.o: kmip_bio.c kmip_bio.h
+kmip_bio.lo: kmip_bio.c kmip_bio.h
 
 clean:
-	rm -f *.o
+	rm -f *.o *.lo
 clean_html_docs:
 	cd docs && make clean && cd ..
 cleanest:
-	rm -f demo_create demo_get demo_destroy tests *.o
+	rm -f demo_create demo_get demo_destroy tests *.o *.lo
 	cd docs && make clean && cd ..
 
-.SUFFIXES: .c .o
+.SUFFIXES: .c .o .lo .so
 .c.o:
 	$(CC) $(CFLAGS) -c $<
+.c.lo:
+	$(CC) $(CFLAGS) $(LOFLAGS) -c $<
+.lo.so:
+	$(CC) $(CFLAGS) $(LOFALGS) -o $<
