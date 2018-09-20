@@ -112,13 +112,24 @@ test_buffer_full_and_resize(void)
         kmip_set_buffer(&ctx, large_enough, ARRAY_LENGTH(large_enough));
         
         result = encode_protocol_version(&ctx, &pv);
-        return(report_encoding_test_result(&ctx, expected, large_enough, result, 
-                                  __func__));
+        result = report_encoding_test_result(
+            &ctx,
+            expected,
+            large_enough,
+            result,
+            __func__);
+        
+        kmip_destroy(&ctx);
+        
+        return(result);
     }
     else
     {
         printf("FAIL - %s\n", __func__);
         printf("- expected buffer full\n");
+        
+        kmip_destroy(&ctx);
+        
         return(1);
     }
 }
