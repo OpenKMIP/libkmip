@@ -2874,7 +2874,7 @@ print_text_string(int indent, const char *name, struct text_string *value)
     
     if(value != NULL)
     {
-        printf("%*sValue: %s\n", indent + 2, "", value->value);
+        printf("%*sValue: %.*s\n", indent + 2, "", (int)value->size, value->value);
     }
     
     return;

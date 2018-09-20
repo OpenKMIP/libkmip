@@ -83,7 +83,7 @@ use_high_level_api(void)
         return(result);
     }
     
-    struct attribute a[3] = {0};
+    Attribute a[3] = {0};
     for(int i = 0; i < 3; i++)
     {
         init_attribute(&a[i]);
@@ -101,7 +101,7 @@ use_high_level_api(void)
     a[2].type = KMIP_ATTR_CRYPTOGRAPHIC_USAGE_MASK;
     a[2].value = &mask;
     
-    struct template_attribute ta = {0};
+    TemplateAttribute ta = {0};
     ta.attributes = a;
     ta.attribute_count = ARRAY_LENGTH(a);
     
@@ -197,7 +197,7 @@ use_mid_level_api(void)
         return(result);
     }
     
-    struct attribute a[3] = {0};
+    Attribute a[3] = {0};
     for(int i = 0; i < 3; i++)
     {
         init_attribute(&a[i]);
@@ -215,14 +215,14 @@ use_mid_level_api(void)
     a[2].type = KMIP_ATTR_CRYPTOGRAPHIC_USAGE_MASK;
     a[2].value = &mask;
     
-    struct template_attribute ta = {0};
+    TemplateAttribute ta = {0};
     ta.attributes = a;
     ta.attribute_count = ARRAY_LENGTH(a);
     
     char *id = NULL;
     size_t id_size = 0;
     
-    struct kmip kmip_context = {0};
+    KMIP kmip_context = {0};
     kmip_init(&kmip_context, NULL, 0, KMIP_1_0);
     
     result = kmip_bio_create_with_context(
@@ -340,7 +340,7 @@ use_low_level_api(void)
     printf("\n");
     
     /* Set up the KMIP context and the initial encoding buffer. */
-    struct kmip kmip_context = {0};
+    KMIP kmip_context = {0};
     kmip_init(&kmip_context, NULL, 0, KMIP_1_0);
     
     size_t buffer_blocks = 1;
@@ -360,7 +360,7 @@ use_low_level_api(void)
     kmip_set_buffer(&kmip_context, encoding, buffer_total_size);
     
     /* Build the request message. */
-    struct attribute a[3] = {0};
+    Attribute a[3] = {0};
     for(int i = 0; i < 3; i++)
     {
         init_attribute(&a[i]);
@@ -378,14 +378,14 @@ use_low_level_api(void)
     a[2].type = KMIP_ATTR_CRYPTOGRAPHIC_USAGE_MASK;
     a[2].value = &mask;
     
-    struct template_attribute ta = {0};
+    TemplateAttribute ta = {0};
     ta.attributes = a;
     ta.attribute_count = ARRAY_LENGTH(a);
     
-    struct protocol_version pv = {0};
+    ProtocolVersion pv = {0};
     init_protocol_version(&pv, kmip_context.version);
     
-    struct request_header rh = {0};
+    RequestHeader rh = {0};
     init_request_header(&rh);
     
     rh.protocol_version = &pv;
@@ -393,15 +393,15 @@ use_low_level_api(void)
     rh.time_stamp = time(NULL);
     rh.batch_count = 1;
     
-    struct create_request_payload crp = {0};
+    CreateRequestPayload crp = {0};
     crp.object_type = KMIP_OBJTYPE_SYMMETRIC_KEY;
     crp.template_attribute = &ta;
     
-    struct request_batch_item rbi = {0};
+    RequestBatchItem rbi = {0};
     rbi.operation = KMIP_OP_CREATE;
     rbi.request_payload = &crp;
     
-    struct request_message rm = {0};
+    RequestMessage rm = {0};
     rm.request_header = &rh;
     rm.batch_items = &rbi;
     rm.batch_count = 1;
@@ -486,7 +486,7 @@ use_low_level_api(void)
     kmip_set_buffer(&kmip_context, response, response_size);
     
     /* Decode the response message and retrieve the operation results. */
-    struct response_message resp_m = {0};
+    ResponseMessage resp_m = {0};
     int decode_result = decode_response_message(&kmip_context, &resp_m);
     if(decode_result != KMIP_OK)
     {
@@ -512,7 +512,7 @@ use_low_level_api(void)
         return(KMIP_MALFORMED_RESPONSE);
     }
     
-    struct response_batch_item req = resp_m.batch_items[0];
+    ResponseBatchItem req = resp_m.batch_items[0];
     result_status = req.result_status;
     
     printf("The KMIP operation was executed with no errors.\n");
@@ -522,15 +522,14 @@ use_low_level_api(void)
     
     if(result == KMIP_STATUS_SUCCESS)
     {
-        struct create_response_payload *pld = 
-            (struct create_response_payload *)req.response_payload;
+        CreateResponsePayload *pld = (CreateResponsePayload *)req.response_payload;
         if(pld != NULL)
         {
-            struct text_string *uuid = pld->unique_identifier;
+            TextString *uuid = pld->unique_identifier;
             
             if(uuid != NULL)
             {
-                printf("Symmetric Key ID: %s\n", uuid->value);
+                printf("Symmetric Key ID: %.*s\n", (int)uuid->size, uuid->value);
             }
         }
     }

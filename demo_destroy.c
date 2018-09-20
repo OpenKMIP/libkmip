@@ -176,7 +176,7 @@ use_mid_level_api(int argc, char **argv)
         return(result);
     }
     
-    struct kmip kmip_context = {0};
+    KMIP kmip_context = {0};
     kmip_init(&kmip_context, NULL, 0, KMIP_1_0);
     
     result = kmip_bio_destroy_with_context(
@@ -277,7 +277,7 @@ use_low_level_api(int argc, char **argv)
     }
     
     /* Set up the KMIP context and the initial encoding buffer. */
-    struct kmip kmip_context = {0};
+    KMIP kmip_context = {0};
     kmip_init(&kmip_context, NULL, 0, KMIP_1_0);
     
     size_t buffer_blocks = 1;
@@ -297,10 +297,10 @@ use_low_level_api(int argc, char **argv)
     kmip_set_buffer(&kmip_context, encoding, buffer_total_size);
     
     /* Build the request message. */
-    struct protocol_version pv = {0};
+    ProtocolVersion pv = {0};
     init_protocol_version(&pv, kmip_context.version);
     
-    struct request_header rh = {0};
+    RequestHeader rh = {0};
     init_request_header(&rh);
     
     rh.protocol_version = &pv;
@@ -308,18 +308,18 @@ use_low_level_api(int argc, char **argv)
     rh.time_stamp = time(NULL);
     rh.batch_count = 1;
     
-    struct text_string id = {0};
+    TextString id = {0};
     id.value = argv[1];
     id.size = kmip_strnlen_s(argv[1], 50);
     
-    struct destroy_request_payload drp = {0};
+    DestroyRequestPayload drp = {0};
     drp.unique_identifier = &id;
     
-    struct request_batch_item rbi = {0};
+    RequestBatchItem rbi = {0};
     rbi.operation = KMIP_OP_DESTROY;
     rbi.request_payload = &drp;
     
-    struct request_message rm = {0};
+    RequestMessage rm = {0};
     rm.request_header = &rh;
     rm.batch_items = &rbi;
     rm.batch_count = 1;
@@ -404,7 +404,7 @@ use_low_level_api(int argc, char **argv)
     kmip_set_buffer(&kmip_context, response, response_size);
     
     /* Decode the response message and retrieve the operation results. */
-    struct response_message resp_m = {0};
+    ResponseMessage resp_m = {0};
     int decode_result = decode_response_message(&kmip_context, &resp_m);
     if(decode_result != KMIP_OK)
     {
@@ -430,7 +430,7 @@ use_low_level_api(int argc, char **argv)
         return(KMIP_MALFORMED_RESPONSE);
     }
     
-    struct response_batch_item req = resp_m.batch_items[0];
+    ResponseBatchItem req = resp_m.batch_items[0];
     result_status = req.result_status;
     
     printf("The KMIP operation was executed with no errors.\n");
@@ -452,7 +452,7 @@ use_low_level_api(int argc, char **argv)
 int
 main(int argc, char **argv)
 {
-    /*use_high_level_api(argc, argv);*/
+    use_high_level_api(argc, argv);
     /*use_mid_level_api(argc, argv);*/
-    use_low_level_api(argc, argv);
+    /*use_low_level_api(argc, argv);*/
 }

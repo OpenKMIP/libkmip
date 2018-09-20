@@ -156,6 +156,7 @@ int kmip_bio_create(BIO *bio, struct template_attribute *template_attribute,
         return(KMIP_EXCEED_MAX_MESSAGE_SIZE);
     }
     
+    kmip_set_buffer(&ctx, NULL, 0);
     uint8 *extended = ctx.realloc_func(ctx.state, encoding, buffer_total_size + length);
     if(encoding != extended)
     {
@@ -175,7 +176,6 @@ int kmip_bio_create(BIO *bio, struct template_attribute *template_attribute,
         return(KMIP_IO_FAILURE);
     }
     
-    kmip_reset(&ctx);
     kmip_set_buffer(&ctx, encoding, buffer_block_size);
     
     /* Decode the response message and retrieve the operation results. */
@@ -355,11 +355,21 @@ int kmip_bio_destroy(BIO *bio, char *uuid, size_t uuid_size)
         return(KMIP_EXCEED_MAX_MESSAGE_SIZE);
     }
     
+    kmip_set_buffer(&ctx, NULL, 0);
     uint8 *extended = ctx.realloc_func(ctx.state, encoding, buffer_total_size + length);
-    if(encoding != extended)
+    if(extended == NULL)
+    {
+        free_buffer(&ctx, encoding, buffer_total_size);
+        encoding = NULL;
+        kmip_destroy(&ctx);
+        return(KMIP_MEMORY_ALLOC_FAILED);
+    }
+    else
     {
         encoding = extended;
+        extended = NULL;
     }
+    
     ctx.memset_func(encoding + buffer_total_size, 0, length);
     
     buffer_block_size += length;
@@ -374,7 +384,6 @@ int kmip_bio_destroy(BIO *bio, char *uuid, size_t uuid_size)
         return(KMIP_IO_FAILURE);
     }
     
-    kmip_reset(&ctx);
     kmip_set_buffer(&ctx, encoding, buffer_block_size);
     
     /* Decode the response message and retrieve the operation result status. */
@@ -545,6 +554,7 @@ char **key, size_t *key_size)
         return(KMIP_EXCEED_MAX_MESSAGE_SIZE);
     }
     
+    kmip_set_buffer(&ctx, NULL, 0);
     uint8 *extended = ctx.realloc_func(ctx.state, encoding, buffer_total_size + length);
     if(encoding != extended)
     {
@@ -564,7 +574,6 @@ char **key, size_t *key_size)
         return(KMIP_IO_FAILURE);
     }
     
-    kmip_reset(&ctx);
     kmip_set_buffer(&ctx, encoding, buffer_block_size);
     
     /* Decode the response message and retrieve the operation result status. */
@@ -772,6 +781,7 @@ char **id, size_t *id_size)
         return(KMIP_EXCEED_MAX_MESSAGE_SIZE);
     }
     
+    kmip_set_buffer(ctx, NULL, 0);
     uint8 *extended = ctx->realloc_func(ctx->state, encoding, buffer_total_size + length);
     if(encoding != extended)
     {
@@ -791,7 +801,6 @@ char **id, size_t *id_size)
         return(KMIP_IO_FAILURE);
     }
     
-    kmip_reset(ctx);
     kmip_set_buffer(ctx, encoding, buffer_block_size);
     
     /* Decode the response message and retrieve the operation results. */
@@ -968,6 +977,7 @@ char *uuid, size_t uuid_size)
         return(KMIP_EXCEED_MAX_MESSAGE_SIZE);
     }
     
+    kmip_set_buffer(ctx, NULL, 0);
     uint8 *extended = ctx->realloc_func(ctx->state, encoding,
                                         buffer_total_size + length);
     if(encoding != extended)
@@ -988,7 +998,6 @@ char *uuid, size_t uuid_size)
         return(KMIP_IO_FAILURE);
     }
     
-    kmip_reset(ctx);
     kmip_set_buffer(ctx, encoding, buffer_block_size);
     
     /* Decode the response message and retrieve the operation result status. */
@@ -1152,6 +1161,7 @@ char **key, size_t *key_size)
         return(KMIP_EXCEED_MAX_MESSAGE_SIZE);
     }
     
+    kmip_set_buffer(ctx, NULL, 0);
     uint8 *extended = ctx->realloc_func(
         ctx->state,
         encoding,
@@ -1173,7 +1183,6 @@ char **key, size_t *key_size)
         return(KMIP_IO_FAILURE);
     }
     
-    kmip_reset(ctx);
     kmip_set_buffer(ctx, encoding, buffer_block_size);
     
     /* Decode the response message and retrieve the operation result status. */
@@ -1248,18 +1257,6 @@ char **key, size_t *key_size)
     return(result);
 }
 
-/*
-int kmip_bio_send_request(
-struct kmip *ctx,
-BIO *bio,
-struct request_message *request, 
-struct response_message **response,
-size_t max_msg_size)
-{
-return(KMIP_OK);
-}
-*/
-
 int kmip_bio_send_request_encoding(
 struct kmip *ctx, BIO *bio,
 char *request, size_t request_size,
@@ -1308,6 +1305,7 @@ char **response, size_t *response_size)
         return(KMIP_EXCEED_MAX_MESSAGE_SIZE);
     }
     
+    kmip_set_buffer(ctx, NULL, 0);
     uint8 *extended = ctx->realloc_func(ctx->state, encoding,
                                         buffer_total_size + length);
     if(encoding != extended)

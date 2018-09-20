@@ -117,7 +117,7 @@ use_high_level_api(int argc, char **argv)
         if(result == KMIP_STATUS_SUCCESS)
         {
             printf("Symmetric Key ID: %s\n", argv[1]);
-            printf("Symmetric Key Size: %zu bytes\n", key_size);
+            printf("Symmetric Key Size: %zu bits\n", key_size * 8);
             printf("Symmetric Key:");
             print_buffer(key, key_size);
             printf("\n");
@@ -205,7 +205,7 @@ use_mid_level_api(int argc, char **argv)
     size_t key_size = 0;
     size_t id_size = kmip_strnlen_s(argv[1], 50);
     
-    struct kmip kmip_context = {0};
+    KMIP kmip_context = {0};
     kmip_init(&kmip_context, NULL, 0, KMIP_1_0);
     
     result = kmip_bio_get_symmetric_key_with_context(
@@ -237,7 +237,7 @@ use_mid_level_api(int argc, char **argv)
         if(result == KMIP_STATUS_SUCCESS)
         {
             printf("Symmetric Key ID: %s\n", argv[1]);
-            printf("Symmetric Key Size: %zu bytes\n", key_size);
+            printf("Symmetric Key Size: %zu bits\n", key_size * 8);
             printf("Symmetric Key:");
             print_buffer(key, key_size);
             printf("\n");
