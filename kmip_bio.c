@@ -205,7 +205,13 @@ int kmip_bio_create(BIO *bio, struct template_attribute *template_attribute,
         (struct create_response_payload *)resp_item.response_payload;
     struct text_string *unique_identifier = pld->unique_identifier;
     
-    char *result_id = ctx.calloc_func(ctx.state, 1, unique_identifier->size);
+    /* KMIP text strings are not null-terminated by default. Add an extra */
+    /* character to the end of the UUID copy to make space for the null   */
+    /* terminator.                                                        */
+    char *result_id = ctx.calloc_func(
+        ctx.state,
+        1,
+        unique_identifier->size + 1);
     *id_size = unique_identifier->size;
     for(size_t i = 0; i < *id_size; i++)
     {
