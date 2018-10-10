@@ -88,7 +88,7 @@ use_high_level_api(int argc, char **argv)
         return(result);
     }
     
-    result = kmip_bio_destroy(bio, argv[1], kmip_strnlen_s(argv[1], 50));
+    result = kmip_bio_destroy_symmetric_key(bio, argv[1], kmip_strnlen_s(argv[1], 50));
     
     BIO_free_all(bio);
     SSL_CTX_free(ctx);
@@ -179,7 +179,7 @@ use_mid_level_api(int argc, char **argv)
     KMIP kmip_context = {0};
     kmip_init(&kmip_context, NULL, 0, KMIP_1_0);
     
-    result = kmip_bio_destroy_with_context(
+    result = kmip_bio_destroy_symmetric_key_with_context(
         &kmip_context, bio,
         argv[1], kmip_strnlen_s(argv[1], 50));
     
@@ -369,7 +369,7 @@ use_low_level_api(int argc, char **argv)
     printf("\n");
     
     char *response = NULL;
-    size_t response_size = 0;
+    int response_size = 0;
     
     result = kmip_bio_send_request_encoding(
         &kmip_context, bio,

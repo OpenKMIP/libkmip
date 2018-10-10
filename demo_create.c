@@ -106,9 +106,9 @@ use_high_level_api(void)
     ta.attribute_count = ARRAY_LENGTH(a);
     
     char *id = NULL;
-    size_t id_size = 0;
+    int id_size = 0;
     
-    result = kmip_bio_create(bio, &ta, &id, &id_size);
+    result = kmip_bio_create_symmetric_key(bio, &ta, &id, &id_size);
     
     BIO_free_all(bio);
     SSL_CTX_free(ctx);
@@ -220,12 +220,12 @@ use_mid_level_api(void)
     ta.attribute_count = ARRAY_LENGTH(a);
     
     char *id = NULL;
-    size_t id_size = 0;
+    int id_size = 0;
     
     KMIP kmip_context = {0};
     kmip_init(&kmip_context, NULL, 0, KMIP_1_0);
     
-    result = kmip_bio_create_with_context(
+    result = kmip_bio_create_symmetric_key_with_context(
         &kmip_context, bio,
         &ta,
         &id, &id_size);
@@ -451,7 +451,7 @@ use_low_level_api(void)
     printf("\n");
     
     char *response = NULL;
-    size_t response_size = 0;
+    int response_size = 0;
     
     result = kmip_bio_send_request_encoding(
         &kmip_context, bio,
