@@ -29,14 +29,14 @@ The following function signatures define the client API and can be found in
 .. code-block:: c
 
    /* High-level API */
-   int kmip_bio_create(BIO *, TemplateAttribute *, char **, int *);
+   int kmip_bio_create_symmetric_key(BIO *, TemplateAttribute *, char **, int *);
    int kmip_bio_get_symmetric_key(BIO *, char *, int, char **, int *);
-   int kmip_bio_destroy(BIO *, char *, int);
+   int kmip_bio_destroy_symmetric_key(BIO *, char *, int);
    
    /* Mid-level API */
-   int kmip_bio_create_with_context(KMIP *, BIO *, TemplateAttribute *, char **, int *);
+   int kmip_bio_create_symmetric_key_with_context(KMIP *, BIO *, TemplateAttribute *, char **, int *);
    int kmip_bio_get_symmetric_key_with_context(KMIP *, BIO *, char *, int, char **, int *);
-   int kmip_bio_destroy_with_context(KMIP *, BIO *, char *, size_t);
+   int kmip_bio_destroy_symmetric_key_with_context(KMIP *, BIO *, char *, size_t);
 
    /* Low-level API */
    int kmip_bio_send_request_encoding(KMIP *, BIO *, char *, int, char **, int *); 
@@ -70,7 +70,7 @@ parent application, consider switching to use the :ref:`mid-level-api` or
 The function header details for each of the high-level API functions are
 provided below.
 
-.. c:function:: int kmip_bio_create(BIO *, TemplateAttribute *, char **, int *)
+.. c:function:: int kmip_bio_create_symmetric_key(BIO *, TemplateAttribute *, char **, int *)
 
     Create a symmetric key with the attributes provided in the
     ``TemplateAttribute`` structure.
@@ -91,11 +91,16 @@ provided below.
     :param int*: A pointer that can be used to access the length of the UUID
         string pointed to by the above double pointer.
 
-    :return: A status code indicating success or failure of the operation. The
-        following codes are returned explicitly by this function. If the code
-        returned is not listed here, it is the result of the request encoding
-        or response decoding process. See :ref:`status-codes` for all possible
-        status code values.
+    :return: A status code indicating success or failure of the operation. A
+        negative status code indicates a libkmip error occurred while
+        processing the request. A positive status code indicates a KMIP error
+        occurred while the KMIP server processed the request. A status code
+        of 0 indicates the operation succeeded.
+
+        The following codes are returned explicitly by this function. If the
+        code returned is negative and is not listed here, it is the result of
+        the request encoding or response decoding process. See
+        :ref:`status-codes` for all possible status code values.
 
         * ``KMIP_ARG_INVALID``
             One or more of the function arguments are invalid or unset and no
@@ -151,11 +156,16 @@ provided below.
     :param int*: A pointer that can be used to access the length of the
         symmetric key pointed to by the above double pointer.
 
-    :return: A status code indicating success or failure of the operation. The
-        following codes are returned explicitly by this function. If the code
-        returned is not listed here, it is the result of the request encoding
-        or response decoding process. See :ref:`status-codes` for all possible
-        status code values.
+    :return: A status code indicating success or failure of the operation. A
+        negative status code indicates a libkmip error occurred while
+        processing the request. A positive status code indicates a KMIP error
+        occurred while the KMIP server processed the request. A status code
+        of 0 indicates the operation succeeded.
+
+        The following codes are returned explicitly by this function. If the
+        code returned is negative and is not listed here, it is the result of
+        the request encoding or response decoding process. See
+        :ref:`status-codes` for all possible status code values.
 
         * ``KMIP_ARG_INVALID``
             One or more of the function arguments are invalid or unset and no
@@ -193,7 +203,7 @@ provided below.
             The received response message from the KMIP server is malformed
             and does not contain valid operation result information.
 
-.. c:function:: int kmip_bio_destroy(BIO *, char *, int)
+.. c:function:: int kmip_bio_destroy_symmetric_key(BIO *, char *, int)
 
     Destroy a symmetric key identified by a specific UUID.
 
@@ -202,11 +212,16 @@ provided below.
     :param char*: A string containing the UUID of the symmetric key to destroy.
     :param int: The length of the above UUID string.
 
-    :return: A status code indicating success or failure of the operation. The
-        following codes are returned explicitly by this function. If the code
-        returned is not listed here, it is the result of the request encoding
-        or response decoding process. See :ref:`status-codes` for all possible
-        status code values.
+    :return: A status code indicating success or failure of the operation. A
+        negative status code indicates a libkmip error occurred while
+        processing the request. A positive status code indicates a KMIP error
+        occurred while the KMIP server processed the request. A status code
+        of 0 indicates the operation succeeded.
+
+        The following codes are returned explicitly by this function. If the
+        code returned is negative and is not listed here, it is the result of
+        the request encoding or response decoding process. See
+        :ref:`status-codes` for all possible status code values.
 
         * ``KMIP_ARG_INVALID``
             One or more of the function arguments are invalid or unset and no
@@ -275,7 +290,7 @@ Using these functions, the library will automatically:
 The function header details for each of the mid-level API functions are
 provided below.
 
-.. c:function:: int kmip_bio_create_with_context(KMIP *, BIO *, TemplateAttribute *, char **, int *)
+.. c:function:: int kmip_bio_create_symmetric_key_with_context(KMIP *, BIO *, TemplateAttribute *, char **, int *)
 
     Create a symmetric key with the attributes provided in the
     ``TemplateAttribute`` structure.
@@ -305,11 +320,16 @@ provided below.
     :param int*: A pointer that can be used to access the length of the UUID
         string pointed to by the above double pointer.
 
-    :return: A status code indicating success or failure of the operation. The
-        following codes are returned explicitly by this function. If the code
-        returned is not listed here, it is the result of the request encoding
-        or response decoding process. See :ref:`status-codes` for all possible
-        status code values.
+    :return: A status code indicating success or failure of the operation. A
+        negative status code indicates a libkmip error occurred while
+        processing the request. A positive status code indicates a KMIP error
+        occurred while the KMIP server processed the request. A status code
+        of 0 indicates the operation succeeded.
+
+        The following codes are returned explicitly by this function. If the
+        code returned is negative and is not listed here, it is the result of
+        the request encoding or response decoding process. See
+        :ref:`status-codes` for all possible status code values.
 
         * ``KMIP_ARG_INVALID``
             One or more of the function arguments are invalid or unset and no
@@ -373,11 +393,16 @@ provided below.
     :param int*: A pointer that can be used to access the length of the
         symmetric key pointed to by the above double pointer.
 
-    :return: A status code indicating success or failure of the operation. The
-        following codes are returned explicitly by this function. If the code
-        returned is not listed here, it is the result of the request encoding
-        or response decoding process. See :ref:`status-codes` for all possible
-        status code values.
+    :return: A status code indicating success or failure of the operation. A
+        negative status code indicates a libkmip error occurred while
+        processing the request. A positive status code indicates a KMIP error
+        occurred while the KMIP server processed the request. A status code
+        of 0 indicates the operation succeeded.
+
+        The following codes are returned explicitly by this function. If the
+        code returned is negative and is not listed here, it is the result of
+        the request encoding or response decoding process. See
+        :ref:`status-codes` for all possible status code values.
 
         * ``KMIP_ARG_INVALID``
             One or more of the function arguments are invalid or unset and no
@@ -414,9 +439,9 @@ provided below.
             The received response message from the KMIP server is malformed
             and does not contain valid operation result information.
 
-.. c:function:: int kmip_bio_destroy_with_context(KMIP *, BIO *, char *, int)
+.. c:function:: int kmip_bio_destroy_symmetric_key_with_context(KMIP *, BIO *, char *, int)
 
-    Destroy a KMIP managed object identified by a specific UUID.
+    Destroy a symmetric key identified by a specific UUID.
 
     :param KMIP*: A libkmip ``KMIP`` structure containing the context
         information needed to encode and decode message structures.
@@ -433,11 +458,16 @@ provided below.
         destroy.
     :param int: The length of the above UUID string.
 
-    :return: A status code indicating success or failure of the operation. The
-        following codes are returned explicitly by this function. If the code
-        returned is not listed here, it is the result of the request encoding
-        or response decoding process. See :ref:`status-codes` for all possible
-        status code values.
+    :return: A status code indicating success or failure of the operation. A
+        negative status code indicates a libkmip error occurred while
+        processing the request. A positive status code indicates a KMIP error
+        occurred while the KMIP server processed the request. A status code
+        of 0 indicates the operation succeeded.
+
+        The following codes are returned explicitly by this function. If the
+        code returned is negative and is not listed here, it is the result of
+        the request encoding or response decoding process. See
+        :ref:`status-codes` for all possible status code values.
 
         * ``KMIP_ARG_INVALID``
             One or more of the function arguments are invalid or unset and no
@@ -519,8 +549,12 @@ The function header details for the low-level API function is provided below.
     :param int*: A pointer that can be used to access the length of the
         encoded response message pointed to by the above double pointer.
 
-    :return: A status code indicating success or failure of the operation. The
-        following codes are returned explicitly by this function.
+    :return: A status code indicating success or failure of the operation. A
+        negative status code indicates a libkmip error occurred while
+        processing the request. A positive status code indicates a KMIP error
+        occurred while the KMIP server processed the operation. A status code
+        of 0 indicates the operation succeeded. The following codes are
+        returned explicitly by this function.
 
         * ``KMIP_ARG_INVALID``
             One or more of the function arguments are invalid or unset and no
@@ -560,8 +594,9 @@ The function header details for the low-level API function is provided below.
 
 Status Codes
 ~~~~~~~~~~~~
-The following table lists the status codes that can be returned by the client
-API functions.
+The following tables list the status codes that can be returned by the client
+API functions. The first table lists the status codes related to the
+functioning of libkmip.
 
 ============================  =====
 Status Code                   Value
@@ -584,6 +619,18 @@ KMIP_EXCEED_MAX_MESSAGE_SIZE  -14
 KMIP_MALFORMED_RESPONSE       -15
 KMIP_OBJECT_MISMATCH          -16
 ============================  =====
+
+The second table lists the operation result status codes that can be returned
+by a KMIP server as the result of a successful or unsuccessful operation.
+
+=============================  =====
+Status Code                    Value
+=============================  =====
+KMIP_STATUS_SUCCESS            0
+KMIP_STATUS_OPERATION_FAILED   1
+KMIP_STATUS_OPERATION_PENDING  2
+KMIP_STATUS_OPERATION_UNDONE   3
+=============================  =====
 
 .. _encoding-api:
 
