@@ -18,49 +18,20 @@
 #define KMIP_BIO_H
 
 #include <openssl/ssl.h>
+#include "kmip.h"
 
 /*
 OpenSSH BIO API
 */
 
-int kmip_bio_create(BIO *,
-                    struct template_attribute *,
-                    char **,
-                    size_t *);
-int kmip_bio_destroy(BIO *,
-                     char *,
-                     size_t);
-int kmip_bio_get_symmetric_key(BIO *,
-                               char *,
-                               size_t,
-                               char **,
-                               size_t *);
+int kmip_bio_create_symmetric_key(BIO *, TemplateAttribute *, char **, int *);
+int kmip_bio_get_symmetric_key(BIO *, char *, int, char **, int *);
+int kmip_bio_destroy_symmetric_key(BIO *, char *, int);
 
-int kmip_bio_create_with_context(struct kmip *,
-                                 BIO *,
-                                 struct template_attribute *,
-                                 char **,
-                                 size_t *);
-int kmip_bio_destroy_with_context(struct kmip *,
-                                  BIO *,
-                                  char *,
-                                  size_t);
-int kmip_bio_get_symmetric_key_with_context(struct kmip *,
-                                            BIO *,
-                                            char *,
-                                            size_t,
-                                            char **,
-                                            size_t *);
+int kmip_bio_create_symmetric_key_with_context(KMIP *, BIO *, TemplateAttribute *, char **, int *);
+int kmip_bio_get_symmetric_key_with_context(KMIP *, BIO *, char *, int, char **, int *);
+int kmip_bio_destroy_symmetric_key_with_context(KMIP *, BIO *, char *, int);
 
-int kmip_bio_send_request(struct kmip *,
-                          BIO *,
-                          struct request_message *,
-                          struct response_message **);
-int kmip_bio_send_request_encoding(struct kmip *,
-                                   BIO *,
-                                   char *,
-                                   size_t,
-                                   char **,
-                                   size_t *);
+int kmip_bio_send_request_encoding(KMIP *, BIO *, char *, int, char **, int *);
 
 #endif  /* KMIP_BIO_H */
