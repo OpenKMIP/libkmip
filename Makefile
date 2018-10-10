@@ -7,25 +7,31 @@
 SRCDIR = .
 BINDIR = $(SRCDIR)/bin
 
-MAJOR   = 0
-MINOR   = 1
-MICRO   = 0
-VERSION = $(MAJOR).$(MINOR).$(MICRO)
-SONAME  = libkmip.so.$(MAJOR)
-LIBNAME = libkmip.so.$(VERSION)
+MAJOR    = 0
+MINOR    = 1
+VERSION  = $(MAJOR).$(MINOR)
+ARCNAME  = libkmip.a
+LINKNAME = libkmip.so
+SONAME   = $(LINKNAME).$(MAJOR)
+LIBNAME  = $(LINKNAME).$(VERSION)
+LIBS     = $(LIBNAME) $(ARCNAME)
 
 CC      = cc
 #CFLAGS = -std=c11 -pedantic -g3 -Og -Wall -Wextra
 CFLAGS  = -std=c11 -pedantic -g3 -Wall -Wextra
 LOFLAGS = -fPIC
-SOFLAGS = -shared -Wl,-soname,$(SONAME) -o
+SOFLAGS = -shared -Wl,-soname,$(SONAME)
 LDFLAGS = -L/usr/local/lib
 LDLIBS  = -lssl -lcrypto
+AR      = ar csrv
 DESTDIR = 
 PREFIX  = /usr/local
 KMIP    = kmip
 
-all: demo tests
+OFILES  = kmip.o kmip_memset.o kmip_bio.o
+LOFILES = kmip.lo kmip_memset.lo kmip_bio.lo
+
+all: demos tests $(LIBS)
 
 test: tests
 	$(SRCDIR)/tests
@@ -33,7 +39,7 @@ test: tests
 install: all
 	mkdir -p $(DESTDIR)$(PREFIX)/bin/$(KMIP)
 	mkdir -p $(DESTDIR)$(PREFIX)/include/$(KMIP)
-	mkdir -p $(DESTDIR)$(PREFIX)/lib/$(KMIP)
+	mkdir -p $(DESTDIR)$(PREFIX)/lib
 	mkdir -p $(DESTDIR)$(PREFIX)/src/$(KMIP)
 	mkdir -p $(DESTDIR)$(PREFIX)/share/doc/$(KMIP)/src
 	cp demo_create $(DESTDIR)$(PREFIX)/bin/$(KMIP)
@@ -41,6 +47,11 @@ install: all
 	cp demo_destroy $(DESTDIR)$(PREFIX)/bin/$(KMIP)
 	cp tests $(DESTDIR)$(PREFIX)/bin/$(KMIP)
 	cp -r $(SRCDIR)/docs/source/. $(DESTDIR)$(PREFIX)/share/doc/$(KMIP)/src
+	cp $(SRCDIR)/*.c $(DESTDIR)$(PREFIX)/src/$(KMIP)
+	cp $(SRCDIR)/*.h $(DESTDIR)$(PREFIX)/include/$(KMIP)
+	cp $(SRCDIR)/$(LIBNAME) $(DESTDIR)$(PREFIX)/lib
+	cp $(SRCDIR)/$(ARCNAME) $(DESTDIR)$(PREFIX)/lib
+	cd $(DESTDIR)$(PREFIX)/lib && ln -s $(LIBNAME) $(LINKNAME) && cd -
 
 install_html_docs: html_docs
 	mkdir -p $(DESTDIR)$(PREFIX)/share/doc/$(KMIP)/html
@@ -49,23 +60,24 @@ install_html_docs: html_docs
 uninstall:
 	rm -rf $(DESTDIR)$(PREFIX)/bin/$(KMIP)
 	rm -rf $(DESTDIR)$(PREFIX)/include/$(KMIP)
-	rm -rf $(DESTDIR)$(PREFIX)/lib/$(KMIP)
 	rm -rf $(DESTDIR)$(PREFIX)/src/$(KMIP)
 	rm -rf $(DESTDIR)$(PREFIX)/share/doc/$(KMIP)
+	rm -r $(DESTDIR)$(PREFIX)/lib/$(LINKNAME)*
+	rm -r $(DESTDIR)$(PREFIX)/lib/$(ARCNAME)
 
 uninstall_html_docs:
-	rm -rf $(DESTDIR)/$(PREFIX)/share/doc/$(KMIP)/html
+	rm -rf $(DESTDIR)$(PREFIX)/share/doc/$(KMIP)/html
 
-
+docs: html_docs
 html_docs:
-	cd docs && make html && cd ..
-demo: demo_create demo_get demo_destroy
-demo_get: demo_get.o kmip.o kmip_memset.o kmip_bio.o
-	$(CC) $(LDFLAGS) -o demo_get demo_get.o kmip.o kmip_memset.o kmip_bio.o $(LDLIBS)
-demo_create: demo_create.o kmip.o kmip_memset.o kmip_bio.o
-	$(CC) $(LDFLAGS) -o demo_create demo_create.o kmip.o kmip_memset.o kmip_bio.o $(LDLIBS)
-demo_destroy: demo_destroy.o kmip.o kmip_memset.o kmip_bio.o
-	$(CC) $(LDFLAGS) -o demo_destroy demo_destroy.o kmip.o kmip_memset.o kmip_bio.o $(LDLIBS)
+	cd $(SRCDIR)/docs && make html && cd -
+demos: demo_create demo_get demo_destroy
+demo_get: demo_get.o $(OFILES)
+	$(CC) $(LDFLAGS) -o demo_get $? $(LDLIBS)
+demo_create: demo_create.o $(OFILES)
+	$(CC) $(LDFLAGS) -o demo_create $? $(LDLIBS)
+demo_destroy: demo_destroy.o $(OFILES)
+	$(CC) $(LDFLAGS) -o demo_destroy $? $(LDLIBS)
 tests: tests.o kmip.o kmip_memset.o
 	$(CC) $(LDFLAGS) -o tests tests.o kmip.o kmip_memset.o
 
@@ -73,6 +85,10 @@ demo_get.o: demo_get.c kmip_memset.h kmip.h
 demo_create.o: demo_create.c kmip_memset.h kmip.h
 demo_destroy.o: demo_destroy.c kmip_memset.h kmip.h
 tests.o: tests.c kmip_memset.h kmip.h
+$(LIBNAME): $(LOFILES)
+	$(CC) $(CFLAGS) $(SOFLAGS) -o $@ $(LOFILES)
+$(ARCNAME): $(OFILES)
+	$(AR) $@ $(OFILES)
 
 kmip.o: kmip.c kmip.h kmip_memset.h
 kmip.lo: kmip.c kmip.h kmip_memset.h
@@ -88,13 +104,13 @@ clean:
 clean_html_docs:
 	cd docs && make clean && cd ..
 cleanest:
-	rm -f demo_create demo_get demo_destroy tests *.o *.lo
+	rm -f demo_create demo_get demo_destroy tests *.o $(LOFILES) $(LIBS)
 	cd docs && make clean && cd ..
 
 .SUFFIXES: .c .o .lo .so
 .c.o:
 	$(CC) $(CFLAGS) -c $<
 .c.lo:
-	$(CC) $(CFLAGS) $(LOFLAGS) -c $<
-.lo.so:
-	$(CC) $(CFLAGS) $(LOFALGS) -o $<
+	$(CC) $(CFLAGS) $(LOFLAGS) -c $< -o $@
+#.lo.so:
+#	$(CC) $(CFLAGS) $(SOFLAGS) -o $@ $?
