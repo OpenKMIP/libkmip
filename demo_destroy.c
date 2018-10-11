@@ -102,7 +102,7 @@ use_high_level_api(int argc, char **argv)
     {
         printf("The KMIP operation was executed with no errors.\n");
         printf("Result: ");
-        print_result_status_enum(result);
+        kmip_print_result_status_enum(result);
         printf(" (%d)\n", result);
     }
     
@@ -191,17 +191,17 @@ use_mid_level_api(int argc, char **argv)
         printf("An error occurred while deleting the object.");
         printf("Error Code: %d\n", result);
         printf("Error Name: ");
-        print_error_string(result);
+        kmip_print_error_string(result);
         printf("\n");
         printf("Context Error: %s\n", kmip_context.error_message);
         printf("Stack trace:\n");
-        print_stack_trace(&kmip_context);
+        kmip_print_stack_trace(&kmip_context);
     }
     else if(result >= 0)
     {
         printf("The KMIP operation was executed with no errors.\n");
         printf("Result: ");
-        print_result_status_enum(result);
+        kmip_print_result_status_enum(result);
         printf(" (%d)\n", result);
     }
     
@@ -298,10 +298,10 @@ use_low_level_api(int argc, char **argv)
     
     /* Build the request message. */
     ProtocolVersion pv = {0};
-    init_protocol_version(&pv, kmip_context.version);
+    kmip_init_protocol_version(&pv, kmip_context.version);
     
     RequestHeader rh = {0};
-    init_request_header(&rh);
+    kmip_init_request_header(&rh);
     
     rh.protocol_version = &pv;
     rh.maximum_response_size = kmip_context.max_message_size;
@@ -327,7 +327,7 @@ use_low_level_api(int argc, char **argv)
     /* Encode the request message. Dynamically resize the encoding buffer */
     /* if it's not big enough. Once encoding succeeds, send the request   */
     /* message.                                                           */
-    int encode_result = encode_request_message(&kmip_context, &rm);
+    int encode_result = kmip_encode_request_message(&kmip_context, &rm);
     while(encode_result == KMIP_ERROR_BUFFER_FULL)
     {
         kmip_reset(&kmip_context);
@@ -351,12 +351,12 @@ use_low_level_api(int argc, char **argv)
             &kmip_context,
             encoding,
             buffer_total_size);
-        encode_result = encode_request_message(&kmip_context, &rm);
+        encode_result = kmip_encode_request_message(&kmip_context, &rm);
     }
     
     if(encode_result != KMIP_OK)
     {
-        free_buffer(&kmip_context, encoding, buffer_total_size);
+        kmip_free_buffer(&kmip_context, encoding, buffer_total_size);
         encoding = NULL;
         kmip_set_buffer(&kmip_context, NULL, 0);
         kmip_destroy(&kmip_context);
@@ -365,7 +365,7 @@ use_low_level_api(int argc, char **argv)
         return(encode_result);
     }
     
-    print_request_message(&rm);
+    kmip_print_request_message(&rm);
     printf("\n");
     
     char *response = NULL;
@@ -384,14 +384,14 @@ use_low_level_api(int argc, char **argv)
         printf("An error occurred while destroying the object.");
         printf("Error Code: %d\n", result);
         printf("Error Name: ");
-        print_error_string(result);
+        kmip_print_error_string(result);
         printf("\n");
         printf("Context Error: %s\n", kmip_context.error_message);
         printf("Stack trace:\n");
-        print_stack_trace(&kmip_context);
+        kmip_print_stack_trace(&kmip_context);
         
-        free_buffer(&kmip_context, encoding, buffer_total_size);
-        free_buffer(&kmip_context, response, response_size);
+        kmip_free_buffer(&kmip_context, encoding, buffer_total_size);
+        kmip_free_buffer(&kmip_context, response, response_size);
         encoding = NULL;
         response = NULL;
         kmip_set_buffer(&kmip_context, NULL, 0);
@@ -399,31 +399,31 @@ use_low_level_api(int argc, char **argv)
         return(result);
     }
     
-    free_buffer(&kmip_context, encoding, buffer_total_size);
+    kmip_free_buffer(&kmip_context, encoding, buffer_total_size);
     encoding = NULL;
     kmip_set_buffer(&kmip_context, response, response_size);
     
     /* Decode the response message and retrieve the operation results. */
     ResponseMessage resp_m = {0};
-    int decode_result = decode_response_message(&kmip_context, &resp_m);
+    int decode_result = kmip_decode_response_message(&kmip_context, &resp_m);
     if(decode_result != KMIP_OK)
     {
-        free_response_message(&kmip_context, &resp_m);
-        free_buffer(&kmip_context, response, response_size);
+        kmip_free_response_message(&kmip_context, &resp_m);
+        kmip_free_buffer(&kmip_context, response, response_size);
         response = NULL;
         kmip_set_buffer(&kmip_context, NULL, 0);
         kmip_destroy(&kmip_context);
         return(decode_result);
     }
     
-    print_response_message(&resp_m);
+    kmip_print_response_message(&resp_m);
     printf("\n");
     
     enum result_status result_status = KMIP_STATUS_OPERATION_FAILED;
     if(resp_m.batch_count != 1 || resp_m.batch_items == NULL)
     {
-        free_response_message(&kmip_context, &resp_m);
-        free_buffer(&kmip_context, response, response_size);
+        kmip_free_response_message(&kmip_context, &resp_m);
+        kmip_free_buffer(&kmip_context, response, response_size);
         response = NULL;
         kmip_set_buffer(&kmip_context, NULL, 0);
         kmip_destroy(&kmip_context);
@@ -435,13 +435,13 @@ use_low_level_api(int argc, char **argv)
     
     printf("The KMIP operation was executed with no errors.\n");
     printf("Result: ");
-    print_result_status_enum(result_status);
+    kmip_print_result_status_enum(result_status);
     printf(" (%d)\n", result_status);
     
     /* Clean up the response message, the response buffer, and the KMIP */
     /* context.                                                         */
-    free_response_message(&kmip_context, &resp_m);
-    free_buffer(&kmip_context, response, response_size);
+    kmip_free_response_message(&kmip_context, &resp_m);
+    kmip_free_buffer(&kmip_context, response, response_size);
     response = NULL;
     kmip_set_buffer(&kmip_context, NULL, 0);
     kmip_destroy(&kmip_context);

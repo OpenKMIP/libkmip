@@ -45,15 +45,15 @@ kmip_strnlen_s(const char *str, size_t strsz)
     return(length);
 }
 
-struct linked_list_item *
-linked_list_pop(struct linked_list *list)
+LinkedListItem *
+kmip_linked_list_pop(LinkedList *list)
 {
     if(list == NULL)
     {
         return(NULL);
     }
     
-    struct linked_list_item *popped = list->head;
+    LinkedListItem *popped = list->head;
     
     if(popped != NULL)
     {
@@ -83,11 +83,11 @@ linked_list_pop(struct linked_list *list)
 }
 
 void
-linked_list_push(struct linked_list *list, struct linked_list_item *item)
+kmip_linked_list_push(LinkedList *list, LinkedListItem *item)
 {
     if(list != NULL && item != NULL)
     {
-        struct linked_list_item *head = list->head;
+        LinkedListItem *head = list->head;
         list->head = item;
         item->next = head;
         item->prev = NULL;
@@ -130,7 +130,7 @@ kmip_free(void *state, void *ptr)
 Enumeration Utilities
 */
 
-static const char *attribute_names[25] = {
+static const char *kmip_attribute_names[25] = {
     "Attestation Type",
     "BatchErrorContinuation Option",
     "BlockCipher Mode",
@@ -159,7 +159,7 @@ static const char *attribute_names[25] = {
 };
 
 int
-get_enum_string_index(enum tag t)
+kmip_get_enum_string_index(enum tag t)
 {
     switch(t)
     {
@@ -266,7 +266,7 @@ get_enum_string_index(enum tag t)
 }
 
 int
-check_enum_value(enum kmip_version version, enum tag t, int value)
+kmip_check_enum_value(enum kmip_version version, enum tag t, int value)
 {
     switch(t)
     {
@@ -952,11 +952,11 @@ Context Utilities
 */
 
 void
-kmip_clear_errors(struct kmip *ctx)
+kmip_clear_errors(KMIP *ctx)
 {
     for(size_t i = 0; i < ARRAY_LENGTH(ctx->errors); i++)
     {
-        ctx->errors[i] = (struct error_frame){0};
+        ctx->errors[i] = (ErrorFrame){0};
     }
     ctx->frame_index = ctx->errors;
     
@@ -968,8 +968,7 @@ kmip_clear_errors(struct kmip *ctx)
 }
 
 void
-kmip_init(struct kmip *ctx, uint8 *buffer, size_t buffer_size, 
-          enum kmip_version v)
+kmip_init(KMIP *ctx, uint8 *buffer, size_t buffer_size, enum kmip_version v)
 {
     ctx->buffer = buffer;
     ctx->index = ctx->buffer;
@@ -977,13 +976,21 @@ kmip_init(struct kmip *ctx, uint8 *buffer, size_t buffer_size,
     ctx->version = v;
     
     if(ctx->calloc_func == NULL)
+    {
         ctx->calloc_func = &kmip_calloc;
+    }
     if(ctx->realloc_func == NULL)
+    {
         ctx->realloc_func = &kmip_realloc;
+    }
     if(ctx->memset_func == NULL)
+    {
         ctx->memset_func = &kmip_memset;
+    }
     if(ctx->free_func == NULL)
+    {
         ctx->free_func = &kmip_free;
+    }
     
     ctx->max_message_size = 8192;
     ctx->error_message_size = 200;
@@ -991,37 +998,28 @@ kmip_init(struct kmip *ctx, uint8 *buffer, size_t buffer_size,
     
     ctx->error_frame_count = 20;
     
-    ctx->credential_list = ctx->calloc_func(
-        ctx->state,
-        1,
-        sizeof(struct linked_list));
+    ctx->credential_list = ctx->calloc_func(ctx->state, 1, sizeof(LinkedList));
     
     kmip_clear_errors(ctx);
 }
 
 void
-kmip_init_error_message(struct kmip *ctx)
+kmip_init_error_message(KMIP *ctx)
 {
     if(ctx->error_message == NULL)
     {
-        ctx->error_message = ctx->calloc_func(
-            ctx->state,
-            ctx->error_message_size,
-            sizeof(char));
+        ctx->error_message = ctx->calloc_func(ctx->state, ctx->error_message_size, sizeof(char));
     }
 }
 
 int
-kmip_add_credential(struct kmip *ctx, struct credential *cred)
+kmip_add_credential(KMIP *ctx, Credential *cred)
 {   
-    struct linked_list_item *item = ctx->calloc_func(
-        ctx->state,
-        1,
-        sizeof(struct linked_list_item));
+    LinkedListItem *item = ctx->calloc_func(ctx->state, 1, sizeof(LinkedListItem));
     if(item != NULL)
     {
         item->data = cred;
-        linked_list_push(ctx->credential_list, item);
+        kmip_linked_list_push(ctx->credential_list, item);
         return(KMIP_OK);
     }
     
@@ -1029,20 +1027,20 @@ kmip_add_credential(struct kmip *ctx, struct credential *cred)
 }
 
 void
-kmip_remove_credentials(struct kmip *ctx)
+kmip_remove_credentials(KMIP *ctx)
 {   
-    struct linked_list_item *item = linked_list_pop(ctx->credential_list);
+    LinkedListItem *item = kmip_linked_list_pop(ctx->credential_list);
     while(item != NULL)
     {
-        ctx->memset_func(item, 0, sizeof(struct linked_list_item));
+        ctx->memset_func(item, 0, sizeof(LinkedListItem));
         ctx->free_func(ctx->state, item);
         
-        item = linked_list_pop(ctx->credential_list);
+        item = kmip_linked_list_pop(ctx->credential_list);
     }
 }
 
 void
-kmip_reset(struct kmip *ctx)
+kmip_reset(KMIP *ctx)
 {
     if(ctx->buffer != NULL)
     {
@@ -1054,7 +1052,7 @@ kmip_reset(struct kmip *ctx)
 }
 
 void
-kmip_rewind(struct kmip *ctx)
+kmip_rewind(KMIP *ctx)
 {
     ctx->index = ctx->buffer;
     
@@ -1062,7 +1060,7 @@ kmip_rewind(struct kmip *ctx)
 }
 
 void
-kmip_set_buffer(struct kmip *ctx, void *buffer, size_t buffer_size)
+kmip_set_buffer(KMIP *ctx, void *buffer, size_t buffer_size)
 {
     /* TODO (ph) Add own_buffer if buffer == NULL? */
     ctx->buffer = (uint8 *)buffer;
@@ -1088,12 +1086,12 @@ kmip_destroy(KMIP *ctx)
 }
 
 void
-kmip_push_error_frame(struct kmip *ctx, const char *function, 
+kmip_push_error_frame(KMIP *ctx, const char *function, 
                       const int line)
 {
     for(size_t i = 0; i < 20; i++)
     {
-        struct error_frame *frame = &ctx->errors[i];
+        ErrorFrame *frame = &ctx->errors[i];
         if(frame->line == 0)
         {
             ctx->frame_index = frame;
@@ -1105,55 +1103,39 @@ kmip_push_error_frame(struct kmip *ctx, const char *function,
 }
 
 void
-set_enum_error_message(struct kmip *ctx, enum tag t, int value, int result)
+kmip_set_enum_error_message(KMIP *ctx, enum tag t, int value, int result)
 {
     switch(result)
     {
         /* TODO (ph) Update error message for KMIP version 2.0+ */
         case KMIP_INVALID_FOR_VERSION:
         kmip_init_error_message(ctx);
-        snprintf(
-            ctx->error_message,
-            ctx->error_message_size,
-            "KMIP 1.%d does not support %s enumeration value (%d)",
-            ctx->version,
-            attribute_names[get_enum_string_index(t)],
-            value);
+        snprintf(ctx->error_message, ctx->error_message_size, "KMIP 1.%d does not support %s enumeration value (%d)", ctx->version, kmip_attribute_names[kmip_get_enum_string_index(t)], value);
         break;
         
         default: /* KMIP_ENUM_MISMATCH */
         kmip_init_error_message(ctx);
-        snprintf(
-            ctx->error_message,
-            ctx->error_message_size,
-            "Invalid %s enumeration value (%d)",
-            attribute_names[get_enum_string_index(t)],
-            value);
+        snprintf(ctx->error_message, ctx->error_message_size, "Invalid %s enumeration value (%d)", kmip_attribute_names[kmip_get_enum_string_index(t)], value);
         break;
     };
 }
 
 void
-set_alloc_error_message(struct kmip *ctx, size_t size, const char *type)
+kmip_set_alloc_error_message(KMIP *ctx, size_t size, const char *type)
 {
     kmip_init_error_message(ctx);
-    snprintf(
-        ctx->error_message,
-        ctx->error_message_size,
-        "Could not allocate %zd bytes for a %s",
-        size,
-        type);
+    snprintf(ctx->error_message, ctx->error_message_size, "Could not allocate %zd bytes for a %s", size, type);
 }
 
 void
-set_error_message(struct kmip *ctx, const char *message)
+kmip_set_error_message(KMIP *ctx, const char *message)
 {
     kmip_init_error_message(ctx);
     snprintf(ctx->error_message, ctx->error_message_size, "%s", message);
 }
 
 int
-is_tag_next(const struct kmip *ctx, enum tag t)
+kmip_is_tag_next(const KMIP *ctx, enum tag t)
 {
     uint8 *index = ctx->index;
     
@@ -1177,7 +1159,7 @@ is_tag_next(const struct kmip *ctx, enum tag t)
 }
 
 int
-is_tag_type_next(const struct kmip *ctx, enum tag t, enum type s)
+kmip_is_tag_type_next(const KMIP *ctx, enum tag t, enum type s)
 {
     uint8 *index = ctx->index;
     
@@ -1202,7 +1184,7 @@ is_tag_type_next(const struct kmip *ctx, enum tag t, enum type s)
 }
 
 int
-get_num_items_next(struct kmip *ctx, enum tag t)
+kmip_get_num_items_next(KMIP *ctx, enum tag t)
 {
     int count = 0;
     
@@ -1211,7 +1193,7 @@ get_num_items_next(struct kmip *ctx, enum tag t)
     
     while((ctx->size - (ctx->index - ctx->buffer)) > 8)
     {
-        if(is_tag_next(ctx, t))
+        if(kmip_is_tag_next(ctx, t))
         {
             ctx->index += 4;
             
@@ -1247,7 +1229,7 @@ Initialization Functions
 */
 
 void
-init_protocol_version(struct protocol_version *value, enum kmip_version kmip_version)
+kmip_init_protocol_version(ProtocolVersion *value, enum kmip_version kmip_version)
 {
     switch(kmip_version)
     {
@@ -1280,7 +1262,7 @@ init_protocol_version(struct protocol_version *value, enum kmip_version kmip_ver
 }
 
 void
-init_attribute(struct attribute *value)
+kmip_init_attribute(Attribute *value)
 {
     value->type = 0;
     value->index = KMIP_UNSET;
@@ -1288,7 +1270,7 @@ init_attribute(struct attribute *value)
 }
 
 void
-init_cryptographic_parameters(struct cryptographic_parameters *value)
+kmip_init_cryptographic_parameters(CryptographicParameters *value)
 {
     value->block_cipher_mode = 0;
     value->padding_method = 0;
@@ -1313,7 +1295,7 @@ init_cryptographic_parameters(struct cryptographic_parameters *value)
 }
 
 void
-init_key_block(struct key_block *value)
+kmip_init_key_block(KeyBlock *value)
 {
     value->key_format_type = 0;
     value->key_compression_type = 0;
@@ -1325,7 +1307,7 @@ init_key_block(struct key_block *value)
 }
 
 void
-init_request_header(struct request_header *value)
+kmip_init_request_header(RequestHeader *value)
 {
     value->protocol_version = NULL;
     value->maximum_response_size = KMIP_UNSET;
@@ -1345,7 +1327,7 @@ init_request_header(struct request_header *value)
 }
 
 void
-init_response_header(struct response_header *value)
+kmip_init_response_header(ResponseHeader *value)
 {
     value->protocol_version = NULL;
     value->time_stamp = 0;
@@ -1364,7 +1346,7 @@ Printing Functions
 */
 
 void
-print_buffer(void *buffer, int size)
+kmip_print_buffer(void *buffer, int size)
 {
     uint8 *index = (uint8 *)buffer;
     for(int i = 0; i < size; i++)
@@ -1378,9 +1360,9 @@ print_buffer(void *buffer, int size)
 }
 
 void
-print_stack_trace(struct kmip *ctx)
+kmip_print_stack_trace(KMIP *ctx)
 {
-    struct error_frame *index = ctx->frame_index;
+    ErrorFrame *index = ctx->frame_index;
     do
     {
         printf("- %s @ line: %d\n", index->function, index->line);
@@ -1388,7 +1370,7 @@ print_stack_trace(struct kmip *ctx)
 }
 
 void
-print_error_string(int value)
+kmip_print_error_string(int value)
 {
     switch(value)
     {
@@ -1469,7 +1451,7 @@ print_error_string(int value)
 }
 
 void
-print_batch_error_continuation_option(enum batch_error_continuation_option value)
+kmip_print_batch_error_continuation_option(enum batch_error_continuation_option value)
 {
     if(value == 0)
     {
@@ -1498,7 +1480,7 @@ print_batch_error_continuation_option(enum batch_error_continuation_option value
 }
 
 void
-print_operation_enum(enum operation value)
+kmip_print_operation_enum(enum operation value)
 {
     if(value == 0)
     {
@@ -1527,7 +1509,7 @@ print_operation_enum(enum operation value)
 }
 
 void
-print_result_status_enum(enum result_status value)
+kmip_print_result_status_enum(enum result_status value)
 {
     switch(value)
     {
@@ -1554,7 +1536,7 @@ print_result_status_enum(enum result_status value)
 }
 
 void
-print_result_reason_enum(enum result_reason value)
+kmip_print_result_reason_enum(enum result_reason value)
 {
     if(value == 0)
     {
@@ -1671,7 +1653,7 @@ print_result_reason_enum(enum result_reason value)
 }
 
 void
-print_object_type_enum(enum object_type value)
+kmip_print_object_type_enum(enum object_type value)
 {
     if(value == 0)
     {
@@ -1724,7 +1706,7 @@ print_object_type_enum(enum object_type value)
 }
 
 void
-print_key_format_type_enum(enum key_format_type value)
+kmip_print_key_format_type_enum(enum key_format_type value)
 {
     if(value == 0)
     {
@@ -1829,7 +1811,7 @@ print_key_format_type_enum(enum key_format_type value)
 }
 
 void
-print_key_compression_type_enum(enum key_compression_type value)
+kmip_print_key_compression_type_enum(enum key_compression_type value)
 {
     if(value == 0)
     {
@@ -1862,7 +1844,7 @@ print_key_compression_type_enum(enum key_compression_type value)
 }
 
 void
-print_cryptographic_algorithm_enum(enum cryptographic_algorithm value)
+kmip_print_cryptographic_algorithm_enum(enum cryptographic_algorithm value)
 {
     if(value == 0)
     {
@@ -2039,7 +2021,7 @@ print_cryptographic_algorithm_enum(enum cryptographic_algorithm value)
 }
 
 void
-print_name_type_enum(enum name_type value)
+kmip_print_name_type_enum(enum name_type value)
 {
     if(value == 0)
     {
@@ -2064,7 +2046,7 @@ print_name_type_enum(enum name_type value)
 }
 
 void
-print_attribute_type_enum(enum attribute_type value)
+kmip_print_attribute_type_enum(enum attribute_type value)
 {
     if((int)value == KMIP_UNSET)
     {
@@ -2113,7 +2095,7 @@ print_attribute_type_enum(enum attribute_type value)
 }
 
 void
-print_state_enum(enum state value)
+kmip_print_state_enum(enum state value)
 {
     if(value == 0)
     {
@@ -2154,7 +2136,7 @@ print_state_enum(enum state value)
 }
 
 void
-print_block_cipher_mode_enum(enum block_cipher_mode value)
+kmip_print_block_cipher_mode_enum(enum block_cipher_mode value)
 {
     if(value == 0)
     {
@@ -2243,7 +2225,7 @@ print_block_cipher_mode_enum(enum block_cipher_mode value)
 }
 
 void
-print_padding_method_enum(enum padding_method value)
+kmip_print_padding_method_enum(enum padding_method value)
 {
     if(value == 0)
     {
@@ -2300,7 +2282,7 @@ print_padding_method_enum(enum padding_method value)
 }
 
 void
-print_hashing_algorithm_enum(enum hashing_algorithm value)
+kmip_print_hashing_algorithm_enum(enum hashing_algorithm value)
 {
     if(value == 0)
     {
@@ -2385,7 +2367,7 @@ print_hashing_algorithm_enum(enum hashing_algorithm value)
 }
 
 void
-print_key_role_type_enum(enum key_role_type value)
+kmip_print_key_role_type_enum(enum key_role_type value)
 {
     if(value == 0)
     {
@@ -2498,7 +2480,7 @@ print_key_role_type_enum(enum key_role_type value)
 }
 
 void
-print_digital_signature_algorithm_enum(enum digital_signature_algorithm value)
+kmip_print_digital_signature_algorithm_enum(enum digital_signature_algorithm value)
 {
     if(value == 0)
     {
@@ -2591,7 +2573,7 @@ print_digital_signature_algorithm_enum(enum digital_signature_algorithm value)
 }
 
 void
-print_mask_generator_enum(enum mask_generator value)
+kmip_print_mask_generator_enum(enum mask_generator value)
 {
     if(value == 0)
     {
@@ -2612,7 +2594,7 @@ print_mask_generator_enum(enum mask_generator value)
 }
 
 void
-print_wrapping_method_enum(enum wrapping_method value)
+kmip_print_wrapping_method_enum(enum wrapping_method value)
 {
     if(value == 0)
     {
@@ -2649,7 +2631,7 @@ print_wrapping_method_enum(enum wrapping_method value)
 }
 
 void
-print_encoding_option_enum(enum encoding_option value)
+kmip_print_encoding_option_enum(enum encoding_option value)
 {
     if(value == 0)
     {
@@ -2674,7 +2656,7 @@ print_encoding_option_enum(enum encoding_option value)
 }
 
 void
-print_key_wrap_type_enum(enum key_wrap_type value)
+kmip_print_key_wrap_type_enum(enum key_wrap_type value)
 {
     if(value == 0)
     {
@@ -2699,7 +2681,7 @@ print_key_wrap_type_enum(enum key_wrap_type value)
 }
 
 void
-print_credential_type_enum(enum credential_type value)
+kmip_print_credential_type_enum(enum credential_type value)
 {
     if(value == 0)
     {
@@ -2728,7 +2710,7 @@ print_credential_type_enum(enum credential_type value)
 }
 
 void
-print_cryptographic_usage_mask_enums(int indent, int32 value)
+kmip_print_cryptographic_usage_mask_enums(int indent, int32 value)
 {
     printf("\n");
     
@@ -2834,7 +2816,7 @@ print_cryptographic_usage_mask_enums(int indent, int32 value)
 }
 
 void
-print_integer(int32 value)
+kmip_print_integer(int32 value)
 {
     switch(value)
     {
@@ -2849,7 +2831,7 @@ print_integer(int32 value)
 }
 
 void
-print_bool(int32 value)
+kmip_print_bool(int32 value)
 {
     switch(value)
     {
@@ -2868,7 +2850,7 @@ print_bool(int32 value)
 }
 
 void
-print_text_string(int indent, const char *name, struct text_string *value)
+kmip_print_text_string(int indent, const char *name, TextString *value)
 {
     printf("%*s%s @ %p\n", indent, "", name, (void *)value);
     
@@ -2881,7 +2863,7 @@ print_text_string(int indent, const char *name, struct text_string *value)
 }
 
 void
-print_byte_string(int indent, const char *name, struct byte_string *value)
+kmip_print_byte_string(int indent, const char *name, ByteString *value)
 {
     printf("%*s%s @ %p\n", indent, "", name, (void *)value);
     
@@ -2903,7 +2885,7 @@ print_byte_string(int indent, const char *name, struct byte_string *value)
 }
 
 void
-print_protocol_version(int indent, struct protocol_version *value)
+kmip_print_protocol_version(int indent, ProtocolVersion *value)
 {
     printf("%*sProtocol Version @ %p\n", indent, "", (void *)value);
     
@@ -2917,160 +2899,160 @@ print_protocol_version(int indent, struct protocol_version *value)
 }
 
 void
-print_name(int indent, struct name *value)
+kmip_print_name(int indent, Name *value)
 {
     printf("%*sName @ %p\n", indent, "", (void *)value);
     
     if(value != NULL)
     {
-        print_text_string(indent + 2, "Name Value", value->value);
+        kmip_print_text_string(indent + 2, "Name Value", value->value);
         
         printf("%*sName Type: ", indent + 2, "");
-        print_name_type_enum(value->type);
+        kmip_print_name_type_enum(value->type);
         printf("\n");
     }
 }
 
 void
-print_nonce(int indent, struct nonce *value)
+kmip_print_nonce(int indent, Nonce *value)
 {
     printf("%*sNonce @ %p\n", indent, "", (void *)value);
     
     if(value != NULL)
     {
-        print_byte_string(indent + 2, "Nonce ID", value->nonce_id);
-        print_byte_string(indent + 2, "Nonce Value", value->nonce_value);
+        kmip_print_byte_string(indent + 2, "Nonce ID", value->nonce_id);
+        kmip_print_byte_string(indent + 2, "Nonce Value", value->nonce_value);
     }
     
     return;
 }
 
 void
-print_cryptographic_parameters(int indent, struct cryptographic_parameters *value)
+kmip_print_cryptographic_parameters(int indent, CryptographicParameters *value)
 {
     printf("%*sCryptographic Parameters @ %p\n", indent, "", (void *)value);
     
     if(value != NULL)
     {
         printf("%*sBlock Cipher Mode: ", indent + 2, "");
-        print_block_cipher_mode_enum(value->block_cipher_mode);
+        kmip_print_block_cipher_mode_enum(value->block_cipher_mode);
         printf("\n");
         
         printf("%*sPadding Method: ", indent + 2, "");
-        print_padding_method_enum(value->padding_method);
+        kmip_print_padding_method_enum(value->padding_method);
         printf("\n");
         
         printf("%*sHashing Algorithm: ", indent + 2, "");
-        print_hashing_algorithm_enum(value->hashing_algorithm);
+        kmip_print_hashing_algorithm_enum(value->hashing_algorithm);
         printf("\n");
         
         printf("%*sKey Role Type: ", indent + 2, "");
-        print_key_role_type_enum(value->key_role_type);
+        kmip_print_key_role_type_enum(value->key_role_type);
         printf("\n");
         
         printf("%*sDigital Signature Algorithm: ", indent + 2, "");
-        print_digital_signature_algorithm_enum(value->digital_signature_algorithm);
+        kmip_print_digital_signature_algorithm_enum(value->digital_signature_algorithm);
         printf("\n");
         
         printf("%*sCryptographic Algorithm: ", indent + 2, "");
-        print_cryptographic_algorithm_enum(value->cryptographic_algorithm);
+        kmip_print_cryptographic_algorithm_enum(value->cryptographic_algorithm);
         printf("\n");
         
         printf("%*sRandom IV: ", indent + 2, "");
-        print_bool(value->random_iv);
+        kmip_print_bool(value->random_iv);
         printf("\n");
         
         printf("%*sIV Length: ", indent + 2, "");
-        print_integer(value->iv_length);
+        kmip_print_integer(value->iv_length);
         printf("\n");
         
         printf("%*sTag Length: ", indent + 2, "");
-        print_integer(value->tag_length);
+        kmip_print_integer(value->tag_length);
         printf("\n");
         
         printf("%*sFixed Field Length: ", indent + 2, "");
-        print_integer(value->fixed_field_length);
+        kmip_print_integer(value->fixed_field_length);
         printf("\n");
         
         printf("%*sInvocation Field Length: ", indent + 2, "");
-        print_integer(value->invocation_field_length);
+        kmip_print_integer(value->invocation_field_length);
         printf("\n");
         
         printf("%*sCounter Length: ", indent + 2, "");
-        print_integer(value->counter_length);
+        kmip_print_integer(value->counter_length);
         printf("\n");
         
         printf("%*sInitial Counter Value: ", indent + 2, "");
-        print_integer(value->initial_counter_value);
+        kmip_print_integer(value->initial_counter_value);
         printf("\n");
         
         printf("%*sSalt Length: ", indent + 2, "");
-        print_integer(value->salt_length);
+        kmip_print_integer(value->salt_length);
         printf("\n");
         
         printf("%*sMask Generator: ", indent + 2, "");
-        print_mask_generator_enum(value->mask_generator);
+        kmip_print_mask_generator_enum(value->mask_generator);
         printf("\n");
         
         printf("%*sMask Generator Hashing Algorithm: ", indent + 2, "");
-        print_hashing_algorithm_enum(value->mask_generator_hashing_algorithm);
+        kmip_print_hashing_algorithm_enum(value->mask_generator_hashing_algorithm);
         printf("\n");
         
-        print_byte_string(indent + 2, "P Source", value->p_source);
+        kmip_print_byte_string(indent + 2, "P Source", value->p_source);
         
         printf("%*sTrailer Field: ", indent + 2, "");
-        print_integer(value->trailer_field);
+        kmip_print_integer(value->trailer_field);
         printf("\n");
     }
 }
 
 void
-print_encryption_key_information(int indent, struct encryption_key_information *value)
+kmip_print_encryption_key_information(int indent, EncryptionKeyInformation *value)
 {
     printf("%*sEncryption Key Information @ %p\n", indent, "", (void *)value);
     
     if(value != NULL)
     {
-        print_text_string(indent + 2, "Unique Identifier", value->unique_identifier);
+        kmip_print_text_string(indent + 2, "Unique Identifier", value->unique_identifier);
         
-        print_cryptographic_parameters(indent + 2, value->cryptographic_parameters);
+        kmip_print_cryptographic_parameters(indent + 2, value->cryptographic_parameters);
     }
 }
 
 void
-print_mac_signature_key_information(int indent, struct mac_signature_key_information *value)
+kmip_print_mac_signature_key_information(int indent, MACSignatureKeyInformation *value)
 {
     printf("%*sMAC/Signature Key Information @ %p\n", indent, "", (void *)value);
     
     if(value != NULL)
     {
-        print_text_string(indent + 2, "Unique Identifier", value->unique_identifier);
+        kmip_print_text_string(indent + 2, "Unique Identifier", value->unique_identifier);
         
-        print_cryptographic_parameters(indent + 2, value->cryptographic_parameters);
+        kmip_print_cryptographic_parameters(indent + 2, value->cryptographic_parameters);
     }
 }
 
 void
-print_key_wrapping_data(int indent, struct key_wrapping_data *value)
+kmip_print_key_wrapping_data(int indent, KeyWrappingData *value)
 {
     printf("%*sKey Wrapping Data @ %p\n", indent, "", (void *)value);
     
     if(value != NULL)
     {
         printf("%*sWrapping Method: ", indent + 2, "");
-        print_wrapping_method_enum(value->wrapping_method);
+        kmip_print_wrapping_method_enum(value->wrapping_method);
         printf("\n");
         
-        print_encryption_key_information(indent + 2, value->encryption_key_info);
+        kmip_print_encryption_key_information(indent + 2, value->encryption_key_info);
         
-        print_mac_signature_key_information(indent + 2, value->mac_signature_key_info);
+        kmip_print_mac_signature_key_information(indent + 2, value->mac_signature_key_info);
         
-        print_byte_string(indent + 2, "MAC/Signature", value->mac_signature);
+        kmip_print_byte_string(indent + 2, "MAC/Signature", value->mac_signature);
         
-        print_byte_string(indent + 2, "IV/Counter/Nonce", value->iv_counter_nonce);
+        kmip_print_byte_string(indent + 2, "IV/Counter/Nonce", value->iv_counter_nonce);
         
         printf("%*sEncoding Option: ", indent + 2, "");
-        print_encoding_option_enum(value->encoding_option);
+        kmip_print_encoding_option_enum(value->encoding_option);
         printf("\n");
     }
     
@@ -3078,7 +3060,7 @@ print_key_wrapping_data(int indent, struct key_wrapping_data *value)
 }
 
 void
-print_attribute_value(int indent, enum attribute_type type, void *value)
+kmip_print_attribute_value(int indent, enum attribute_type type, void *value)
 {
     printf("%*sAttribute Value: ", indent, "");
     
@@ -3086,21 +3068,21 @@ print_attribute_value(int indent, enum attribute_type type, void *value)
     {
         case KMIP_ATTR_UNIQUE_IDENTIFIER:
         printf("\n");
-        print_text_string(indent + 2, "Unique Identifier", value);
+        kmip_print_text_string(indent + 2, "Unique Identifier", value);
         break;
         
         case KMIP_ATTR_NAME:
         printf("\n");
-        print_name(indent + 2, value);
+        kmip_print_name(indent + 2, value);
         break;
         
         case KMIP_ATTR_OBJECT_TYPE:
-        print_object_type_enum(*(enum object_type *)value);
+        kmip_print_object_type_enum(*(enum object_type *)value);
         printf("\n");
         break;
         
         case KMIP_ATTR_CRYPTOGRAPHIC_ALGORITHM:
-        print_cryptographic_algorithm_enum(*(enum cryptographic_algorithm *)value);
+        kmip_print_cryptographic_algorithm_enum(*(enum cryptographic_algorithm *)value);
         printf("\n");
         break;
         
@@ -3110,15 +3092,15 @@ print_attribute_value(int indent, enum attribute_type type, void *value)
         
         case KMIP_ATTR_OPERATION_POLICY_NAME:
         printf("\n");
-        print_text_string(indent + 2, "Operation Policy Name", value);
+        kmip_print_text_string(indent + 2, "Operation Policy Name", value);
         break;
         
         case KMIP_ATTR_CRYPTOGRAPHIC_USAGE_MASK:
-        print_cryptographic_usage_mask_enums(indent + 2, *(int32 *)value);
+        kmip_print_cryptographic_usage_mask_enums(indent + 2, *(int32 *)value);
         break;
         
         case KMIP_ATTR_STATE:
-        print_state_enum(*(enum state *)value);
+        kmip_print_state_enum(*(enum state *)value);
         printf("\n");
         break;
         
@@ -3129,28 +3111,28 @@ print_attribute_value(int indent, enum attribute_type type, void *value)
 }
 
 void
-print_attribute(int indent, struct attribute *value)
+kmip_print_attribute(int indent, Attribute *value)
 {
     printf("%*sAttribute @ %p\n", indent, "", (void *)value);
     
     if(value != NULL)
     {
         printf("%*sAttribute Name: ", indent + 2, "");
-        print_attribute_type_enum(value->type);
+        kmip_print_attribute_type_enum(value->type);
         printf("\n");
         
         printf("%*sAttribute Index: ", indent + 2, "");
-        print_integer(value->index);
+        kmip_print_integer(value->index);
         printf("\n");
         
-        print_attribute_value(indent + 2, value->type, value->value);
+        kmip_print_attribute_value(indent + 2, value->type, value->value);
     }
     
     return;
 }
 
 void
-print_key_material(int indent, enum key_format_type format, void *value)
+kmip_print_key_material(int indent, enum key_format_type format, void *value)
 {
     switch(format)
     {
@@ -3160,7 +3142,7 @@ print_key_material(int indent, enum key_format_type format, void *value)
         case KMIP_KEYFORMAT_PKCS8:
         case KMIP_KEYFORMAT_X509:
         case KMIP_KEYFORMAT_EC_PRIVATE_KEY:
-        print_byte_string(indent, "Key Material", (struct byte_string *)value);
+        kmip_print_byte_string(indent, "Key Material", (ByteString *)value);
         break;
         
         default:
@@ -3170,12 +3152,12 @@ print_key_material(int indent, enum key_format_type format, void *value)
 }
 
 void
-print_key_value(int indent, enum type type, enum key_format_type format, void *value)
+kmip_print_key_value(int indent, enum type type, enum key_format_type format, void *value)
 {
     switch(type)
     {
         case KMIP_TYPE_BYTE_STRING:
-        print_byte_string(indent, "Key Value", (struct byte_string *)value);
+        kmip_print_byte_string(indent, "Key Value", (ByteString *)value);
         break;
         
         case KMIP_TYPE_STRUCTURE:
@@ -3183,12 +3165,12 @@ print_key_value(int indent, enum type type, enum key_format_type format, void *v
         
         if(value != NULL)
         {
-            struct key_value key_value = *(struct key_value *)value;
-            print_key_material(indent + 2, format, key_value.key_material);
+            KeyValue key_value = *(KeyValue *)value;
+            kmip_print_key_material(indent + 2, format, key_value.key_material);
             printf("%*sAttributes: %zu\n", indent + 2, "", key_value.attribute_count);
             for(size_t i = 0; i < key_value.attribute_count; i++)
             {
-                print_attribute(indent + 2, &key_value.attributes[i]);
+                kmip_print_attribute(indent + 2, &key_value.attributes[i]);
             }
         }
         break;
@@ -3200,54 +3182,54 @@ print_key_value(int indent, enum type type, enum key_format_type format, void *v
 }
 
 void
-print_key_block(int indent, struct key_block *value)
+kmip_print_key_block(int indent, KeyBlock *value)
 {
     printf("%*sKey Block @ %p\n", indent, "", (void *)value);
     
     if(value != NULL)
     {
         printf("%*sKey Format Type: ", indent + 2, "");
-        print_key_format_type_enum(value->key_format_type);
+        kmip_print_key_format_type_enum(value->key_format_type);
         printf("\n");
         
         printf("%*sKey Compression Type: ", indent + 2, "");
-        print_key_compression_type_enum(value->key_compression_type);
+        kmip_print_key_compression_type_enum(value->key_compression_type);
         printf("\n");
         
-        print_key_value(indent + 2, value->key_value_type, value->key_format_type, value->key_value);
+        kmip_print_key_value(indent + 2, value->key_value_type, value->key_format_type, value->key_value);
         
         printf("%*sCryptographic Algorithm: ", indent + 2, "");
-        print_cryptographic_algorithm_enum(value->cryptographic_algorithm);
+        kmip_print_cryptographic_algorithm_enum(value->cryptographic_algorithm);
         printf("\n");
         
         printf("%*sCryptographic Length: %d\n", indent + 2, "", value->cryptographic_length);
         
-        print_key_wrapping_data(indent + 2, value->key_wrapping_data);
+        kmip_print_key_wrapping_data(indent + 2, value->key_wrapping_data);
     }
     
     return;
 }
 
 void
-print_symmetric_key(int indent, struct symmetric_key *value)
+kmip_print_symmetric_key(int indent, SymmetricKey *value)
 {
     printf("%*sSymmetric Key @ %p\n", indent, "", (void *)value);
     
     if(value != NULL)
     {
-        print_key_block(indent + 2, value->key_block);
+        kmip_print_key_block(indent + 2, value->key_block);
     }
     
     return;
 }
 
 void
-print_object(int indent, enum object_type type, void *value)
+kmip_print_object(int indent, enum object_type type, void *value)
 {
     switch(type)
     {
         case KMIP_OBJTYPE_SYMMETRIC_KEY:
-        print_symmetric_key(indent, (struct symmetric_key *)value);
+        kmip_print_symmetric_key(indent, (SymmetricKey *)value);
         break;
         
         default:
@@ -3257,13 +3239,13 @@ print_object(int indent, enum object_type type, void *value)
 }
 
 void
-print_key_wrapping_specification(int indent, struct key_wrapping_specification *value)
+kmip_print_key_wrapping_specification(int indent, KeyWrappingSpecification *value)
 {
     printf("%*sKey Wrapping Specification @ %p\n", indent, "", (void *)value);
 }
 
 void
-print_template_attribute(int indent, struct template_attribute *value)
+kmip_print_template_attribute(int indent, TemplateAttribute *value)
 {
     printf("%*sTemplate Attribute @ %p\n", indent, "", (void *)value);
     
@@ -3272,106 +3254,106 @@ print_template_attribute(int indent, struct template_attribute *value)
         printf("%*sNames: %zu\n", indent + 2, "", value->name_count);
         for(size_t i = 0; i < value->name_count; i++)
         {
-            print_name(indent + 4, &value->names[i]);
+            kmip_print_name(indent + 4, &value->names[i]);
         }
         
         printf("%*sAttributes: %zu\n", indent + 2, "", value->attribute_count);
         for(size_t i = 0; i< value->attribute_count; i++)
         {
-            print_attribute(indent + 4, &value->attributes[i]);
+            kmip_print_attribute(indent + 4, &value->attributes[i]);
         }
     }
 }
 
 void
-print_create_request_payload(int indent, struct create_request_payload *value)
+kmip_print_create_request_payload(int indent, CreateRequestPayload *value)
 {
     printf("%*sCreate Request Payload @ %p\n", indent, "", (void *)value);
     
     if(value != NULL)
     {
         printf("%*sObject Type: ", indent + 2, "");
-        print_object_type_enum(value->object_type);
+        kmip_print_object_type_enum(value->object_type);
         printf("\n");
         
-        print_template_attribute(indent + 2, value->template_attribute);
+        kmip_print_template_attribute(indent + 2, value->template_attribute);
     }
 }
 
 void
-print_create_response_payload(int indent, struct create_response_payload *value)
+kmip_print_create_response_payload(int indent, CreateResponsePayload *value)
 {
     printf("%*sCreate Response Payload @ %p\n", indent, "", (void *)value);
     
     if(value != NULL)
     {
         printf("%*sObject Type: ", indent + 2, "");
-        print_object_type_enum(value->object_type);
+        kmip_print_object_type_enum(value->object_type);
         printf("\n");
         
-        print_text_string(
+        kmip_print_text_string(
             indent + 2,
             "Unique Identifier",
             value->unique_identifier);
         
-        print_template_attribute(indent + 2, value->template_attribute);
+        kmip_print_template_attribute(indent + 2, value->template_attribute);
     }
 }
 
 void
-print_get_request_payload(int indent, struct get_request_payload *value)
+kmip_print_get_request_payload(int indent, GetRequestPayload *value)
 {
     printf("%*sGet Request Payload @ %p\n", indent, "", (void *)value);
     
     if(value != NULL)
     {
-        print_text_string(
+        kmip_print_text_string(
             indent + 2,
             "Unique Identifier",
             value->unique_identifier);
         
         printf("%*sKey Format Type: ", indent + 2, "");
-        print_key_format_type_enum(value->key_format_type);
+        kmip_print_key_format_type_enum(value->key_format_type);
         printf("\n");
         
         printf("%*sKey Wrap Type: ", indent + 2, "");
-        print_key_wrap_type_enum(value->key_wrap_type);
+        kmip_print_key_wrap_type_enum(value->key_wrap_type);
         printf("\n");
         
         printf("%*sKey Compression Type: ", indent + 2, "");
-        print_key_compression_type_enum(value->key_compression_type);
+        kmip_print_key_compression_type_enum(value->key_compression_type);
         printf("\n");
         
-        print_key_wrapping_specification(indent + 2, value->key_wrapping_spec);
+        kmip_print_key_wrapping_specification(indent + 2, value->key_wrapping_spec);
     }
 }
 
 void
-print_get_response_payload(int indent, struct get_response_payload *value)
+kmip_print_get_response_payload(int indent, GetResponsePayload *value)
 {
     printf("%*sGet Response Payload @ %p\n", indent, "", (void *)value);
     
     if(value != NULL)
     {
         printf("%*sObject Type: ", indent + 2, "");
-        print_object_type_enum(value->object_type);
+        kmip_print_object_type_enum(value->object_type);
         printf("\n");
         
-        print_text_string(indent + 2, "Unique Identifier", value->unique_identifier);
-        print_object(indent + 2, value->object_type, value->object);
+        kmip_print_text_string(indent + 2, "Unique Identifier", value->unique_identifier);
+        kmip_print_object(indent + 2, value->object_type, value->object);
     }
     
     return;
 }
 
 void
-print_destroy_request_payload(int indent, struct destroy_request_payload *value)
+kmip_print_destroy_request_payload(int indent, DestroyRequestPayload *value)
 {
     printf("%*sDestroy Request Payload @ %p\n", indent, "", (void *)value);
     
     if(value != NULL)
     {
-        print_text_string(
+        kmip_print_text_string(
             indent + 2,
             "Unique Identifier",
             value->unique_identifier);
@@ -3379,13 +3361,13 @@ print_destroy_request_payload(int indent, struct destroy_request_payload *value)
 }
 
 void
-print_destroy_response_payload(int indent, struct destroy_response_payload *value)
+kmip_print_destroy_response_payload(int indent, DestroyResponsePayload *value)
 {
     printf("%*sDestroy Response Payload @ %p\n", indent, "", (void *)value);
 
     if(value != NULL)
     {
-        print_text_string(
+        kmip_print_text_string(
             indent + 2,
             "Unique Identifier",
             value->unique_identifier);
@@ -3393,20 +3375,20 @@ print_destroy_response_payload(int indent, struct destroy_response_payload *valu
 }
 
 void
-print_request_payload(int indent, enum operation type, void *value)
+kmip_print_request_payload(int indent, enum operation type, void *value)
 {
     switch(type)
     {
         case KMIP_OP_CREATE:
-        print_create_request_payload(indent, value);
+        kmip_print_create_request_payload(indent, value);
         break;
         
         case KMIP_OP_GET:
-        print_get_request_payload(indent, (struct get_request_payload *)value);
+        kmip_print_get_request_payload(indent, (GetRequestPayload *)value);
         break;
         
         case KMIP_OP_DESTROY:
-        print_destroy_request_payload(indent, value);
+        kmip_print_destroy_request_payload(indent, value);
         break;
         
         default:
@@ -3416,20 +3398,20 @@ print_request_payload(int indent, enum operation type, void *value)
 }
 
 void
-print_response_payload(int indent, enum operation type, void *value)
+kmip_print_response_payload(int indent, enum operation type, void *value)
 {
     switch(type)
     {
         case KMIP_OP_CREATE:
-        print_create_response_payload(indent, value);
+        kmip_print_create_response_payload(indent, value);
         break;
         
         case KMIP_OP_GET:
-        print_get_response_payload(indent, (struct get_response_payload *)value);
+        kmip_print_get_response_payload(indent, (GetResponsePayload *)value);
         break;
         
         case KMIP_OP_DESTROY:
-        print_destroy_response_payload(indent, value);
+        kmip_print_destroy_response_payload(indent, value);
         break;
         
         default:
@@ -3439,25 +3421,25 @@ print_response_payload(int indent, enum operation type, void *value)
 }
 
 void
-print_username_password_credential(int indent, struct username_password_credential *value)
+kmip_print_username_password_credential(int indent, UsernamePasswordCredential *value)
 {
     printf("%*sUsername/Password Credential @ %p\n", indent, "", (void *)value);
 }
 
 void
-print_device_credential(int indent, struct device_credential *value)
+kmip_print_device_credential(int indent, DeviceCredential *value)
 {
     printf("%*sDevice Credential @ %p\n", indent, "", (void *)value);
 }
 
 void
-print_attestation_credential(int indent, struct attestation_credential *value)
+kmip_print_attestation_credential(int indent, AttestationCredential *value)
 {
     printf("%*sAttestation Credential @ %p\n", indent, "", (void *)value);
 }
 
 void
-print_credential_value(int indent, enum credential_type type, void *value)
+kmip_print_credential_value(int indent, enum credential_type type, void *value)
 {
     printf("%*sCredential Value @ %p\n", indent, "", value);
     
@@ -3466,15 +3448,15 @@ print_credential_value(int indent, enum credential_type type, void *value)
         switch(type)
         {
             case KMIP_CRED_USERNAME_AND_PASSWORD:
-            print_username_password_credential(indent + 2, value);
+            kmip_print_username_password_credential(indent + 2, value);
             break;
             
             case KMIP_CRED_DEVICE:
-            print_device_credential(indent + 2, value);
+            kmip_print_device_credential(indent + 2, value);
             break;
             
             case KMIP_CRED_ATTESTATION:
-            print_attestation_credential(indent + 2, value);
+            kmip_print_attestation_credential(indent + 2, value);
             break;
             
             default:
@@ -3485,17 +3467,17 @@ print_credential_value(int indent, enum credential_type type, void *value)
 }
 
 void
-print_credential(int indent, struct credential *value)
+kmip_print_credential(int indent, Credential *value)
 {
     printf("%*sCredential @ %p\n", indent, "", (void *)value);
     
     if(value != NULL)
     {
         printf("%*sCredential Type: ", indent + 2, "");
-        print_credential_type_enum(value->credential_type);
+        kmip_print_credential_type_enum(value->credential_type);
         printf("\n");
         
-        print_credential_value(
+        kmip_print_credential_value(
             indent + 2,
             value->credential_type,
             value->credential_value);
@@ -3503,33 +3485,33 @@ print_credential(int indent, struct credential *value)
 }
 
 void
-print_authentication(int indent, struct authentication *value)
+kmip_print_authentication(int indent, Authentication *value)
 {
     printf("%*sAuthentication @ %p\n", indent, "", (void *)value);
     
     if(value != NULL)
     {
-        print_credential(indent + 2, value->credential);
+        kmip_print_credential(indent + 2, value->credential);
     }
 }
 
 void
-print_request_batch_item(int indent, struct request_batch_item *value)
+kmip_print_request_batch_item(int indent, RequestBatchItem *value)
 {
     printf("%*sRequest Batch Item @ %p\n", indent, "", (void *)value);
     
     if(value != NULL)
     {
         printf("%*sOperation: ", indent + 2, "");
-        print_operation_enum(value->operation);
+        kmip_print_operation_enum(value->operation);
         printf("\n");
         
-        print_byte_string(
+        kmip_print_byte_string(
             indent + 2,
             "Unique Batch Item ID",
             value->unique_batch_item_id);
         
-        print_request_payload(
+        kmip_print_request_payload(
             indent + 2,
             value->operation,
             value->request_payload);
@@ -3537,36 +3519,36 @@ print_request_batch_item(int indent, struct request_batch_item *value)
 }
 
 void
-print_response_batch_item(int indent, struct response_batch_item *value)
+kmip_print_response_batch_item(int indent, ResponseBatchItem *value)
 {
     printf("%*sResponse Batch Item @ %p\n", indent, "", (void *)value);
     
     if(value != NULL)
     {
         printf("%*sOperation: ", indent + 2, "");
-        print_operation_enum(value->operation);
+        kmip_print_operation_enum(value->operation);
         printf("\n");
         
-        print_byte_string(
+        kmip_print_byte_string(
             indent + 2,
             "Unique Batch Item ID",
             value->unique_batch_item_id);
         
         printf("%*sResult Status: ", indent + 2, "");
-        print_result_status_enum(value->result_status);
+        kmip_print_result_status_enum(value->result_status);
         printf("\n");
         
         printf("%*sResult Reason: ", indent + 2, "");
-        print_result_reason_enum(value->result_reason);
+        kmip_print_result_reason_enum(value->result_reason);
         printf("\n");
         
-        print_text_string(indent + 2, "Result Message", value->result_message);
-        print_byte_string(
+        kmip_print_text_string(indent + 2, "Result Message", value->result_message);
+        kmip_print_byte_string(
             indent + 2,
             "Asynchronous Correlation Value",
             value->asynchronous_correlation_value);
         
-        print_response_payload(
+        kmip_print_response_payload(
             indent + 2,
             value->operation,
             value->response_payload);
@@ -3576,31 +3558,31 @@ print_response_batch_item(int indent, struct response_batch_item *value)
 }
 
 void
-print_request_header(int indent, struct request_header *value)
+kmip_print_request_header(int indent, RequestHeader *value)
 {
     printf("%*sRequest Header @ %p\n", indent, "", (void *)value);
     
     if(value != NULL)
     {
-        print_protocol_version(indent + 2, value->protocol_version);
+        kmip_print_protocol_version(indent + 2, value->protocol_version);
         
         printf("%*sMaximum Response Size: ", indent + 2, "");
-        print_integer(value->maximum_response_size);
+        kmip_print_integer(value->maximum_response_size);
         printf("\n");
         
-        print_text_string(
+        kmip_print_text_string(
             indent + 2,
             "Client Correlation Value",
             value->client_correlation_value);
-        print_text_string(
+        kmip_print_text_string(
             indent + 2,
             "Server Correlation Value",
             value->server_correlation_value);
         printf("%*sAsynchronous Indicator: ", indent + 2, "");
-        print_bool(value->asynchronous_indicator);
+        kmip_print_bool(value->asynchronous_indicator);
         printf("\n");
         printf("%*sAttestation Capable Indicator: ", indent + 2, "");
-        print_bool(value->attestation_capable_indicator);
+        kmip_print_bool(value->attestation_capable_indicator);
         printf("\n");
         printf(
             "%*sAttestation Types: %zu\n",
@@ -3612,13 +3594,13 @@ print_request_header(int indent, struct request_header *value)
             /* TODO (ph) Add enum value -> string functionality. */
             printf("%*sAttestation Type: %s\n", indent + 4, "", "???");
         }
-        print_authentication(indent + 2, value->authentication);
+        kmip_print_authentication(indent + 2, value->authentication);
         printf("%*sBatch Error Continuation Option: ", indent + 2, "");
-        print_batch_error_continuation_option(
+        kmip_print_batch_error_continuation_option(
             value->batch_error_continuation_option);
         printf("\n");
         printf("%*sBatch Order Option: ", indent + 2, "");
-        print_bool(value->batch_order_option);
+        kmip_print_bool(value->batch_order_option);
         printf("\n");
         printf("%*sTime Stamp: %lu\n", indent + 2, "", value->time_stamp);
         printf("%*sBatch Count: %d\n", indent + 2, "", value->batch_count);
@@ -3626,15 +3608,15 @@ print_request_header(int indent, struct request_header *value)
 }
 
 void
-print_response_header(int indent, struct response_header *value)
+kmip_print_response_header(int indent, ResponseHeader *value)
 {
     printf("%*sResponse Header @ %p\n", indent, "", (void *)value);
     
     if(value != NULL)
     {
-        print_protocol_version(indent + 2, value->protocol_version);
+        kmip_print_protocol_version(indent + 2, value->protocol_version);
         printf("%*sTime Stamp: %lu\n", indent + 2, "", value->time_stamp);
-        print_nonce(indent + 2, value->nonce);
+        kmip_print_nonce(indent + 2, value->nonce);
         printf(
             "%*sAttestation Types: %zu\n",
             indent + 2,
@@ -3645,11 +3627,11 @@ print_response_header(int indent, struct response_header *value)
             /* TODO (ph) Add enum value -> string functionality. */
             printf("%*sAttestation Type: %s\n", indent + 4, "", "???");
         }
-        print_text_string(
+        kmip_print_text_string(
             indent + 2,
             "Client Correlation Value",
             value->client_correlation_value);
-        print_text_string(
+        kmip_print_text_string(
             indent + 2,
             "Server Correlation Value",
             value->server_correlation_value);
@@ -3658,18 +3640,18 @@ print_response_header(int indent, struct response_header *value)
 }
 
 void
-print_request_message(struct request_message *value)
+kmip_print_request_message(RequestMessage *value)
 {
     printf("Request Message @ %p\n", (void *)value);
     
     if(value != NULL)
     {
-        print_request_header(2, value->request_header);
+        kmip_print_request_header(2, value->request_header);
         printf("%*sBatch Items: %zu\n", 2, "", value->batch_count);
         
         for(size_t i = 0; i < value->batch_count; i++)
         {
-            print_request_batch_item(4, &value->batch_items[i]);
+            kmip_print_request_batch_item(4, &value->batch_items[i]);
         }
     }
     
@@ -3677,18 +3659,18 @@ print_request_message(struct request_message *value)
 }
 
 void
-print_response_message(struct response_message *value)
+kmip_print_response_message(ResponseMessage *value)
 {
     printf("Response Message @ %p\n", (void *)value);
     
     if(value != NULL)
     {
-        print_response_header(2, value->response_header);
+        kmip_print_response_header(2, value->response_header);
         printf("  Batch Items: %zu\n", value->batch_count);
         
         for(size_t i = 0; i < value->batch_count; i++)
         {
-            print_response_batch_item(4, &value->batch_items[i]);
+            kmip_print_response_batch_item(4, &value->batch_items[i]);
         }
     }
     
@@ -3700,14 +3682,14 @@ Freeing Functions
 */
 
 void
-free_buffer(struct kmip *ctx, void *buffer, size_t size)
+kmip_free_buffer(KMIP *ctx, void *buffer, size_t size)
 {
     ctx->memset_func(buffer, 0, size);
     ctx->free_func(ctx->state, buffer);
 }
 
 void
-free_text_string(struct kmip *ctx, struct text_string *value)
+kmip_free_text_string(KMIP *ctx, TextString *value)
 {
     if(value != NULL)
     {
@@ -3726,7 +3708,7 @@ free_text_string(struct kmip *ctx, struct text_string *value)
 }
 
 void
-free_byte_string(struct kmip *ctx, struct byte_string *value)
+kmip_free_byte_string(KMIP *ctx, ByteString *value)
 {
     if(value != NULL)
     {
@@ -3745,13 +3727,13 @@ free_byte_string(struct kmip *ctx, struct byte_string *value)
 }
 
 void
-free_name(struct kmip *ctx, struct name *value)
+kmip_free_name(KMIP *ctx, Name *value)
 {
     if(value != NULL)
     {
         if(value->value != NULL)
         {
-            free_text_string(ctx, value->value);
+            kmip_free_text_string(ctx, value->value);
             ctx->free_func(ctx->state, value->value);
             
             value->value = NULL;
@@ -3764,7 +3746,7 @@ free_name(struct kmip *ctx, struct name *value)
 }
 
 void
-free_attribute(struct kmip *ctx, struct attribute *value)
+kmip_free_attribute(KMIP *ctx, Attribute *value)
 {
     if(value != NULL)
     {
@@ -3773,11 +3755,11 @@ free_attribute(struct kmip *ctx, struct attribute *value)
             switch(value->type)
             {
                 case KMIP_ATTR_UNIQUE_IDENTIFIER:
-                free_text_string(ctx, value->value);
+                kmip_free_text_string(ctx, value->value);
                 break;
                 
                 case KMIP_ATTR_NAME:
-                free_name(ctx, value->value);
+                kmip_free_name(ctx, value->value);
                 break;
                 
                 case KMIP_ATTR_OBJECT_TYPE:
@@ -3793,7 +3775,7 @@ free_attribute(struct kmip *ctx, struct attribute *value)
                 break;
                 
                 case KMIP_ATTR_OPERATION_POLICY_NAME:
-                free_text_string(ctx, value->value);
+                kmip_free_text_string(ctx, value->value);
                 break;
                 
                 case KMIP_ATTR_CRYPTOGRAPHIC_USAGE_MASK:
@@ -3827,7 +3809,7 @@ free_attribute(struct kmip *ctx, struct attribute *value)
 }
 
 void
-free_template_attribute(struct kmip *ctx, struct template_attribute *value)
+kmip_free_template_attribute(KMIP *ctx, TemplateAttribute *value)
 {
     if(value != NULL)
     {
@@ -3835,7 +3817,7 @@ free_template_attribute(struct kmip *ctx, struct template_attribute *value)
         {
             for(size_t i = 0; i < value->name_count; i++)
             {
-                free_name(ctx, &value->names[i]);
+                kmip_free_name(ctx, &value->names[i]);
             }
             ctx->free_func(ctx->state, value->names);
             
@@ -3848,7 +3830,7 @@ free_template_attribute(struct kmip *ctx, struct template_attribute *value)
         {
             for(size_t i = 0; i < value->attribute_count; i++)
             {
-                free_attribute(ctx, &value->attributes[i]);
+                kmip_free_attribute(ctx, &value->attributes[i]);
             }
             ctx->free_func(ctx->state, value->attributes);
             
@@ -3862,14 +3844,13 @@ free_template_attribute(struct kmip *ctx, struct template_attribute *value)
 }
 
 void
-free_transparent_symmetric_key(struct kmip *ctx, 
-                               struct transparent_symmetric_key *value)
+kmip_free_transparent_symmetric_key(KMIP *ctx, TransparentSymmetricKey *value)
 {
     if(value != NULL)
     {
         if(value->key != NULL)
         {
-            free_byte_string(ctx, value->key);
+            kmip_free_byte_string(ctx, value->key);
             
             ctx->free_func(ctx->state, value->key);
             value->key = NULL;
@@ -3880,9 +3861,7 @@ free_transparent_symmetric_key(struct kmip *ctx,
 }
 
 void
-free_key_material(struct kmip *ctx,
-                  enum key_format_type format,
-                  void **value)
+kmip_free_key_material(KMIP *ctx, enum key_format_type format, void **value)
 {
     if(value != NULL)
     {
@@ -3896,11 +3875,11 @@ free_key_material(struct kmip *ctx,
                 case KMIP_KEYFORMAT_PKCS8:
                 case KMIP_KEYFORMAT_X509:
                 case KMIP_KEYFORMAT_EC_PRIVATE_KEY:
-                free_byte_string(ctx, *value);
+                kmip_free_byte_string(ctx, *value);
                 break;
                 
                 case KMIP_KEYFORMAT_TRANS_SYMMETRIC_KEY:
-                free_transparent_symmetric_key(ctx, *value);
+                kmip_free_transparent_symmetric_key(ctx, *value);
                 break;
                 
                 default:
@@ -3923,15 +3902,13 @@ free_key_material(struct kmip *ctx,
 }
 
 void
-free_key_value(struct kmip *ctx,
-               enum key_format_type format,
-               struct key_value *value)
+kmip_free_key_value(KMIP *ctx, enum key_format_type format, KeyValue *value)
 {
     if(value != NULL)
     {
         if(value->key_material != NULL)
         {
-            free_key_material(ctx, format, &value->key_material);
+            kmip_free_key_material(ctx, format, &value->key_material);
             value->key_material = NULL;
         }
         
@@ -3939,7 +3916,7 @@ free_key_value(struct kmip *ctx,
         {
             for(size_t i = 0; i < value->attribute_count; i++)
             {
-                free_attribute(ctx, &value->attributes[i]);
+                kmip_free_attribute(ctx, &value->attributes[i]);
             }
             ctx->free_func(ctx->state, value->attributes);
             
@@ -3953,34 +3930,32 @@ free_key_value(struct kmip *ctx,
 }
 
 void
-free_cryptographic_parameters(struct kmip *ctx,
-                              struct cryptographic_parameters *value)
+kmip_free_cryptographic_parameters(KMIP *ctx, CryptographicParameters *value)
 {
     if(value != NULL)
     {
         if(value->p_source != NULL)
         {
-            free_byte_string(ctx, value->p_source);
+            kmip_free_byte_string(ctx, value->p_source);
             
             ctx->free_func(ctx->state, value->p_source);
             value->p_source = NULL;
         }
         
-        init_cryptographic_parameters(value);
+        kmip_init_cryptographic_parameters(value);
     }
     
     return;
 }
 
 void
-free_encryption_key_information(struct kmip *ctx,
-                                struct encryption_key_information *value)
+kmip_free_encryption_key_information(KMIP *ctx, EncryptionKeyInformation *value)
 {
     if(value != NULL)
     {
         if(value->unique_identifier != NULL)
         {
-            free_text_string(ctx, value->unique_identifier);
+            kmip_free_text_string(ctx, value->unique_identifier);
             
             ctx->free_func(ctx->state, value->unique_identifier);
             value->unique_identifier = NULL;
@@ -3988,7 +3963,7 @@ free_encryption_key_information(struct kmip *ctx,
         
         if(value->cryptographic_parameters != NULL)
         {
-            free_cryptographic_parameters(ctx, value->cryptographic_parameters);
+            kmip_free_cryptographic_parameters(ctx, value->cryptographic_parameters);
             
             ctx->free_func(ctx->state, value->cryptographic_parameters);
             value->cryptographic_parameters = NULL;
@@ -3999,14 +3974,13 @@ free_encryption_key_information(struct kmip *ctx,
 }
 
 void
-free_mac_signature_key_information(struct kmip *ctx,
-                                   struct mac_signature_key_information *value)
+kmip_free_mac_signature_key_information(KMIP *ctx, MACSignatureKeyInformation *value)
 {
     if(value != NULL)
     {
         if(value->unique_identifier != NULL)
         {
-            free_text_string(ctx, value->unique_identifier);
+            kmip_free_text_string(ctx, value->unique_identifier);
             
             ctx->free_func(ctx->state, value->unique_identifier);
             value->unique_identifier = NULL;
@@ -4014,7 +3988,7 @@ free_mac_signature_key_information(struct kmip *ctx,
         
         if(value->cryptographic_parameters != NULL)
         {
-            free_cryptographic_parameters(ctx, value->cryptographic_parameters);
+            kmip_free_cryptographic_parameters(ctx, value->cryptographic_parameters);
             
             ctx->free_func(ctx->state, value->cryptographic_parameters);
             value->cryptographic_parameters = NULL;
@@ -4025,14 +3999,13 @@ free_mac_signature_key_information(struct kmip *ctx,
 }
 
 void
-free_key_wrapping_data(struct kmip *ctx,
-                       struct key_wrapping_data *value)
+kmip_free_key_wrapping_data(KMIP *ctx, KeyWrappingData *value)
 {
     if(value != NULL)
     {
         if(value->encryption_key_info != NULL)
         {
-            free_encryption_key_information(ctx, value->encryption_key_info);
+            kmip_free_encryption_key_information(ctx, value->encryption_key_info);
             
             ctx->free_func(ctx->state, value->encryption_key_info);
             value->encryption_key_info = NULL;
@@ -4040,7 +4013,7 @@ free_key_wrapping_data(struct kmip *ctx,
         
         if(value->mac_signature_key_info != NULL)
         {
-            free_mac_signature_key_information(ctx, value->mac_signature_key_info);
+            kmip_free_mac_signature_key_information(ctx, value->mac_signature_key_info);
             
             ctx->free_func(ctx->state, value->mac_signature_key_info);
             value->mac_signature_key_info = NULL;
@@ -4048,7 +4021,7 @@ free_key_wrapping_data(struct kmip *ctx,
         
         if(value->mac_signature != NULL)
         {
-            free_byte_string(ctx, value->mac_signature);
+            kmip_free_byte_string(ctx, value->mac_signature);
             
             ctx->free_func(ctx->state, value->mac_signature);
             value->mac_signature = NULL;
@@ -4056,7 +4029,7 @@ free_key_wrapping_data(struct kmip *ctx,
         
         if(value->iv_counter_nonce != NULL)
         {
-            free_byte_string(ctx, value->iv_counter_nonce);
+            kmip_free_byte_string(ctx, value->iv_counter_nonce);
             
             ctx->free_func(ctx->state, value->iv_counter_nonce);
             value->iv_counter_nonce = NULL;
@@ -4070,7 +4043,7 @@ free_key_wrapping_data(struct kmip *ctx,
 }
 
 void
-free_key_block(struct kmip *ctx, struct key_block *value)
+kmip_free_key_block(KMIP *ctx, KeyBlock *value)
 {
     if(value != NULL)
     {
@@ -4078,12 +4051,12 @@ free_key_block(struct kmip *ctx, struct key_block *value)
         {
             if(value->key_value_type == KMIP_TYPE_BYTE_STRING)
             {
-                free_byte_string(ctx, value->key_value);
+                kmip_free_byte_string(ctx, value->key_value);
                 ctx->free_func(ctx->state, value->key_value);
             }
             else
             {
-                free_key_value(ctx, value->key_format_type, value->key_value);
+                kmip_free_key_value(ctx, value->key_format_type, value->key_value);
                 ctx->free_func(ctx->state, value->key_value);
             }
             value->key_value = NULL;
@@ -4091,25 +4064,25 @@ free_key_block(struct kmip *ctx, struct key_block *value)
         
         if(value->key_wrapping_data != NULL)
         {
-            free_key_wrapping_data(ctx, value->key_wrapping_data);
+            kmip_free_key_wrapping_data(ctx, value->key_wrapping_data);
             ctx->free_func(ctx->state, value->key_wrapping_data);
             value->key_wrapping_data = NULL;
         }
         
-        init_key_block(value);
+        kmip_init_key_block(value);
     }
     
     return;
 }
 
 void
-free_symmetric_key(struct kmip *ctx, struct symmetric_key *value)
+kmip_free_symmetric_key(KMIP *ctx, SymmetricKey *value)
 {
     if(value != NULL)
     {
         if(value->key_block != NULL)
         {
-            free_key_block(ctx, value->key_block);
+            kmip_free_key_block(ctx, value->key_block);
             ctx->free_func(ctx->state, value->key_block);
             value->key_block = NULL;
         }
@@ -4119,13 +4092,13 @@ free_symmetric_key(struct kmip *ctx, struct symmetric_key *value)
 }
 
 void
-free_public_key(struct kmip *ctx, struct public_key *value)
+kmip_free_public_key(KMIP *ctx, PublicKey *value)
 {
     if(value != NULL)
     {
         if(value->key_block != NULL)
         {
-            free_key_block(ctx, value->key_block);
+            kmip_free_key_block(ctx, value->key_block);
             ctx->free_func(ctx->state, value->key_block);
             value->key_block = NULL;
         }
@@ -4135,13 +4108,13 @@ free_public_key(struct kmip *ctx, struct public_key *value)
 }
 
 void
-free_private_key(struct kmip *ctx, struct private_key *value)
+kmip_free_private_key(KMIP *ctx, PrivateKey *value)
 {
     if(value != NULL)
     {
         if(value->key_block != NULL)
         {
-            free_key_block(ctx, value->key_block);
+            kmip_free_key_block(ctx, value->key_block);
             ctx->free_func(ctx->state, value->key_block);
             value->key_block = NULL;
         }
@@ -4151,23 +4124,20 @@ free_private_key(struct kmip *ctx, struct private_key *value)
 }
 
 void
-free_key_wrapping_specification(struct kmip *ctx,
-                                struct key_wrapping_specification *value)
+kmip_free_key_wrapping_specification(KMIP *ctx, KeyWrappingSpecification *value)
 {
     if(value != NULL)
     {
         if(value->encryption_key_info != NULL)
         {
-            free_encryption_key_information(ctx, value->encryption_key_info);
+            kmip_free_encryption_key_information(ctx, value->encryption_key_info);
             ctx->free_func(ctx->state, value->encryption_key_info);
             value->encryption_key_info = NULL;
         }
         
         if(value->mac_signature_key_info != NULL)
         {
-            free_mac_signature_key_information(
-                ctx,
-                value->mac_signature_key_info);
+            kmip_free_mac_signature_key_information(ctx, value->mac_signature_key_info);
             ctx->free_func(ctx->state, value->mac_signature_key_info);
             value->mac_signature_key_info = NULL;
         }
@@ -4176,7 +4146,7 @@ free_key_wrapping_specification(struct kmip *ctx,
         {
             for(size_t i = 0; i < value->attribute_name_count; i++)
             {
-                free_text_string(ctx, &value->attribute_names[i]);
+                kmip_free_text_string(ctx, &value->attribute_names[i]);
             }
             ctx->free_func(ctx->state, value->attribute_names);
             value->attribute_names = NULL;
@@ -4191,14 +4161,13 @@ free_key_wrapping_specification(struct kmip *ctx,
 }
 
 void
-free_create_request_payload(struct kmip *ctx,
-                            struct create_request_payload *value)
+kmip_free_create_request_payload(KMIP *ctx, CreateRequestPayload *value)
 {
     if(value != NULL)
     {
         if(value->template_attribute != NULL)
         {
-            free_template_attribute(ctx, value->template_attribute);
+            kmip_free_template_attribute(ctx, value->template_attribute);
             ctx->free_func(ctx->state, value->template_attribute);
             value->template_attribute = NULL;
         }
@@ -4210,21 +4179,20 @@ free_create_request_payload(struct kmip *ctx,
 }
 
 void
-free_create_response_payload(struct kmip *ctx,
-                             struct create_response_payload *value)
+kmip_free_create_response_payload(KMIP *ctx, CreateResponsePayload *value)
 {
     if(value != NULL)
     {
         if(value->unique_identifier != NULL)
         {
-            free_text_string(ctx, value->unique_identifier);
+            kmip_free_text_string(ctx, value->unique_identifier);
             ctx->free_func(ctx->state, value->unique_identifier);
             value->unique_identifier = NULL;
         }
         
         if(value->template_attribute != NULL)
         {
-            free_template_attribute(ctx, value->template_attribute);
+            kmip_free_template_attribute(ctx, value->template_attribute);
             ctx->free_func(ctx->state, value->template_attribute);
             value->template_attribute = NULL;
         }
@@ -4236,21 +4204,20 @@ free_create_response_payload(struct kmip *ctx,
 }
 
 void
-free_get_request_payload(struct kmip *ctx,
-                         struct get_request_payload *value)
+kmip_free_get_request_payload(KMIP *ctx, GetRequestPayload *value)
 {
     if(value != NULL)
     {
         if(value->unique_identifier != NULL)
         {
-            free_text_string(ctx, value->unique_identifier);
+            kmip_free_text_string(ctx, value->unique_identifier);
             ctx->free_func(ctx->state, value->unique_identifier);
             value->unique_identifier = NULL;
         }
         
         if(value->key_wrapping_spec != NULL)
         {
-            free_key_wrapping_specification(ctx, value->key_wrapping_spec);
+            kmip_free_key_wrapping_specification(ctx, value->key_wrapping_spec);
             ctx->free_func(ctx->state, value->key_wrapping_spec);
             value->key_wrapping_spec = NULL;
         }
@@ -4264,14 +4231,13 @@ free_get_request_payload(struct kmip *ctx,
 }
 
 void
-free_get_response_payload(struct kmip *ctx,
-                          struct get_response_payload *value)
+kmip_free_get_response_payload(KMIP *ctx, GetResponsePayload *value)
 {
     if(value != NULL)
     {
         if(value->unique_identifier != NULL)
         {
-            free_text_string(ctx, value->unique_identifier);
+            kmip_free_text_string(ctx, value->unique_identifier);
             ctx->free_func(ctx->state, value->unique_identifier);
             value->unique_identifier = NULL;
         }
@@ -4281,15 +4247,15 @@ free_get_response_payload(struct kmip *ctx,
             switch(value->object_type)
             {
                 case KMIP_OBJTYPE_SYMMETRIC_KEY:
-                free_symmetric_key(ctx, (struct symmetric_key *)value->object);
+                kmip_free_symmetric_key(ctx, (SymmetricKey *)value->object);
                 break;
                 
                 case KMIP_OBJTYPE_PUBLIC_KEY:
-                free_public_key(ctx, (struct public_key *)value->object);
+                kmip_free_public_key(ctx, (PublicKey *)value->object);
                 break;
                 
                 case KMIP_OBJTYPE_PRIVATE_KEY:
-                free_private_key(ctx, (struct private_key *)value->object);
+                kmip_free_private_key(ctx, (PrivateKey *)value->object);
                 break;
                 
                 default:
@@ -4315,14 +4281,13 @@ free_get_response_payload(struct kmip *ctx,
 }
 
 void
-free_destroy_request_payload(struct kmip *ctx,
-                             struct destroy_request_payload *value)
+kmip_free_destroy_request_payload(KMIP *ctx, DestroyRequestPayload *value)
 {
     if(value != NULL)
     {
         if(value->unique_identifier != NULL)
         {
-            free_text_string(ctx, value->unique_identifier);
+            kmip_free_text_string(ctx, value->unique_identifier);
             ctx->free_func(ctx->state, value->unique_identifier);
             value->unique_identifier = NULL;
         }
@@ -4332,14 +4297,13 @@ free_destroy_request_payload(struct kmip *ctx,
 }
 
 void
-free_destroy_response_payload(struct kmip *ctx,
-                              struct destroy_response_payload *value)
+kmip_free_destroy_response_payload(KMIP *ctx, DestroyResponsePayload *value)
 {
     if(value != NULL)
     {
         if(value->unique_identifier != NULL)
         {
-            free_text_string(ctx, value->unique_identifier);
+            kmip_free_text_string(ctx, value->unique_identifier);
             ctx->free_func(ctx->state, value->unique_identifier);
             value->unique_identifier = NULL;
         }
@@ -4349,13 +4313,13 @@ free_destroy_response_payload(struct kmip *ctx,
 }
 
 void
-free_request_batch_item(struct kmip *ctx, struct request_batch_item *value)
+kmip_free_request_batch_item(KMIP *ctx, RequestBatchItem *value)
 {
     if(value != NULL)
     {
         if(value->unique_batch_item_id != NULL)
         {
-            free_byte_string(ctx, value->unique_batch_item_id);
+            kmip_free_byte_string(ctx, value->unique_batch_item_id);
             ctx->free_func(ctx->state, value->unique_batch_item_id);
             value->unique_batch_item_id = NULL;
         }
@@ -4365,21 +4329,15 @@ free_request_batch_item(struct kmip *ctx, struct request_batch_item *value)
             switch(value->operation)
             {
                 case KMIP_OP_CREATE:
-                free_create_request_payload(
-                    ctx,
-                    (struct create_request_payload *)value->request_payload);
+                kmip_free_create_request_payload(ctx, (CreateRequestPayload *)value->request_payload);
                 break;
                 
                 case KMIP_OP_GET:
-                free_get_request_payload(
-                    ctx,
-                    (struct get_request_payload *)value->request_payload);
+                kmip_free_get_request_payload(ctx, (GetRequestPayload *)value->request_payload);
                 break;
                 
                 case KMIP_OP_DESTROY:
-                free_destroy_request_payload(
-                    ctx,
-                    (struct destroy_request_payload *)value->request_payload);
+                kmip_free_destroy_request_payload(ctx, (DestroyRequestPayload *)value->request_payload);
                 break;
                 
                 default:
@@ -4405,27 +4363,27 @@ free_request_batch_item(struct kmip *ctx, struct request_batch_item *value)
 }
 
 void
-free_response_batch_item(struct kmip *ctx, struct response_batch_item *value)
+kmip_free_response_batch_item(KMIP *ctx, ResponseBatchItem *value)
 {
     if(value != NULL)
     {
         if(value->unique_batch_item_id != NULL)
         {
-            free_byte_string(ctx, value->unique_batch_item_id);
+            kmip_free_byte_string(ctx, value->unique_batch_item_id);
             ctx->free_func(ctx->state, value->unique_batch_item_id);
             value->unique_batch_item_id = NULL;
         }
         
         if(value->result_message != NULL)
         {
-            free_text_string(ctx, value->result_message);
+            kmip_free_text_string(ctx, value->result_message);
             ctx->free_func(ctx->state, value->result_message);
             value->result_message = NULL;
         }
         
         if(value->asynchronous_correlation_value != NULL)
         {
-            free_byte_string(ctx, value->asynchronous_correlation_value);
+            kmip_free_byte_string(ctx, value->asynchronous_correlation_value);
             ctx->free_func(ctx->state, value->asynchronous_correlation_value);
             value->asynchronous_correlation_value = NULL;
         }
@@ -4435,21 +4393,15 @@ free_response_batch_item(struct kmip *ctx, struct response_batch_item *value)
             switch(value->operation)
             {
                 case KMIP_OP_CREATE:
-                free_create_response_payload(
-                    ctx,
-                    (struct create_response_payload *)value->response_payload);
+                kmip_free_create_response_payload(ctx, (CreateResponsePayload *)value->response_payload);
                 break;
                 
                 case KMIP_OP_GET:
-                free_get_response_payload(
-                    ctx, 
-                    (struct get_response_payload *)value->response_payload);
+                kmip_free_get_response_payload(ctx, (GetResponsePayload *)value->response_payload);
                 break;
                 
                 case KMIP_OP_DESTROY:
-                free_destroy_response_payload(
-                    ctx,
-                    (struct destroy_response_payload *)value->response_payload);
+                kmip_free_destroy_response_payload(ctx, (DestroyResponsePayload *)value->response_payload);
                 break;
                 
                 default:
@@ -4477,20 +4429,20 @@ free_response_batch_item(struct kmip *ctx, struct response_batch_item *value)
 }
 
 void
-free_nonce(struct kmip *ctx, struct nonce *value)
+kmip_free_nonce(KMIP *ctx, Nonce *value)
 {
     if(value != NULL)
     {
         if(value->nonce_id != NULL)
         {
-            free_byte_string(ctx, value->nonce_id);
+            kmip_free_byte_string(ctx, value->nonce_id);
             ctx->free_func(ctx->state, value->nonce_id);
             value->nonce_id = NULL;
         }
         
         if(value->nonce_value != NULL)
         {
-            free_byte_string(ctx, value->nonce_value);
+            kmip_free_byte_string(ctx, value->nonce_value);
             ctx->free_func(ctx->state, value->nonce_value);
             value->nonce_value = NULL;
         }
@@ -4500,21 +4452,20 @@ free_nonce(struct kmip *ctx, struct nonce *value)
 }
 
 void
-free_username_password_credential(struct kmip *ctx,
-                                  struct username_password_credential *value)
+kmip_free_username_password_credential(KMIP *ctx, UsernamePasswordCredential *value)
 {
     if(value != NULL)
     {
         if(value->username != NULL)
         {
-            free_text_string(ctx, value->username);
+            kmip_free_text_string(ctx, value->username);
             ctx->free_func(ctx->state, value->username);
             value->username = NULL;
         }
         
         if(value->password != NULL)
         {
-            free_text_string(ctx, value->password);
+            kmip_free_text_string(ctx, value->password);
             ctx->free_func(ctx->state, value->password);
             value->password = NULL;
         }
@@ -4524,48 +4475,48 @@ free_username_password_credential(struct kmip *ctx,
 }
 
 void
-free_device_credential(struct kmip *ctx, struct device_credential *value)
+kmip_free_device_credential(KMIP *ctx, DeviceCredential *value)
 {
     if(value != NULL)
     {
         if(value->device_serial_number != NULL)
         {
-            free_text_string(ctx, value->device_serial_number);
+            kmip_free_text_string(ctx, value->device_serial_number);
             ctx->free_func(ctx->state, value->device_serial_number);
             value->device_serial_number = NULL;
         }
         
         if(value->password != NULL)
         {
-            free_text_string(ctx, value->password);
+            kmip_free_text_string(ctx, value->password);
             ctx->free_func(ctx->state, value->password);
             value->password = NULL;
         }
         
         if(value->device_identifier != NULL)
         {
-            free_text_string(ctx, value->device_identifier);
+            kmip_free_text_string(ctx, value->device_identifier);
             ctx->free_func(ctx->state, value->device_identifier);
             value->device_identifier = NULL;
         }
         
         if(value->network_identifier != NULL)
         {
-            free_text_string(ctx, value->network_identifier);
+            kmip_free_text_string(ctx, value->network_identifier);
             ctx->free_func(ctx->state, value->network_identifier);
             value->network_identifier = NULL;
         }
         
         if(value->machine_identifier != NULL)
         {
-            free_text_string(ctx, value->machine_identifier);
+            kmip_free_text_string(ctx, value->machine_identifier);
             ctx->free_func(ctx->state, value->machine_identifier);
             value->machine_identifier = NULL;
         }
         
         if(value->media_identifier != NULL)
         {
-            free_text_string(ctx, value->media_identifier);
+            kmip_free_text_string(ctx, value->media_identifier);
             ctx->free_func(ctx->state, value->media_identifier);
             value->media_identifier = NULL;
         }
@@ -4575,27 +4526,27 @@ free_device_credential(struct kmip *ctx, struct device_credential *value)
 }
 
 void
-free_attestation_credential(struct kmip *ctx, struct attestation_credential *value)
+kmip_free_attestation_credential(KMIP *ctx, AttestationCredential *value)
 {
     if(value != NULL)
     {
         if(value->nonce != NULL)
         {
-            free_nonce(ctx, value->nonce);
+            kmip_free_nonce(ctx, value->nonce);
             ctx->free_func(ctx->state, value->nonce);
             value->nonce = NULL;
         }
         
         if(value->attestation_measurement != NULL)
         {
-            free_byte_string(ctx, value->attestation_measurement);
+            kmip_free_byte_string(ctx, value->attestation_measurement);
             ctx->free_func(ctx->state, value->attestation_measurement);
             value->attestation_measurement = NULL;
         }
         
         if(value->attestation_assertion != NULL)
         {
-            free_byte_string(ctx, value->attestation_assertion);
+            kmip_free_byte_string(ctx, value->attestation_assertion);
             ctx->free_func(ctx->state, value->attestation_assertion);
             value->attestation_assertion = NULL;
         }
@@ -4607,9 +4558,7 @@ free_attestation_credential(struct kmip *ctx, struct attestation_credential *val
 }
 
 void
-free_credential_value(struct kmip *ctx,
-                      enum credential_type type,
-                      void **value)
+kmip_free_credential_value(KMIP *ctx, enum credential_type type, void **value)
 {
     if(value != NULL)
     {
@@ -4618,21 +4567,15 @@ free_credential_value(struct kmip *ctx,
             switch(type)
             {
                 case KMIP_CRED_USERNAME_AND_PASSWORD:
-                free_username_password_credential(
-                    ctx,
-                    (struct username_password_credential *)*value);
+                kmip_free_username_password_credential(ctx, (UsernamePasswordCredential *)*value);
                 break;
                 
                 case KMIP_CRED_DEVICE:
-                free_device_credential(
-                    ctx,
-                    (struct device_credential *)*value);
+                kmip_free_device_credential(ctx, (DeviceCredential *)*value);
                 break;
                 
                 case KMIP_CRED_ATTESTATION:
-                free_attestation_credential(
-                    ctx,
-                    (struct attestation_credential *)*value);
+                kmip_free_attestation_credential(ctx, (AttestationCredential *)*value);
                 break;
                 
                 default:
@@ -4655,16 +4598,13 @@ free_credential_value(struct kmip *ctx,
 }
 
 void
-free_credential(struct kmip *ctx, struct credential *value)
+kmip_free_credential(KMIP *ctx, Credential *value)
 {
     if(value != NULL)
     {
         if(value->credential_value != NULL)
         {
-            free_credential_value(
-                ctx,
-                value->credential_type,
-                &value->credential_value);
+            kmip_free_credential_value(ctx, value->credential_type, &value->credential_value);
             value->credential_value = NULL;
         }
         
@@ -4675,13 +4615,13 @@ free_credential(struct kmip *ctx, struct credential *value)
 }
 
 void
-free_authentication(struct kmip *ctx, struct authentication *value)
+kmip_free_authentication(KMIP *ctx, Authentication *value)
 {
     if(value != NULL)
     {
         if(value->credential != NULL)
         {
-            free_credential(ctx, value->credential);
+            kmip_free_credential(ctx, value->credential);
             ctx->free_func(ctx->state, value->credential);
             value->credential = NULL;
         }
@@ -4691,7 +4631,7 @@ free_authentication(struct kmip *ctx, struct authentication *value)
 }
 
 void
-free_request_header(struct kmip *ctx, struct request_header *value)
+kmip_free_request_header(KMIP *ctx, RequestHeader *value)
 {
     if(value != NULL)
     {
@@ -4700,14 +4640,14 @@ free_request_header(struct kmip *ctx, struct request_header *value)
             ctx->memset_func(
                 value->protocol_version,
                 0,
-                sizeof(struct protocol_version));
+                sizeof(ProtocolVersion));
             ctx->free_func(ctx->state, value->protocol_version);
             value->protocol_version = NULL;
         }
         
         if(value->authentication != NULL)
         {
-            free_authentication(ctx, value->authentication);
+            kmip_free_authentication(ctx, value->authentication);
             ctx->free_func(ctx->state, value->authentication);
             value->authentication = NULL;
         }
@@ -4725,26 +4665,26 @@ free_request_header(struct kmip *ctx, struct request_header *value)
         
         if(value->client_correlation_value != NULL)
         {
-            free_text_string(ctx, value->client_correlation_value);
+            kmip_free_text_string(ctx, value->client_correlation_value);
             ctx->free_func(ctx->state, value->client_correlation_value);
             value->client_correlation_value = NULL;
         }
         
         if(value->server_correlation_value != NULL)
         {
-            free_text_string(ctx, value->server_correlation_value);
+            kmip_free_text_string(ctx, value->server_correlation_value);
             ctx->free_func(ctx->state, value->server_correlation_value);
             value->server_correlation_value = NULL;
         }
         
-        init_request_header(value);
+        kmip_init_request_header(value);
     }
     
     return;
 }
 
 void
-free_response_header(struct kmip *ctx, struct response_header *value)
+kmip_free_response_header(KMIP *ctx, ResponseHeader *value)
 {
     if(value != NULL)
     {
@@ -4753,14 +4693,14 @@ free_response_header(struct kmip *ctx, struct response_header *value)
             ctx->memset_func(
                 value->protocol_version,
                 0,
-                sizeof(struct protocol_version));
+                sizeof(ProtocolVersion));
             ctx->free_func(ctx->state, value->protocol_version);
             value->protocol_version = NULL;
         }
         
         if(value->nonce != NULL)
         {
-            free_nonce(ctx, value->nonce);
+            kmip_free_nonce(ctx, value->nonce);
             ctx->free_func(ctx->state, value->nonce);
             value->nonce = NULL;
         }
@@ -4779,32 +4719,32 @@ free_response_header(struct kmip *ctx, struct response_header *value)
         
         if(value->client_correlation_value != NULL)
         {
-            free_text_string(ctx, value->client_correlation_value);
+            kmip_free_text_string(ctx, value->client_correlation_value);
             ctx->free_func(ctx->state, value->client_correlation_value);
             value->client_correlation_value = NULL;
         }
         
         if(value->server_correlation_value != NULL)
         {
-            free_text_string(ctx, value->server_correlation_value);
+            kmip_free_text_string(ctx, value->server_correlation_value);
             ctx->free_func(ctx->state, value->server_correlation_value);
             value->server_correlation_value = NULL;
         }
         
-        init_response_header(value);
+        kmip_init_response_header(value);
     }
     
     return;
 }
 
 void
-free_request_message(struct kmip *ctx, struct request_message *value)
+kmip_free_request_message(KMIP *ctx, RequestMessage *value)
 {
     if(value != NULL)
     {
         if(value->request_header != NULL)
         {
-            free_request_header(ctx, value->request_header);
+            kmip_free_request_header(ctx, value->request_header);
             ctx->free_func(ctx->state, value->request_header);
             value->request_header = NULL;
         }
@@ -4813,7 +4753,7 @@ free_request_message(struct kmip *ctx, struct request_message *value)
         {
             for(size_t i = 0; i < value->batch_count; i++)
             {
-                free_request_batch_item(ctx, &value->batch_items[i]);
+                kmip_free_request_batch_item(ctx, &value->batch_items[i]);
             }
             ctx->free_func(ctx, value->batch_items);
             value->batch_items = NULL;
@@ -4826,13 +4766,13 @@ free_request_message(struct kmip *ctx, struct request_message *value)
 }
 
 void
-free_response_message(struct kmip *ctx, struct response_message *value)
+kmip_free_response_message(KMIP *ctx, ResponseMessage *value)
 {
     if(value != NULL)
     {
         if(value->response_header != NULL)
         {
-            free_response_header(ctx, value->response_header);
+            kmip_free_response_header(ctx, value->response_header);
             ctx->free_func(ctx->state, value->response_header);
             value->response_header = NULL;
         }
@@ -4841,7 +4781,7 @@ free_response_message(struct kmip *ctx, struct response_message *value)
         {
             for(size_t i = 0; i < value->batch_count; i++)
             {
-                free_response_batch_item(ctx, &value->batch_items[i]);
+                kmip_free_response_batch_item(ctx, &value->batch_items[i]);
             }
             ctx->free_func(ctx, value->batch_items);
             value->batch_items = NULL;
@@ -4858,8 +4798,7 @@ Comparison Functions
 */
 
 int
-compare_text_string(const struct text_string *a, 
-                    const struct text_string *b)
+kmip_compare_text_string(const TextString *a, const TextString *b)
 {
     if(a != b)
     {
@@ -4894,8 +4833,7 @@ compare_text_string(const struct text_string *a,
 }
 
 int
-compare_byte_string(const struct byte_string *a, 
-                    const struct byte_string *b)
+kmip_compare_byte_string(const ByteString *a, const ByteString *b)
 {
     if(a != b)
     {
@@ -4930,7 +4868,7 @@ compare_byte_string(const struct byte_string *a,
 }
 
 int
-compare_name(const struct name *a, const struct name *b)
+kmip_compare_name(const Name *a, const Name *b)
 {
     if(a != b)
     {
@@ -4951,7 +4889,7 @@ compare_name(const struct name *a, const struct name *b)
                 return(KMIP_FALSE);
             }
             
-            if(compare_text_string(a->value, b->value) != KMIP_TRUE)
+            if(kmip_compare_text_string(a->value, b->value) != KMIP_TRUE)
             {
                 return(KMIP_FALSE);
             }
@@ -4962,8 +4900,7 @@ compare_name(const struct name *a, const struct name *b)
 }
 
 int
-compare_attribute(const struct attribute *a, 
-                  const struct attribute *b)
+kmip_compare_attribute(const Attribute *a, const Attribute *b)
 {
     if(a != b)
     {
@@ -4992,17 +4929,15 @@ compare_attribute(const struct attribute *a,
             switch(a->type)
             {
                 case KMIP_ATTR_UNIQUE_IDENTIFIER:
-                return(compare_text_string((struct text_string *)a->value, 
-                                           (struct text_string *)b->value));
+                return(kmip_compare_text_string((TextString *)a->value, (TextString *)b->value));
                 break;
                 
                 case KMIP_ATTR_NAME:
-                return(compare_name((struct name *)a->value,
-                                    (struct name *)b->value));
+                return(kmip_compare_name((Name *)a->value, (Name *)b->value));
                 break;
                 
                 case KMIP_ATTR_OBJECT_TYPE:
-                
+                /* TODO (ph) Fill in.*/
                 break;
                 
                 case KMIP_ATTR_CRYPTOGRAPHIC_ALGORITHM:
@@ -5020,8 +4955,7 @@ compare_attribute(const struct attribute *a,
                 break;
                 
                 case KMIP_ATTR_OPERATION_POLICY_NAME:
-                return(compare_text_string((struct text_string *)a->value,
-                                           (struct text_string *)b->value));
+                return(kmip_compare_text_string((TextString *)a->value, (TextString *)b->value));
                 break;
                 
                 case KMIP_ATTR_CRYPTOGRAPHIC_USAGE_MASK:
@@ -5050,8 +4984,7 @@ compare_attribute(const struct attribute *a,
 }
 
 int
-compare_template_attribute(const struct template_attribute *a,
-                           const struct template_attribute *b)
+kmip_compare_template_attribute(const TemplateAttribute *a, const TemplateAttribute *b)
 {
     if(a != b)
     {
@@ -5079,7 +5012,7 @@ compare_template_attribute(const struct template_attribute *a,
             
             for(size_t i = 0; i < a->name_count; i++)
             {
-                if(compare_name(&a->names[i], &b->names[i]) == KMIP_FALSE)
+                if(kmip_compare_name(&a->names[i], &b->names[i]) == KMIP_FALSE)
                 {
                     return(KMIP_FALSE);
                 }
@@ -5095,9 +5028,7 @@ compare_template_attribute(const struct template_attribute *a,
             
             for(size_t i = 0; i < a->attribute_count; i++)
             {
-                if(compare_attribute(
-                    &a->attributes[i], 
-                    &b->attributes[i]) == KMIP_FALSE)
+                if(kmip_compare_attribute(&a->attributes[i], &b->attributes[i]) == KMIP_FALSE)
                 {
                     return(KMIP_FALSE);
                 }
@@ -5109,8 +5040,7 @@ compare_template_attribute(const struct template_attribute *a,
 }
 
 int
-compare_protocol_version(const struct protocol_version *a,
-                         const struct protocol_version *b)
+kmip_compare_protocol_version(const ProtocolVersion *a, const ProtocolVersion *b)
 {
     if(a != b)
     {
@@ -5134,8 +5064,7 @@ compare_protocol_version(const struct protocol_version *a,
 }
 
 int
-compare_transparent_symmetric_key(const struct transparent_symmetric_key *a,
-                                  const struct transparent_symmetric_key *b)
+kmip_compare_transparent_symmetric_key(const TransparentSymmetricKey *a, const TransparentSymmetricKey *b)
 {
     if(a != b)
     {
@@ -5151,7 +5080,7 @@ compare_transparent_symmetric_key(const struct transparent_symmetric_key *a,
                 return(KMIP_FALSE);
             }
             
-            if(compare_byte_string(a->key, b->key) == KMIP_FALSE)
+            if(kmip_compare_byte_string(a->key, b->key) == KMIP_FALSE)
             {
                 return(KMIP_FALSE);
             }
@@ -5162,9 +5091,7 @@ compare_transparent_symmetric_key(const struct transparent_symmetric_key *a,
 }
 
 int
-compare_key_material(enum key_format_type format,
-                     void **a,
-                     void **b)
+kmip_compare_key_material(enum key_format_type format, void **a, void **b)
 {
     if(a != b)
     {
@@ -5188,14 +5115,14 @@ compare_key_material(enum key_format_type format,
                 case KMIP_KEYFORMAT_PKCS8:
                 case KMIP_KEYFORMAT_X509:
                 case KMIP_KEYFORMAT_EC_PRIVATE_KEY:
-                if(compare_byte_string(*a, *b) == KMIP_FALSE)
+                if(kmip_compare_byte_string(*a, *b) == KMIP_FALSE)
                 {
                     return(KMIP_FALSE);
                 }
                 break;
                 
                 case KMIP_KEYFORMAT_TRANS_SYMMETRIC_KEY:
-                if(compare_transparent_symmetric_key(*a, *b) == KMIP_FALSE)
+                if(kmip_compare_transparent_symmetric_key(*a, *b) == KMIP_FALSE)
                 {
                     return(KMIP_FALSE);
                 }
@@ -5213,9 +5140,7 @@ compare_key_material(enum key_format_type format,
 }
 
 int
-compare_key_value(enum key_format_type format,
-                  const struct key_value *a,
-                  const struct key_value *b)
+kmip_compare_key_value(enum key_format_type format, const KeyValue *a, const KeyValue *b)
 {
     if(a != b)
     {
@@ -5231,9 +5156,7 @@ compare_key_value(enum key_format_type format,
                 return(KMIP_FALSE);
             }
             
-            if(compare_key_material(format,
-                                    (void**)&a->key_material,
-                                    (void**)&b->key_material) == KMIP_FALSE)
+            if(kmip_compare_key_material(format, (void**)&a->key_material, (void**)&b->key_material) == KMIP_FALSE)
             {
                 return(KMIP_FALSE);
             }
@@ -5248,9 +5171,7 @@ compare_key_value(enum key_format_type format,
             
             for(size_t i = 0; i < a->attribute_count; i++)
             {
-                if(compare_attribute(
-                    &a->attributes[i], 
-                    &b->attributes[i]) == KMIP_FALSE)
+                if(kmip_compare_attribute(&a->attributes[i], &b->attributes[i]) == KMIP_FALSE)
                 {
                     return(KMIP_FALSE);
                 }
@@ -5262,8 +5183,7 @@ compare_key_value(enum key_format_type format,
 }
 
 int
-compare_cryptographic_parameters(const struct cryptographic_parameters *a,
-                                 const struct cryptographic_parameters *b)
+kmip_compare_cryptographic_parameters(const CryptographicParameters *a, const CryptographicParameters *b)
 {
     if(a != b)
     {
@@ -5365,7 +5285,7 @@ compare_cryptographic_parameters(const struct cryptographic_parameters *a,
                 return(KMIP_FALSE);
             }
             
-            if(compare_byte_string(a->p_source, b->p_source) == KMIP_FALSE)
+            if(kmip_compare_byte_string(a->p_source, b->p_source) == KMIP_FALSE)
             {
                 return(KMIP_FALSE);
             }
@@ -5376,8 +5296,7 @@ compare_cryptographic_parameters(const struct cryptographic_parameters *a,
 }
 
 int
-compare_encryption_key_information(const struct encryption_key_information *a,
-                                   const struct encryption_key_information *b)
+kmip_compare_encryption_key_information(const EncryptionKeyInformation *a, const EncryptionKeyInformation *b)
 {
     if(a != b)
     {
@@ -5393,8 +5312,7 @@ compare_encryption_key_information(const struct encryption_key_information *a,
                 return(KMIP_FALSE);
             }
             
-            if(compare_text_string(a->unique_identifier,
-                                   b->unique_identifier) == KMIP_FALSE)
+            if(kmip_compare_text_string(a->unique_identifier, b->unique_identifier) == KMIP_FALSE)
             {
                 return(KMIP_FALSE);
             }
@@ -5408,9 +5326,7 @@ compare_encryption_key_information(const struct encryption_key_information *a,
                 return(KMIP_FALSE);
             }
             
-            if(compare_cryptographic_parameters(
-                a->cryptographic_parameters, 
-                b->cryptographic_parameters) == KMIP_FALSE)
+            if(kmip_compare_cryptographic_parameters(a->cryptographic_parameters, b->cryptographic_parameters) == KMIP_FALSE)
             {
                 return(KMIP_FALSE);
             }
@@ -5421,8 +5337,7 @@ compare_encryption_key_information(const struct encryption_key_information *a,
 }
 
 int
-compare_mac_signature_key_information(const struct mac_signature_key_information *a,
-                                      const struct mac_signature_key_information *b)
+kmip_compare_mac_signature_key_information(const MACSignatureKeyInformation *a, const MACSignatureKeyInformation *b)
 {
     if(a != b)
     {
@@ -5438,8 +5353,7 @@ compare_mac_signature_key_information(const struct mac_signature_key_information
                 return(KMIP_FALSE);
             }
             
-            if(compare_text_string(a->unique_identifier,
-                                   b->unique_identifier) == KMIP_FALSE)
+            if(kmip_compare_text_string(a->unique_identifier, b->unique_identifier) == KMIP_FALSE)
             {
                 return(KMIP_FALSE);
             }
@@ -5447,15 +5361,12 @@ compare_mac_signature_key_information(const struct mac_signature_key_information
         
         if(a->cryptographic_parameters != b->cryptographic_parameters)
         {
-            if((a->cryptographic_parameters == NULL) ||
-               (b->cryptographic_parameters == NULL))
+            if((a->cryptographic_parameters == NULL) || (b->cryptographic_parameters == NULL))
             {
                 return(KMIP_FALSE);
             }
             
-            if(compare_cryptographic_parameters(
-                a->cryptographic_parameters, 
-                b->cryptographic_parameters) == KMIP_FALSE)
+            if(kmip_compare_cryptographic_parameters(a->cryptographic_parameters, b->cryptographic_parameters) == KMIP_FALSE)
             {
                 return(KMIP_FALSE);
             }
@@ -5466,8 +5377,7 @@ compare_mac_signature_key_information(const struct mac_signature_key_information
 }
 
 int
-compare_key_wrapping_data(const struct key_wrapping_data *a,
-                          const struct key_wrapping_data *b)
+kmip_compare_key_wrapping_data(const KeyWrappingData *a, const KeyWrappingData *b)
 {
     if(a != b)
     {
@@ -5493,8 +5403,7 @@ compare_key_wrapping_data(const struct key_wrapping_data *a,
                 return(KMIP_FALSE);
             }
             
-            if(compare_byte_string(a->mac_signature,
-                                   b->mac_signature) == KMIP_FALSE)
+            if(kmip_compare_byte_string(a->mac_signature, b->mac_signature) == KMIP_FALSE)
             {
                 return(KMIP_FALSE);
             }
@@ -5507,8 +5416,7 @@ compare_key_wrapping_data(const struct key_wrapping_data *a,
                 return(KMIP_FALSE);
             }
             
-            if(compare_byte_string(a->iv_counter_nonce,
-                                   b->iv_counter_nonce) == KMIP_FALSE)
+            if(kmip_compare_byte_string(a->iv_counter_nonce, b->iv_counter_nonce) == KMIP_FALSE)
             {
                 return(KMIP_FALSE);
             }
@@ -5521,9 +5429,7 @@ compare_key_wrapping_data(const struct key_wrapping_data *a,
                 return(KMIP_FALSE);
             }
             
-            if(compare_encryption_key_information(
-                a->encryption_key_info,
-                b->encryption_key_info) == KMIP_FALSE)
+            if(kmip_compare_encryption_key_information(a->encryption_key_info, b->encryption_key_info) == KMIP_FALSE)
             {
                 return(KMIP_FALSE);
             }
@@ -5531,15 +5437,12 @@ compare_key_wrapping_data(const struct key_wrapping_data *a,
         
         if(a->mac_signature_key_info != b->mac_signature_key_info)
         {
-            if((a->mac_signature_key_info == NULL) || 
-               (b->mac_signature_key_info == NULL))
+            if((a->mac_signature_key_info == NULL) || (b->mac_signature_key_info == NULL))
             {
                 return(KMIP_FALSE);
             }
             
-            if(compare_mac_signature_key_information(
-                a->mac_signature_key_info,
-                b->mac_signature_key_info) == KMIP_FALSE)
+            if(kmip_compare_mac_signature_key_information(a->mac_signature_key_info, b->mac_signature_key_info) == KMIP_FALSE)
             {
                 return(KMIP_FALSE);
             }
@@ -5550,7 +5453,7 @@ compare_key_wrapping_data(const struct key_wrapping_data *a,
 }
 
 int
-compare_key_block(const struct key_block *a, const struct key_block *b)
+kmip_compare_key_block(const KeyBlock *a, const KeyBlock *b)
 {
     if(a != b)
     {
@@ -5593,18 +5496,14 @@ compare_key_block(const struct key_block *a, const struct key_block *b)
             
             if(a->key_value_type == KMIP_TYPE_BYTE_STRING)
             {
-                if(compare_byte_string(
-                    (struct byte_string *)a->key_value,
-                    (struct byte_string *)b->key_value) == KMIP_FALSE)
+                if(kmip_compare_byte_string((ByteString *)a->key_value, (ByteString *)b->key_value) == KMIP_FALSE)
                 {
                     return(KMIP_FALSE);
                 }
             }
             else
             {
-                if(compare_key_value(a->key_format_type,
-                                     (struct key_value *)a->key_value,
-                                     (struct key_value *)b->key_value) == KMIP_FALSE)
+                if(kmip_compare_key_value(a->key_format_type, (KeyValue *)a->key_value, (KeyValue *)b->key_value) == KMIP_FALSE)
                 {
                     return(KMIP_FALSE);
                 }
@@ -5618,9 +5517,7 @@ compare_key_block(const struct key_block *a, const struct key_block *b)
                 return(KMIP_FALSE);
             }
             
-            if(compare_key_wrapping_data(
-                a->key_wrapping_data, 
-                b->key_wrapping_data) == KMIP_FALSE)
+            if(kmip_compare_key_wrapping_data(a->key_wrapping_data, b->key_wrapping_data) == KMIP_FALSE)
             {
                 return(KMIP_FALSE);
             }
@@ -5631,8 +5528,7 @@ compare_key_block(const struct key_block *a, const struct key_block *b)
 }
 
 int
-compare_symmetric_key(const struct symmetric_key *a,
-                      const struct symmetric_key *b)
+kmip_compare_symmetric_key(const SymmetricKey *a, const SymmetricKey *b)
 {
     if(a != b)
     {
@@ -5648,7 +5544,7 @@ compare_symmetric_key(const struct symmetric_key *a,
                 return(KMIP_FALSE);
             }
             
-            if(compare_key_block(a->key_block, b->key_block) == KMIP_FALSE)
+            if(kmip_compare_key_block(a->key_block, b->key_block) == KMIP_FALSE)
             {
                 return(KMIP_FALSE);
             }
@@ -5659,7 +5555,7 @@ compare_symmetric_key(const struct symmetric_key *a,
 }
 
 int
-compare_public_key(const struct public_key *a, const struct public_key *b)
+kmip_compare_public_key(const PublicKey *a, const PublicKey *b)
 {
     if(a != b)
     {
@@ -5675,7 +5571,7 @@ compare_public_key(const struct public_key *a, const struct public_key *b)
                 return(KMIP_FALSE);
             }
             
-            if(compare_key_block(a->key_block, b->key_block) == KMIP_FALSE)
+            if(kmip_compare_key_block(a->key_block, b->key_block) == KMIP_FALSE)
             {
                 return(KMIP_FALSE);
             }
@@ -5686,7 +5582,7 @@ compare_public_key(const struct public_key *a, const struct public_key *b)
 }
 
 int
-compare_private_key(const struct private_key *a, const struct private_key *b)
+kmip_compare_private_key(const PrivateKey *a, const PrivateKey *b)
 {
     if(a != b)
     {
@@ -5702,7 +5598,7 @@ compare_private_key(const struct private_key *a, const struct private_key *b)
                 return(KMIP_FALSE);
             }
             
-            if(compare_key_block(a->key_block, b->key_block) == KMIP_FALSE)
+            if(kmip_compare_key_block(a->key_block, b->key_block) == KMIP_FALSE)
             {
                 return(KMIP_FALSE);
             }
@@ -5713,8 +5609,7 @@ compare_private_key(const struct private_key *a, const struct private_key *b)
 }
 
 int
-compare_key_wrapping_specification(const struct key_wrapping_specification *a,
-                                   const struct key_wrapping_specification *b)
+kmip_compare_key_wrapping_specification(const KeyWrappingSpecification *a, const KeyWrappingSpecification *b)
 {
     if(a != b)
     {
@@ -5740,15 +5635,12 @@ compare_key_wrapping_specification(const struct key_wrapping_specification *a,
         
         if(a->encryption_key_info != b->encryption_key_info)
         {
-            if((a->encryption_key_info == NULL) ||
-               (b->encryption_key_info == NULL))
+            if((a->encryption_key_info == NULL) || (b->encryption_key_info == NULL))
             {
                 return(KMIP_FALSE);
             }
             
-            if(compare_encryption_key_information(
-                a->encryption_key_info,
-                b->encryption_key_info) == KMIP_FALSE)
+            if(kmip_compare_encryption_key_information(a->encryption_key_info, b->encryption_key_info) == KMIP_FALSE)
             {
                 return(KMIP_FALSE);
             }
@@ -5756,15 +5648,12 @@ compare_key_wrapping_specification(const struct key_wrapping_specification *a,
         
         if(a->mac_signature_key_info != b->mac_signature_key_info)
         {
-            if((a->mac_signature_key_info == NULL) ||
-               (b->mac_signature_key_info == NULL))
+            if((a->mac_signature_key_info == NULL) || (b->mac_signature_key_info == NULL))
             {
                 return(KMIP_FALSE);
             }
             
-            if(compare_mac_signature_key_information(
-                a->mac_signature_key_info,
-                b->mac_signature_key_info) == KMIP_FALSE)
+            if(kmip_compare_mac_signature_key_information(a->mac_signature_key_info, b->mac_signature_key_info) == KMIP_FALSE)
             {
                 return(KMIP_FALSE);
             }
@@ -5779,9 +5668,7 @@ compare_key_wrapping_specification(const struct key_wrapping_specification *a,
             
             for(size_t i = 0; i < a->attribute_name_count; i++)
             {
-                if(compare_text_string(
-                    &a->attribute_names[i], 
-                    &b->attribute_names[i]) == KMIP_FALSE)
+                if(kmip_compare_text_string(&a->attribute_names[i], &b->attribute_names[i]) == KMIP_FALSE)
                 {
                     return(KMIP_FALSE);
                 }
@@ -5793,8 +5680,7 @@ compare_key_wrapping_specification(const struct key_wrapping_specification *a,
 }
 
 int
-compare_create_request_payload(const struct create_request_payload *a,
-                               const struct create_request_payload *b)
+kmip_compare_create_request_payload(const CreateRequestPayload *a, const CreateRequestPayload *b)
 {
     if(a != b)
     {
@@ -5810,14 +5696,12 @@ compare_create_request_payload(const struct create_request_payload *a,
         
         if(a->template_attribute != b->template_attribute)
         {
-            if((a->template_attribute == NULL) ||
-               (b->template_attribute == NULL))
+            if((a->template_attribute == NULL) || (b->template_attribute == NULL))
             {
                 return(KMIP_FALSE);
             }
             
-            if(compare_template_attribute(a->template_attribute,
-                                          b->template_attribute) == KMIP_FALSE)
+            if(kmip_compare_template_attribute(a->template_attribute, b->template_attribute) == KMIP_FALSE)
             {
                 return(KMIP_FALSE);
             }
@@ -5828,8 +5712,7 @@ compare_create_request_payload(const struct create_request_payload *a,
 }
 
 int
-compare_create_response_payload(const struct create_response_payload *a,
-                                const struct create_response_payload *b)
+kmip_compare_create_response_payload(const CreateResponsePayload *a, const CreateResponsePayload *b)
 {
     if(a != b)
     {
@@ -5850,8 +5733,7 @@ compare_create_response_payload(const struct create_response_payload *a,
                 return(KMIP_FALSE);
             }
             
-            if(compare_text_string(a->unique_identifier,
-                                   b->unique_identifier) == KMIP_FALSE)
+            if(kmip_compare_text_string(a->unique_identifier, b->unique_identifier) == KMIP_FALSE)
             {
                 return(KMIP_FALSE);
             }
@@ -5864,8 +5746,7 @@ compare_create_response_payload(const struct create_response_payload *a,
                 return(KMIP_FALSE);
             }
             
-            if(compare_template_attribute(a->template_attribute,
-                                          b->template_attribute) == KMIP_FALSE)
+            if(kmip_compare_template_attribute(a->template_attribute, b->template_attribute) == KMIP_FALSE)
             {
                 return(KMIP_FALSE);
             }
@@ -5876,8 +5757,7 @@ compare_create_response_payload(const struct create_response_payload *a,
 }
 
 int
-compare_get_request_payload(const struct get_request_payload *a,
-                            const struct get_request_payload *b)
+kmip_compare_get_request_payload(const GetRequestPayload *a, const GetRequestPayload *b)
 {
     if(a != b)
     {
@@ -5903,14 +5783,12 @@ compare_get_request_payload(const struct get_request_payload *a,
         
         if(a->unique_identifier != b->unique_identifier)
         {
-            if((a->unique_identifier == NULL) ||
-               (b->unique_identifier == NULL))
+            if((a->unique_identifier == NULL) || (b->unique_identifier == NULL))
             {
                 return(KMIP_FALSE);
             }
             
-            if(compare_text_string(a->unique_identifier,
-                                   b->unique_identifier) == KMIP_FALSE)
+            if(kmip_compare_text_string(a->unique_identifier, b->unique_identifier) == KMIP_FALSE)
             {
                 return(KMIP_FALSE);
             }
@@ -5918,15 +5796,12 @@ compare_get_request_payload(const struct get_request_payload *a,
         
         if(a->key_wrapping_spec != b->key_wrapping_spec)
         {
-            if((a->key_wrapping_spec == NULL) ||
-               (b->key_wrapping_spec == NULL))
+            if((a->key_wrapping_spec == NULL) || (b->key_wrapping_spec == NULL))
             {
                 return(KMIP_FALSE);
             }
             
-            if(compare_key_wrapping_specification(
-                a->key_wrapping_spec,
-                b->key_wrapping_spec) == KMIP_FALSE)
+            if(kmip_compare_key_wrapping_specification(a->key_wrapping_spec, b->key_wrapping_spec) == KMIP_FALSE)
             {
                 return(KMIP_FALSE);
             }
@@ -5937,8 +5812,7 @@ compare_get_request_payload(const struct get_request_payload *a,
 }
 
 int
-compare_get_response_payload(const struct get_response_payload *a,
-                             const struct get_response_payload *b)
+kmip_compare_get_response_payload(const GetResponsePayload *a, const GetResponsePayload *b)
 {
     if(a != b)
     {
@@ -5959,8 +5833,7 @@ compare_get_response_payload(const struct get_response_payload *a,
                 return(KMIP_FALSE);
             }
             
-            if(compare_text_string(a->unique_identifier,
-                                   b->unique_identifier) == KMIP_FALSE)
+            if(kmip_compare_text_string(a->unique_identifier, b->unique_identifier) == KMIP_FALSE)
             {
                 return(KMIP_FALSE);
             }
@@ -5971,27 +5844,21 @@ compare_get_response_payload(const struct get_response_payload *a,
             switch(a->object_type)
             {
                 case KMIP_OBJTYPE_SYMMETRIC_KEY:
-                if(compare_symmetric_key(
-                    (struct symmetric_key *)a->object,
-                    (struct symmetric_key *)b->object) == KMIP_FALSE)
+                if(kmip_compare_symmetric_key((SymmetricKey *)a->object, (SymmetricKey *)b->object) == KMIP_FALSE)
                 {
                     return(KMIP_FALSE);
                 }
                 break;
                 
                 case KMIP_OBJTYPE_PUBLIC_KEY:
-                if(compare_public_key(
-                    (struct public_key *)a->object,
-                    (struct public_key *)b->object) == KMIP_FALSE)
+                if(kmip_compare_public_key((PublicKey *)a->object, (PublicKey *)b->object) == KMIP_FALSE)
                 {
                     return(KMIP_FALSE);
                 }
                 break;
                 
                 case KMIP_OBJTYPE_PRIVATE_KEY:
-                if(compare_private_key(
-                    (struct private_key *)a->object,
-                    (struct private_key *)b->object) == KMIP_FALSE)
+                if(kmip_compare_private_key((PrivateKey *)a->object, (PrivateKey *)b->object) == KMIP_FALSE)
                 {
                     return(KMIP_FALSE);
                 }
@@ -6009,38 +5876,7 @@ compare_get_response_payload(const struct get_response_payload *a,
 }
 
 int
-compare_destroy_request_payload(const struct destroy_request_payload *a,
-                                const struct destroy_request_payload *b)
-{
-    if(a != b)
-    {
-        if((a == NULL) || (b == NULL))
-        {
-            return(KMIP_FALSE);
-        }
-        
-        if(a->unique_identifier != b->unique_identifier)
-        {
-            if((a->unique_identifier == NULL) ||
-               (b->unique_identifier == NULL))
-            {
-                return(KMIP_FALSE);
-            }
-            
-            if(compare_text_string(a->unique_identifier,
-                                   b->unique_identifier) == KMIP_FALSE)
-            {
-                return(KMIP_FALSE);
-            }
-        }
-    }
-    
-    return(KMIP_TRUE);
-}
-
-int
-compare_destroy_response_payload(const struct destroy_response_payload *a,
-                                 const struct destroy_response_payload *b)
+kmip_compare_destroy_request_payload(const DestroyRequestPayload *a, const DestroyRequestPayload *b)
 {
     if(a != b)
     {
@@ -6056,8 +5892,7 @@ compare_destroy_response_payload(const struct destroy_response_payload *a,
                 return(KMIP_FALSE);
             }
             
-            if(compare_text_string(a->unique_identifier,
-                                   b->unique_identifier) == KMIP_FALSE)
+            if(kmip_compare_text_string(a->unique_identifier, b->unique_identifier) == KMIP_FALSE)
             {
                 return(KMIP_FALSE);
             }
@@ -6068,8 +5903,34 @@ compare_destroy_response_payload(const struct destroy_response_payload *a,
 }
 
 int
-compare_request_batch_item(const struct request_batch_item *a,
-                           const struct request_batch_item *b)
+kmip_compare_destroy_response_payload(const DestroyResponsePayload *a, const DestroyResponsePayload *b)
+{
+    if(a != b)
+    {
+        if((a == NULL) || (b == NULL))
+        {
+            return(KMIP_FALSE);
+        }
+        
+        if(a->unique_identifier != b->unique_identifier)
+        {
+            if((a->unique_identifier == NULL) || (b->unique_identifier == NULL))
+            {
+                return(KMIP_FALSE);
+            }
+            
+            if(kmip_compare_text_string(a->unique_identifier, b->unique_identifier) == KMIP_FALSE)
+            {
+                return(KMIP_FALSE);
+            }
+        }
+    }
+    
+    return(KMIP_TRUE);
+}
+
+int
+kmip_compare_request_batch_item(const RequestBatchItem *a, const RequestBatchItem *b)
 {
     if(a != b)
     {
@@ -6085,14 +5946,12 @@ compare_request_batch_item(const struct request_batch_item *a,
         
         if(a->unique_batch_item_id != b->unique_batch_item_id)
         {
-            if((a->unique_batch_item_id == NULL) ||
-               (b->unique_batch_item_id == NULL))
+            if((a->unique_batch_item_id == NULL) || (b->unique_batch_item_id == NULL))
             {
                 return(KMIP_FALSE);
             }
             
-            if(compare_byte_string(a->unique_batch_item_id,
-                                   b->unique_batch_item_id) == KMIP_FALSE)
+            if(kmip_compare_byte_string(a->unique_batch_item_id, b->unique_batch_item_id) == KMIP_FALSE)
             {
                 return(KMIP_FALSE);
             }
@@ -6108,30 +5967,21 @@ compare_request_batch_item(const struct request_batch_item *a,
             switch(a->operation)
             {
                 case KMIP_OP_CREATE:
-                if(compare_create_request_payload(
-                    (struct create_request_payload *)a->request_payload,
-                    (struct create_request_payload *)b->request_payload) == 
-                   KMIP_FALSE)
+                if(kmip_compare_create_request_payload((CreateRequestPayload *)a->request_payload, (CreateRequestPayload *)b->request_payload) == KMIP_FALSE)
                 {
                     return(KMIP_FALSE);
                 }
                 break;
                 
                 case KMIP_OP_GET:
-                if(compare_get_request_payload(
-                    (struct get_request_payload *)a->request_payload,
-                    (struct get_request_payload *)b->request_payload) == 
-                   KMIP_FALSE)
+                if(kmip_compare_get_request_payload((GetRequestPayload *)a->request_payload, (GetRequestPayload *)b->request_payload) == KMIP_FALSE)
                 {
                     return(KMIP_FALSE);
                 }
                 break;
                 
                 case KMIP_OP_DESTROY:
-                if(compare_destroy_request_payload(
-                    (struct destroy_request_payload *)a->request_payload,
-                    (struct destroy_request_payload *)b->request_payload) == 
-                   KMIP_FALSE)
+                if(kmip_compare_destroy_request_payload((DestroyRequestPayload *)a->request_payload, (DestroyRequestPayload *)b->request_payload) == KMIP_FALSE)
                 {
                     return(KMIP_FALSE);
                 }
@@ -6149,8 +5999,7 @@ compare_request_batch_item(const struct request_batch_item *a,
 }
 
 int
-compare_response_batch_item(const struct response_batch_item *a,
-                            const struct response_batch_item *b)
+kmip_compare_response_batch_item(const ResponseBatchItem *a, const ResponseBatchItem *b)
 {
     if(a != b)
     {
@@ -6176,14 +6025,12 @@ compare_response_batch_item(const struct response_batch_item *a,
         
         if(a->unique_batch_item_id != b->unique_batch_item_id)
         {
-            if((a->unique_batch_item_id == NULL) || 
-               (b->unique_batch_item_id == NULL))
+            if((a->unique_batch_item_id == NULL) || (b->unique_batch_item_id == NULL))
             {
                 return(KMIP_FALSE);
             }
             
-            if(compare_byte_string(a->unique_batch_item_id, 
-                                   b->unique_batch_item_id) == KMIP_FALSE)
+            if(kmip_compare_byte_string(a->unique_batch_item_id, b->unique_batch_item_id) == KMIP_FALSE)
             {
                 return(KMIP_FALSE);
             }
@@ -6196,25 +6043,20 @@ compare_response_batch_item(const struct response_batch_item *a,
                 return(KMIP_FALSE);
             }
             
-            if(compare_text_string(a->result_message,
-                                   b->result_message) == KMIP_FALSE)
+            if(kmip_compare_text_string(a->result_message, b->result_message) == KMIP_FALSE)
             {
                 return(KMIP_FALSE);
             }
         }
         
-        if(a->asynchronous_correlation_value !=
-           b->asynchronous_correlation_value)
+        if(a->asynchronous_correlation_value != b->asynchronous_correlation_value)
         {
-            if((a->asynchronous_correlation_value == NULL) ||
-               (b->asynchronous_correlation_value == NULL))
+            if((a->asynchronous_correlation_value == NULL) || (b->asynchronous_correlation_value == NULL))
             {
                 return(KMIP_FALSE);
             }
             
-            if(compare_byte_string(
-                a->asynchronous_correlation_value,
-                b->asynchronous_correlation_value) == KMIP_FALSE)
+            if(kmip_compare_byte_string(a->asynchronous_correlation_value, b->asynchronous_correlation_value) == KMIP_FALSE)
             {
                 return(KMIP_FALSE);
             }
@@ -6230,30 +6072,21 @@ compare_response_batch_item(const struct response_batch_item *a,
             switch(a->operation)
             {
                 case KMIP_OP_CREATE:
-                if(compare_create_response_payload(
-                    (struct create_response_payload *)a->response_payload,
-                    (struct create_response_payload *)b->response_payload) == 
-                   KMIP_FALSE)
+                if(kmip_compare_create_response_payload((CreateResponsePayload *)a->response_payload, (CreateResponsePayload *)b->response_payload) == KMIP_FALSE)
                 {
                     return(KMIP_FALSE);
                 }
                 break;
                 
                 case KMIP_OP_GET:
-                if(compare_get_response_payload(
-                    (struct get_response_payload *)a->response_payload,
-                    (struct get_response_payload *)b->response_payload) == 
-                   KMIP_FALSE)
+                if(kmip_compare_get_response_payload((GetResponsePayload *)a->response_payload, (GetResponsePayload *)b->response_payload) == KMIP_FALSE)
                 {
                     return(KMIP_FALSE);
                 }
                 break;
                 
                 case KMIP_OP_DESTROY:
-                if(compare_destroy_response_payload(
-                    (struct destroy_response_payload *)a->response_payload,
-                    (struct destroy_response_payload *)b->response_payload) == 
-                   KMIP_FALSE)
+                if(kmip_compare_destroy_response_payload((DestroyResponsePayload *)a->response_payload, (DestroyResponsePayload *)b->response_payload) == KMIP_FALSE)
                 {
                     return(KMIP_FALSE);
                 }
@@ -6271,7 +6104,7 @@ compare_response_batch_item(const struct response_batch_item *a,
 }
 
 int
-compare_nonce(const struct nonce *a, const struct nonce *b)
+kmip_compare_nonce(const Nonce *a, const Nonce *b)
 {
     if(a != b)
     {
@@ -6287,7 +6120,7 @@ compare_nonce(const struct nonce *a, const struct nonce *b)
                 return(KMIP_FALSE);
             }
             
-            if(compare_byte_string(a->nonce_id, b->nonce_id) == KMIP_FALSE)
+            if(kmip_compare_byte_string(a->nonce_id, b->nonce_id) == KMIP_FALSE)
             {
                 return(KMIP_FALSE);
             }
@@ -6300,7 +6133,7 @@ compare_nonce(const struct nonce *a, const struct nonce *b)
                 return(KMIP_FALSE);
             }
             
-            if(compare_byte_string(a->nonce_value, b->nonce_value) == KMIP_FALSE)
+            if(kmip_compare_byte_string(a->nonce_value, b->nonce_value) == KMIP_FALSE)
             {
                 return(KMIP_FALSE);
             }
@@ -6311,8 +6144,7 @@ compare_nonce(const struct nonce *a, const struct nonce *b)
 }
 
 int
-compare_username_password_credential(const struct username_password_credential *a,
-                                     const struct username_password_credential *b)
+kmip_compare_username_password_credential(const UsernamePasswordCredential *a, const UsernamePasswordCredential *b)
 {
     if(a != b)
     {
@@ -6328,7 +6160,7 @@ compare_username_password_credential(const struct username_password_credential *
                 return(KMIP_FALSE);
             }
             
-            if(compare_text_string(a->username, b->username) == KMIP_FALSE)
+            if(kmip_compare_text_string(a->username, b->username) == KMIP_FALSE)
             {
                 return(KMIP_FALSE);
             }
@@ -6341,7 +6173,7 @@ compare_username_password_credential(const struct username_password_credential *
                 return(KMIP_FALSE);
             }
             
-            if(compare_text_string(a->password, b->password) == KMIP_FALSE)
+            if(kmip_compare_text_string(a->password, b->password) == KMIP_FALSE)
             {
                 return(KMIP_FALSE);
             }
@@ -6352,8 +6184,7 @@ compare_username_password_credential(const struct username_password_credential *
 }
 
 int
-compare_device_credential(const struct device_credential *a,
-                          const struct device_credential *b)
+kmip_compare_device_credential(const DeviceCredential *a, const DeviceCredential *b)
 {
     if(a != b)
     {
@@ -6369,8 +6200,7 @@ compare_device_credential(const struct device_credential *a,
                 return(KMIP_FALSE);
             }
             
-            if(compare_text_string(a->device_serial_number,
-                                   b->device_serial_number) == KMIP_FALSE)
+            if(kmip_compare_text_string(a->device_serial_number, b->device_serial_number) == KMIP_FALSE)
             {
                 return(KMIP_FALSE);
             }
@@ -6383,8 +6213,7 @@ compare_device_credential(const struct device_credential *a,
                 return(KMIP_FALSE);
             }
             
-            if(compare_text_string(a->password,
-                                   b->password) == KMIP_FALSE)
+            if(kmip_compare_text_string(a->password, b->password) == KMIP_FALSE)
             {
                 return(KMIP_FALSE);
             }
@@ -6397,8 +6226,7 @@ compare_device_credential(const struct device_credential *a,
                 return(KMIP_FALSE);
             }
             
-            if(compare_text_string(a->device_identifier,
-                                   b->device_identifier) == KMIP_FALSE)
+            if(kmip_compare_text_string(a->device_identifier, b->device_identifier) == KMIP_FALSE)
             {
                 return(KMIP_FALSE);
             }
@@ -6411,8 +6239,7 @@ compare_device_credential(const struct device_credential *a,
                 return(KMIP_FALSE);
             }
             
-            if(compare_text_string(a->network_identifier,
-                                   b->network_identifier) == KMIP_FALSE)
+            if(kmip_compare_text_string(a->network_identifier, b->network_identifier) == KMIP_FALSE)
             {
                 return(KMIP_FALSE);
             }
@@ -6425,8 +6252,7 @@ compare_device_credential(const struct device_credential *a,
                 return(KMIP_FALSE);
             }
             
-            if(compare_text_string(a->machine_identifier,
-                                   b->machine_identifier) == KMIP_FALSE)
+            if(kmip_compare_text_string(a->machine_identifier, b->machine_identifier) == KMIP_FALSE)
             {
                 return(KMIP_FALSE);
             }
@@ -6439,8 +6265,7 @@ compare_device_credential(const struct device_credential *a,
                 return(KMIP_FALSE);
             }
             
-            if(compare_text_string(a->media_identifier,
-                                   b->media_identifier) == KMIP_FALSE)
+            if(kmip_compare_text_string(a->media_identifier, b->media_identifier) == KMIP_FALSE)
             {
                 return(KMIP_FALSE);
             }
@@ -6451,8 +6276,7 @@ compare_device_credential(const struct device_credential *a,
 }
 
 int
-compare_attestation_credential(const struct attestation_credential *a,
-                               const struct attestation_credential *b)
+kmip_compare_attestation_credential(const AttestationCredential *a, const AttestationCredential *b)
 {
     if(a != b)
     {
@@ -6473,7 +6297,7 @@ compare_attestation_credential(const struct attestation_credential *a,
                 return(KMIP_FALSE);
             }
             
-            if(compare_nonce(a->nonce, b->nonce) == KMIP_FALSE)
+            if(kmip_compare_nonce(a->nonce, b->nonce) == KMIP_FALSE)
             {
                 return(KMIP_FALSE);
             }
@@ -6481,14 +6305,12 @@ compare_attestation_credential(const struct attestation_credential *a,
         
         if(a->attestation_measurement != b->attestation_measurement)
         {
-            if((a->attestation_measurement == NULL) || 
-               (b->attestation_measurement == NULL))
+            if((a->attestation_measurement == NULL) || (b->attestation_measurement == NULL))
             {
                 return(KMIP_FALSE);
             }
             
-            if(compare_byte_string(a->attestation_measurement,
-                                   b->attestation_measurement) == KMIP_FALSE)
+            if(kmip_compare_byte_string(a->attestation_measurement, b->attestation_measurement) == KMIP_FALSE)
             {
                 return(KMIP_FALSE);
             }
@@ -6496,14 +6318,12 @@ compare_attestation_credential(const struct attestation_credential *a,
         
         if(a->attestation_assertion != b->attestation_assertion)
         {
-            if((a->attestation_assertion == NULL) || 
-               (b->attestation_assertion == NULL))
+            if((a->attestation_assertion == NULL) || (b->attestation_assertion == NULL))
             {
                 return(KMIP_FALSE);
             }
             
-            if(compare_byte_string(a->attestation_assertion,
-                                   b->attestation_assertion) == KMIP_FALSE)
+            if(kmip_compare_byte_string(a->attestation_assertion, b->attestation_assertion) == KMIP_FALSE)
             {
                 return(KMIP_FALSE);
             }
@@ -6514,9 +6334,7 @@ compare_attestation_credential(const struct attestation_credential *a,
 }
 
 int
-compare_credential_value(enum credential_type type,
-                         void **a,
-                         void **b)
+kmip_compare_credential_value(enum credential_type type, void **a, void **b)
 {
     if(a != b)
     {
@@ -6535,21 +6353,21 @@ compare_credential_value(enum credential_type type,
             switch(type)
             {
                 case KMIP_CRED_USERNAME_AND_PASSWORD:
-                if(compare_username_password_credential(*a, *b) == KMIP_FALSE)
+                if(kmip_compare_username_password_credential(*a, *b) == KMIP_FALSE)
                 {
                     return(KMIP_FALSE);
                 }
                 break;
                 
                 case KMIP_CRED_DEVICE:
-                if(compare_device_credential(*a, *b) == KMIP_FALSE)
+                if(kmip_compare_device_credential(*a, *b) == KMIP_FALSE)
                 {
                     return(KMIP_FALSE);
                 }
                 break;
                 
                 case KMIP_CRED_ATTESTATION:
-                if(compare_attestation_credential(*a, *b) == KMIP_FALSE)
+                if(kmip_compare_attestation_credential(*a, *b) == KMIP_FALSE)
                 {
                     return(KMIP_FALSE);
                 }
@@ -6567,7 +6385,7 @@ compare_credential_value(enum credential_type type,
 }
 
 int
-compare_credential(const struct credential *a, const struct credential *b)
+kmip_compare_credential(const Credential *a, const Credential *b)
 {
     if(a != b)
     {
@@ -6588,10 +6406,7 @@ compare_credential(const struct credential *a, const struct credential *b)
                 return(KMIP_FALSE);
             }
             
-            if(compare_credential_value(
-                a->credential_type,
-                (void**)&a->credential_value,
-                (void**)&b->credential_value) == KMIP_FALSE)
+            if(kmip_compare_credential_value(a->credential_type, (void**)&a->credential_value, (void**)&b->credential_value) == KMIP_FALSE)
             {
                 return(KMIP_FALSE);
             }
@@ -6602,8 +6417,7 @@ compare_credential(const struct credential *a, const struct credential *b)
 }
 
 int
-compare_authentication(const struct authentication *a,
-                       const struct authentication *b)
+kmip_compare_authentication(const Authentication *a, const Authentication *b)
 {
     if(a != b)
     {
@@ -6619,7 +6433,7 @@ compare_authentication(const struct authentication *a,
                 return(KMIP_FALSE);
             }
             
-            if(compare_credential(a->credential, b->credential) == KMIP_FALSE)
+            if(kmip_compare_credential(a->credential, b->credential) == KMIP_FALSE)
             {
                 return(KMIP_FALSE);
             }
@@ -6630,8 +6444,7 @@ compare_authentication(const struct authentication *a,
 }
 
 int
-compare_request_header(const struct request_header *a,
-                       const struct request_header *b)
+kmip_compare_request_header(const RequestHeader *a, const RequestHeader *b)
 {
     if(a != b)
     {
@@ -6650,8 +6463,7 @@ compare_request_header(const struct request_header *a,
             return(KMIP_FALSE);
         }
         
-        if(a->batch_error_continuation_option != 
-           b->batch_error_continuation_option)
+        if(a->batch_error_continuation_option != b->batch_error_continuation_option)
         {
             return(KMIP_FALSE);
         }
@@ -6671,8 +6483,7 @@ compare_request_header(const struct request_header *a,
             return(KMIP_FALSE);
         }
         
-        if(a->attestation_capable_indicator !=
-           b->attestation_capable_indicator)
+        if(a->attestation_capable_indicator != b->attestation_capable_indicator)
         {
             return(KMIP_FALSE);
         }
@@ -6689,8 +6500,7 @@ compare_request_header(const struct request_header *a,
                 return(KMIP_FALSE);
             }
             
-            if(compare_protocol_version(a->protocol_version,
-                                        b->protocol_version) == KMIP_FALSE)
+            if(kmip_compare_protocol_version(a->protocol_version, b->protocol_version) == KMIP_FALSE)
             {
                 return(KMIP_FALSE);
             }
@@ -6703,8 +6513,7 @@ compare_request_header(const struct request_header *a,
                 return(KMIP_FALSE);
             }
             
-            if(compare_authentication(a->authentication,
-                                      b->authentication) == KMIP_FALSE)
+            if(kmip_compare_authentication(a->authentication, b->authentication) == KMIP_FALSE)
             {
                 return(KMIP_FALSE);
             }
@@ -6728,14 +6537,12 @@ compare_request_header(const struct request_header *a,
         
         if(a->client_correlation_value != b->client_correlation_value)
         {
-            if((a->client_correlation_value == NULL) || 
-               (b->client_correlation_value == NULL))
+            if((a->client_correlation_value == NULL) || (b->client_correlation_value == NULL))
             {
                 return(KMIP_FALSE);
             }
             
-            if(compare_text_string(a->client_correlation_value,
-                                   b->client_correlation_value) == KMIP_FALSE)
+            if(kmip_compare_text_string(a->client_correlation_value, b->client_correlation_value) == KMIP_FALSE)
             {
                 return(KMIP_FALSE);
             }
@@ -6743,14 +6550,12 @@ compare_request_header(const struct request_header *a,
         
         if(a->server_correlation_value != b->server_correlation_value)
         {
-            if((a->server_correlation_value == NULL) ||
-               (b->server_correlation_value == NULL))
+            if((a->server_correlation_value == NULL) || (b->server_correlation_value == NULL))
             {
                 return(KMIP_FALSE);
             }
             
-            if(compare_text_string(a->server_correlation_value,
-                                   b->server_correlation_value) == KMIP_FALSE)
+            if(kmip_compare_text_string(a->server_correlation_value, b->server_correlation_value) == KMIP_FALSE)
             {
                 return(KMIP_FALSE);
             }
@@ -6761,8 +6566,7 @@ compare_request_header(const struct request_header *a,
 }
 
 int
-compare_response_header(const struct response_header *a,
-                        const struct response_header *b)
+kmip_compare_response_header(const ResponseHeader *a, const ResponseHeader *b)
 {
     if(a != b)
     {
@@ -6793,8 +6597,7 @@ compare_response_header(const struct response_header *a,
                 return(KMIP_FALSE);
             }
             
-            if(compare_protocol_version(a->protocol_version,
-                                        b->protocol_version) == KMIP_FALSE)
+            if(kmip_compare_protocol_version(a->protocol_version, b->protocol_version) == KMIP_FALSE)
             {
                 return(KMIP_FALSE);
             }
@@ -6807,7 +6610,7 @@ compare_response_header(const struct response_header *a,
                 return(KMIP_FALSE);
             }
             
-            if(compare_nonce(a->nonce, b->nonce) == KMIP_FALSE)
+            if(kmip_compare_nonce(a->nonce, b->nonce) == KMIP_FALSE)
             {
                 return(KMIP_FALSE);
             }
@@ -6831,14 +6634,12 @@ compare_response_header(const struct response_header *a,
         
         if(a->client_correlation_value != b->client_correlation_value)
         {
-            if((a->client_correlation_value == NULL) || 
-               (b->client_correlation_value == NULL))
+            if((a->client_correlation_value == NULL) || (b->client_correlation_value == NULL))
             {
                 return(KMIP_FALSE);
             }
             
-            if(compare_text_string(a->client_correlation_value,
-                                   b->client_correlation_value) == KMIP_FALSE)
+            if(kmip_compare_text_string(a->client_correlation_value, b->client_correlation_value) == KMIP_FALSE)
             {
                 return(KMIP_FALSE);
             }
@@ -6846,14 +6647,12 @@ compare_response_header(const struct response_header *a,
         
         if(a->server_correlation_value != b->server_correlation_value)
         {
-            if((a->server_correlation_value == NULL) ||
-               (b->server_correlation_value == NULL))
+            if((a->server_correlation_value == NULL) || (b->server_correlation_value == NULL))
             {
                 return(KMIP_FALSE);
             }
             
-            if(compare_text_string(a->server_correlation_value,
-                                   b->server_correlation_value) == KMIP_FALSE)
+            if(kmip_compare_text_string(a->server_correlation_value, b->server_correlation_value) == KMIP_FALSE)
             {
                 return(KMIP_FALSE);
             }
@@ -6864,8 +6663,7 @@ compare_response_header(const struct response_header *a,
 }
 
 int
-compare_request_message(const struct request_message *a,
-                        const struct request_message *b)
+kmip_compare_request_message(const RequestMessage *a, const RequestMessage *b)
 {
     if(a != b)
     {
@@ -6886,8 +6684,7 @@ compare_request_message(const struct request_message *a,
                 return(KMIP_FALSE);
             }
             
-            if(compare_request_header(a->request_header,
-                                      b->request_header) == KMIP_FALSE)
+            if(kmip_compare_request_header(a->request_header, b->request_header) == KMIP_FALSE)
             {
                 return(KMIP_FALSE);
             }
@@ -6902,9 +6699,7 @@ compare_request_message(const struct request_message *a,
             
             for(size_t i = 0; i < a->batch_count; i++)
             {
-                if(compare_request_batch_item(
-                    &a->batch_items[i],
-                    &b->batch_items[i]) == KMIP_FALSE)
+                if(kmip_compare_request_batch_item(&a->batch_items[i], &b->batch_items[i]) == KMIP_FALSE)
                 {
                     return(KMIP_FALSE);
                 }
@@ -6916,8 +6711,7 @@ compare_request_message(const struct request_message *a,
 }
 
 int
-compare_response_message(const struct response_message *a,
-                         const struct response_message *b)
+kmip_compare_response_message(const ResponseMessage *a, const ResponseMessage *b)
 {
     if(a != b)
     {
@@ -6938,8 +6732,7 @@ compare_response_message(const struct response_message *a,
                 return(KMIP_FALSE);
             }
             
-            if(compare_response_header(a->response_header,
-                                       b->response_header) == KMIP_FALSE)
+            if(kmip_compare_response_header(a->response_header, b->response_header) == KMIP_FALSE)
             {
                 return(KMIP_FALSE);
             }
@@ -6954,8 +6747,7 @@ compare_response_message(const struct response_message *a,
             
             for(size_t i = 0; i < a->batch_count; i++)
             {
-                if(compare_response_batch_item(&a->batch_items[i], 
-                                               &b->batch_items[i]) == KMIP_FALSE)
+                if(kmip_compare_response_batch_item(&a->batch_items[i], &b->batch_items[i]) == KMIP_FALSE)
                 {
                     return(KMIP_FALSE);
                 }
@@ -6971,7 +6763,7 @@ Encoding Functions
 */
 
 int
-encode_int8_be(struct kmip *ctx, int8 value)
+kmip_encode_int8_be(KMIP *ctx, int8 value)
 {
     CHECK_BUFFER_FULL(ctx, sizeof(int8));
     
@@ -6981,7 +6773,7 @@ encode_int8_be(struct kmip *ctx, int8 value)
 }
 
 int
-encode_int32_be(struct kmip *ctx, int32 value)
+kmip_encode_int32_be(KMIP *ctx, int32 value)
 {
     CHECK_BUFFER_FULL(ctx, sizeof(int32));
     
@@ -6994,7 +6786,7 @@ encode_int32_be(struct kmip *ctx, int32 value)
 }
 
 int
-encode_int64_be(struct kmip *ctx, int64 value)
+kmip_encode_int64_be(KMIP *ctx, int64 value)
 {
     CHECK_BUFFER_FULL(ctx, sizeof(int64));
     
@@ -7011,154 +6803,147 @@ encode_int64_be(struct kmip *ctx, int64 value)
 }
 
 int
-encode_integer(struct kmip *ctx, enum tag t, int32 value)
+kmip_encode_integer(KMIP *ctx, enum tag t, int32 value)
 {
     CHECK_BUFFER_FULL(ctx, 16);
     
-    encode_int32_be(ctx, TAG_TYPE(t, KMIP_TYPE_INTEGER));
-    encode_int32_be(ctx, 4);
-    encode_int32_be(ctx, value);
-    encode_int32_be(ctx, 0);
+    kmip_encode_int32_be(ctx, TAG_TYPE(t, KMIP_TYPE_INTEGER));
+    kmip_encode_int32_be(ctx, 4);
+    kmip_encode_int32_be(ctx, value);
+    kmip_encode_int32_be(ctx, 0);
     
     return(KMIP_OK);
 }
 
 int
-encode_long(struct kmip *ctx, enum tag t, int64 value)
+kmip_encode_long(KMIP *ctx, enum tag t, int64 value)
 {
     CHECK_BUFFER_FULL(ctx, 16);
     
-    encode_int32_be(ctx, TAG_TYPE(t, KMIP_TYPE_LONG_INTEGER));
-    encode_int32_be(ctx, 8);
-    encode_int64_be(ctx, value);
+    kmip_encode_int32_be(ctx, TAG_TYPE(t, KMIP_TYPE_LONG_INTEGER));
+    kmip_encode_int32_be(ctx, 8);
+    kmip_encode_int64_be(ctx, value);
     
     return(KMIP_OK);
 }
 
 int
-encode_enum(struct kmip *ctx, enum tag t, int32 value)
+kmip_encode_enum(KMIP *ctx, enum tag t, int32 value)
 {
     CHECK_BUFFER_FULL(ctx, 16);
     
-    encode_int32_be(ctx, TAG_TYPE(t, KMIP_TYPE_ENUMERATION));
-    encode_int32_be(ctx, 4);
-    encode_int32_be(ctx, value);
-    encode_int32_be(ctx, 0);
+    kmip_encode_int32_be(ctx, TAG_TYPE(t, KMIP_TYPE_ENUMERATION));
+    kmip_encode_int32_be(ctx, 4);
+    kmip_encode_int32_be(ctx, value);
+    kmip_encode_int32_be(ctx, 0);
     
     return(KMIP_OK);
 }
 
 int
-encode_bool(struct kmip *ctx, enum tag t, bool32 value)
+kmip_encode_bool(KMIP *ctx, enum tag t, bool32 value)
 {
     CHECK_BUFFER_FULL(ctx, 16);
     
-    encode_int32_be(ctx, TAG_TYPE(t, KMIP_TYPE_BOOLEAN));
-    encode_int32_be(ctx, 8);
-    encode_int32_be(ctx, 0);
-    encode_int32_be(ctx, value);
+    kmip_encode_int32_be(ctx, TAG_TYPE(t, KMIP_TYPE_BOOLEAN));
+    kmip_encode_int32_be(ctx, 8);
+    kmip_encode_int32_be(ctx, 0);
+    kmip_encode_int32_be(ctx, value);
     
     return(KMIP_OK);
 }
 
 int
-encode_text_string(struct kmip *ctx, enum tag t,
-                   const struct text_string *value)
+kmip_encode_text_string(KMIP *ctx, enum tag t, const TextString *value)
 {
     /* TODO (ph) What if value is NULL? */
     uint8 padding = (8 - (value->size % 8)) % 8;
     CHECK_BUFFER_FULL(ctx, 8 + value->size + padding);
     
-    encode_int32_be(ctx, TAG_TYPE(t, KMIP_TYPE_TEXT_STRING));
-    encode_int32_be(ctx, value->size);
+    kmip_encode_int32_be(ctx, TAG_TYPE(t, KMIP_TYPE_TEXT_STRING));
+    kmip_encode_int32_be(ctx, value->size);
     
     for(uint32 i = 0; i < value->size; i++)
     {
-        encode_int8_be(ctx, value->value[i]);
+        kmip_encode_int8_be(ctx, value->value[i]);
     }
     for(uint8 i = 0; i < padding; i++)
     {
-        encode_int8_be(ctx, 0);
+        kmip_encode_int8_be(ctx, 0);
     }
     
     return(KMIP_OK);
 }
 
 int
-encode_byte_string(struct kmip *ctx, enum tag t,
-                   const struct byte_string *value)
+kmip_encode_byte_string(KMIP *ctx, enum tag t, const ByteString *value)
 {
     uint8 padding = (8 - (value->size % 8)) % 8;
     CHECK_BUFFER_FULL(ctx, 8 + value->size + padding);
     
-    encode_int32_be(ctx, TAG_TYPE(t, KMIP_TYPE_BYTE_STRING));
-    encode_int32_be(ctx, value->size);
+    kmip_encode_int32_be(ctx, TAG_TYPE(t, KMIP_TYPE_BYTE_STRING));
+    kmip_encode_int32_be(ctx, value->size);
     
     for(uint32 i = 0; i < value->size; i++)
     {
-        encode_int8_be(ctx, value->value[i]);
+        kmip_encode_int8_be(ctx, value->value[i]);
     }
     for(uint8 i = 0; i < padding; i++)
     {
-        encode_int8_be(ctx, 0);
+        kmip_encode_int8_be(ctx, 0);
     }
     
     return(KMIP_OK);
 }
 
 int
-encode_date_time(struct kmip *ctx, enum tag t, uint64 value)
+kmip_encode_date_time(KMIP *ctx, enum tag t, uint64 value)
 {
     CHECK_BUFFER_FULL(ctx, 16);
     
-    encode_int32_be(ctx, TAG_TYPE(t, KMIP_TYPE_DATE_TIME));
-    encode_int32_be(ctx, 8);
-    encode_int64_be(ctx, value);
+    kmip_encode_int32_be(ctx, TAG_TYPE(t, KMIP_TYPE_DATE_TIME));
+    kmip_encode_int32_be(ctx, 8);
+    kmip_encode_int64_be(ctx, value);
     
     return(KMIP_OK);
 }
 
 int
-encode_interval(struct kmip *ctx, enum tag t, uint32 value)
+kmip_encode_interval(KMIP *ctx, enum tag t, uint32 value)
 {
     CHECK_BUFFER_FULL(ctx, 16);
     
-    encode_int32_be(ctx, TAG_TYPE(t, KMIP_TYPE_INTERVAL));
-    encode_int32_be(ctx, 4);
-    encode_int32_be(ctx, value);
-    encode_int32_be(ctx, 0);
+    kmip_encode_int32_be(ctx, TAG_TYPE(t, KMIP_TYPE_INTERVAL));
+    kmip_encode_int32_be(ctx, 4);
+    kmip_encode_int32_be(ctx, value);
+    kmip_encode_int32_be(ctx, 0);
     
     return(KMIP_OK);
 }
 
 int
-encode_name(struct kmip *ctx, const struct name *value)
+kmip_encode_name(KMIP *ctx, const Name *value)
 {
     /* TODO (peter-hamilton) Check for value == NULL? */
     
     int result = 0;
     
-    result = encode_int32_be(
-        ctx, 
-        TAG_TYPE(KMIP_TAG_NAME, KMIP_TYPE_STRUCTURE));
+    result = kmip_encode_int32_be(ctx, TAG_TYPE(KMIP_TAG_NAME, KMIP_TYPE_STRUCTURE));
     CHECK_RESULT(ctx, result);
     
     uint8 *length_index = ctx->index;
     uint8 *value_index = ctx->index += 4;
     
-    result = encode_text_string(
-        ctx,
-        KMIP_TAG_NAME_VALUE,
-        value->value);
+    result = kmip_encode_text_string(ctx, KMIP_TAG_NAME_VALUE, value->value);
     CHECK_RESULT(ctx, result);
     
-    result = encode_enum(ctx, KMIP_TAG_NAME_TYPE, value->type);
+    result = kmip_encode_enum(ctx, KMIP_TAG_NAME_TYPE, value->type);
     CHECK_RESULT(ctx, result);
     
     uint8 *curr_index = ctx->index;
     ctx->index = length_index;
     
-    result = encode_int32_be(ctx, curr_index - value_index);
+    result = kmip_encode_int32_be(ctx, curr_index - value_index);
     CHECK_RESULT(ctx, result);
     
     ctx->index = curr_index;
@@ -7167,11 +6952,11 @@ encode_name(struct kmip *ctx, const struct name *value)
 }
 
 int
-encode_attribute_name(struct kmip *ctx, enum attribute_type value)
+kmip_encode_attribute_name(KMIP *ctx, enum attribute_type value)
 {
     int result = 0;
     enum tag t = KMIP_TAG_ATTRIBUTE_NAME;
-    struct text_string attribute_name = {0};
+    TextString attribute_name = {0};
     
     switch(value)
     {
@@ -7221,14 +7006,14 @@ encode_attribute_name(struct kmip *ctx, enum attribute_type value)
         break;
     };
     
-    result = encode_text_string(ctx, t, &attribute_name);
+    result = kmip_encode_text_string(ctx, t, &attribute_name);
     CHECK_RESULT(ctx, result);
     
     return(KMIP_OK);
 }
 
 int
-encode_attribute(struct kmip *ctx, const struct attribute *value)
+kmip_encode_attribute(KMIP *ctx, const Attribute *value)
 {
     /* TODO (peter-hamilton) Check value == NULL? */
     /* TODO (peter-hamilton) Cehck value->value == NULL? */
@@ -7237,20 +7022,18 @@ encode_attribute(struct kmip *ctx, const struct attribute *value)
     
     int result = 0;
     
-    result = encode_int32_be(
-        ctx, 
-        TAG_TYPE(KMIP_TAG_ATTRIBUTE, KMIP_TYPE_STRUCTURE));
+    result = kmip_encode_int32_be(ctx, TAG_TYPE(KMIP_TAG_ATTRIBUTE, KMIP_TYPE_STRUCTURE));
     CHECK_RESULT(ctx, result);
     
     uint8 *length_index = ctx->index;
     uint8 *value_index = ctx->index += 4;
     
-    result = encode_attribute_name(ctx, value->type);
+    result = kmip_encode_attribute_name(ctx, value->type);
     CHECK_RESULT(ctx, result);
     
     if(value->index != KMIP_UNSET)
     {
-        result = encode_integer(ctx, KMIP_TAG_ATTRIBUTE_INDEX, value->index);
+        result = kmip_encode_integer(ctx, KMIP_TAG_ATTRIBUTE_INDEX, value->index);
         CHECK_RESULT(ctx, result);
     }
     
@@ -7261,50 +7044,44 @@ encode_attribute(struct kmip *ctx, const struct attribute *value)
     switch(value->type)
     {
         case KMIP_ATTR_UNIQUE_IDENTIFIER:
-        result = encode_text_string(
-            ctx, t, 
-            (struct text_string*)value->value);
+        result = kmip_encode_text_string(ctx, t, (TextString*)value->value);
         break;
         
         case KMIP_ATTR_NAME:
         /* TODO (ph) This is messy. Clean it up? */
-        result = encode_name(ctx, (struct name*)value->value);
+        result = kmip_encode_name(ctx, (Name*)value->value);
         CHECK_RESULT(ctx, result);
         
         curr_index = ctx->index;
         ctx->index = tag_index;
         
-        result = encode_int32_be(
-            ctx,
-            TAG_TYPE(KMIP_TAG_ATTRIBUTE_VALUE, KMIP_TYPE_STRUCTURE));
+        result = kmip_encode_int32_be(ctx, TAG_TYPE(KMIP_TAG_ATTRIBUTE_VALUE, KMIP_TYPE_STRUCTURE));
         
         ctx->index = curr_index;
         break;
         
         case KMIP_ATTR_OBJECT_TYPE:
-        result = encode_enum(ctx, t, *(int32 *)value->value);
+        result = kmip_encode_enum(ctx, t, *(int32 *)value->value);
         break;
         
         case KMIP_ATTR_CRYPTOGRAPHIC_ALGORITHM:
-        result = encode_enum(ctx, t, *(int32 *)value->value);
+        result = kmip_encode_enum(ctx, t, *(int32 *)value->value);
         break;
         
         case KMIP_ATTR_CRYPTOGRAPHIC_LENGTH:
-        result = encode_integer(ctx, t, *(int32 *)value->value);
+        result = kmip_encode_integer(ctx, t, *(int32 *)value->value);
         break;
         
         case KMIP_ATTR_OPERATION_POLICY_NAME:
-        result = encode_text_string(
-            ctx, t, 
-            (struct text_string*)value->value);
+        result = kmip_encode_text_string(ctx, t, (TextString*)value->value);
         break;
         
         case KMIP_ATTR_CRYPTOGRAPHIC_USAGE_MASK:
-        result = encode_integer(ctx, t, *(int32 *)value->value);
+        result = kmip_encode_integer(ctx, t, *(int32 *)value->value);
         break;
         
         case KMIP_ATTR_STATE:
-        result = encode_enum(ctx, t, *(int32 *)value->value);
+        result = kmip_encode_enum(ctx, t, *(int32 *)value->value);
         break;
         
         default:
@@ -7317,7 +7094,7 @@ encode_attribute(struct kmip *ctx, const struct attribute *value)
     curr_index = ctx->index;
     ctx->index = length_index;
     
-    result = encode_int32_be(ctx, curr_index - value_index);
+    result = kmip_encode_int32_be(ctx, curr_index - value_index);
     CHECK_RESULT(ctx, result);
     
     ctx->index = curr_index;
@@ -7326,14 +7103,11 @@ encode_attribute(struct kmip *ctx, const struct attribute *value)
 }
 
 int
-encode_template_attribute(struct kmip *ctx, 
-                          const struct template_attribute *value)
+kmip_encode_template_attribute(KMIP *ctx, const TemplateAttribute *value)
 {
     int result = 0;
     
-    result = encode_int32_be(
-        ctx, 
-        TAG_TYPE(KMIP_TAG_TEMPLATE_ATTRIBUTE, KMIP_TYPE_STRUCTURE));
+    result = kmip_encode_int32_be(ctx, TAG_TYPE(KMIP_TAG_TEMPLATE_ATTRIBUTE, KMIP_TYPE_STRUCTURE));
     CHECK_RESULT(ctx, result);
     
     uint8 *length_index = ctx->index;
@@ -7341,20 +7115,20 @@ encode_template_attribute(struct kmip *ctx,
     
     for(size_t i = 0; i < value->name_count; i++)
     {
-        result = encode_name(ctx, &value->names[i]);
+        result = kmip_encode_name(ctx, &value->names[i]);
         CHECK_RESULT(ctx, result);
     }
     
     for(size_t i = 0; i <value->attribute_count; i++)
     {
-        result = encode_attribute(ctx, &value->attributes[i]);
+        result = kmip_encode_attribute(ctx, &value->attributes[i]);
         CHECK_RESULT(ctx, result);
     }
     
     uint8 *curr_index = ctx->index;
     ctx->index = length_index;
     
-    result = encode_int32_be(ctx, curr_index - value_index);
+    result = kmip_encode_int32_be(ctx, curr_index - value_index);
     CHECK_RESULT(ctx, result);
     
     ctx->index = curr_index;
@@ -7363,25 +7137,22 @@ encode_template_attribute(struct kmip *ctx,
 }
 
 int
-encode_protocol_version(struct kmip *ctx, 
-                        const struct protocol_version *value)
+kmip_encode_protocol_version(KMIP *ctx, const ProtocolVersion *value)
 {
     CHECK_BUFFER_FULL(ctx, 40);
     
-    encode_int32_be(
-        ctx, 
-        TAG_TYPE(KMIP_TAG_PROTOCOL_VERSION, KMIP_TYPE_STRUCTURE));
+    kmip_encode_int32_be(ctx, TAG_TYPE(KMIP_TAG_PROTOCOL_VERSION, KMIP_TYPE_STRUCTURE));
     
     uint8 *length_index = ctx->index;
     uint8 *value_index = ctx->index += 4;
     
-    encode_integer(ctx, KMIP_TAG_PROTOCOL_VERSION_MAJOR, value->major);
-    encode_integer(ctx, KMIP_TAG_PROTOCOL_VERSION_MINOR, value->minor);
+    kmip_encode_integer(ctx, KMIP_TAG_PROTOCOL_VERSION_MAJOR, value->major);
+    kmip_encode_integer(ctx, KMIP_TAG_PROTOCOL_VERSION_MINOR, value->minor);
     
     uint8 *curr_index = ctx->index;
     ctx->index = length_index;
     
-    encode_int32_be(ctx, curr_index - value_index);
+    kmip_encode_int32_be(ctx, curr_index - value_index);
     
     ctx->index = curr_index;
     
@@ -7389,13 +7160,10 @@ encode_protocol_version(struct kmip *ctx,
 }
 
 int
-encode_cryptographic_parameters(struct kmip *ctx, 
-                                const struct cryptographic_parameters *value)
+kmip_encode_cryptographic_parameters(KMIP *ctx, const CryptographicParameters *value)
 {
     int result = 0;
-    result = encode_int32_be(
-        ctx, 
-        TAG_TYPE(KMIP_TAG_CRYPTOGRAPHIC_PARAMETERS, KMIP_TYPE_STRUCTURE));
+    result = kmip_encode_int32_be(ctx, TAG_TYPE(KMIP_TAG_CRYPTOGRAPHIC_PARAMETERS, KMIP_TYPE_STRUCTURE));
     CHECK_RESULT(ctx, result);
     
     uint8 *length_index = ctx->index;
@@ -7403,37 +7171,25 @@ encode_cryptographic_parameters(struct kmip *ctx,
     
     if(value->block_cipher_mode != 0)
     {
-        result = encode_enum(
-            ctx,
-            KMIP_TAG_BLOCK_CIPHER_MODE,
-            value->block_cipher_mode);
+        result = kmip_encode_enum(ctx, KMIP_TAG_BLOCK_CIPHER_MODE, value->block_cipher_mode);
         CHECK_RESULT(ctx, result);
     }
     
     if(value->padding_method != 0)
     {
-        result = encode_enum(
-            ctx,
-            KMIP_TAG_PADDING_METHOD,
-            value->padding_method);
+        result = kmip_encode_enum(ctx, KMIP_TAG_PADDING_METHOD, value->padding_method);
         CHECK_RESULT(ctx, result);
     }
     
     if(value->hashing_algorithm != 0)
     {
-        result = encode_enum(
-            ctx,
-            KMIP_TAG_HASHING_ALGORITHM,
-            value->hashing_algorithm);
+        result = kmip_encode_enum(ctx, KMIP_TAG_HASHING_ALGORITHM, value->hashing_algorithm);
         CHECK_RESULT(ctx, result);
     }
     
     if(value->key_role_type != 0)
     {
-        result = encode_enum(
-            ctx,
-            KMIP_TAG_KEY_ROLE_TYPE,
-            value->key_role_type);
+        result = kmip_encode_enum(ctx, KMIP_TAG_KEY_ROLE_TYPE, value->key_role_type);
         CHECK_RESULT(ctx, result);
     }
     
@@ -7441,82 +7197,55 @@ encode_cryptographic_parameters(struct kmip *ctx,
     {
         if(value->digital_signature_algorithm != 0)
         {
-            result = encode_enum(
-                ctx,
-                KMIP_TAG_DIGITAL_SIGNATURE_ALGORITHM,
-                value->digital_signature_algorithm);
+            result = kmip_encode_enum(ctx, KMIP_TAG_DIGITAL_SIGNATURE_ALGORITHM, value->digital_signature_algorithm);
             CHECK_RESULT(ctx, result);
         }
         
         if(value->cryptographic_algorithm != 0)
         {
-            result = encode_enum(
-                ctx,
-                KMIP_TAG_CRYPTOGRAPHIC_ALGORITHM,
-                value->cryptographic_algorithm);
+            result = kmip_encode_enum(ctx, KMIP_TAG_CRYPTOGRAPHIC_ALGORITHM, value->cryptographic_algorithm);
             CHECK_RESULT(ctx, result);
         }
         
         if(value->random_iv != KMIP_UNSET)
         {
-            result = encode_bool(
-                ctx,
-                KMIP_TAG_RANDOM_IV,
-                value->random_iv);
+            result = kmip_encode_bool(ctx, KMIP_TAG_RANDOM_IV, value->random_iv);
             CHECK_RESULT(ctx, result);
         }
         
         if(value->iv_length != KMIP_UNSET)
         {
-            result = encode_integer(
-                ctx,
-                KMIP_TAG_IV_LENGTH,
-                value->iv_length);
+            result = kmip_encode_integer(ctx, KMIP_TAG_IV_LENGTH, value->iv_length);
             CHECK_RESULT(ctx, result);
         }
         
         if(value->tag_length != KMIP_UNSET)
         {
-            result = encode_integer(
-                ctx,
-                KMIP_TAG_TAG_LENGTH,
-                value->tag_length);
+            result = kmip_encode_integer(ctx, KMIP_TAG_TAG_LENGTH, value->tag_length);
             CHECK_RESULT(ctx, result);
         }
         
         if(value->fixed_field_length != KMIP_UNSET)
         {
-            result = encode_integer(
-                ctx,
-                KMIP_TAG_FIXED_FIELD_LENGTH,
-                value->fixed_field_length);
+            result = kmip_encode_integer(ctx, KMIP_TAG_FIXED_FIELD_LENGTH, value->fixed_field_length);
             CHECK_RESULT(ctx, result);
         }
         
         if(value->invocation_field_length != KMIP_UNSET)
         {
-            result = encode_integer(
-                ctx,
-                KMIP_TAG_INVOCATION_FIELD_LENGTH,
-                value->invocation_field_length);
+            result = kmip_encode_integer(ctx, KMIP_TAG_INVOCATION_FIELD_LENGTH, value->invocation_field_length);
             CHECK_RESULT(ctx, result);
         }
         
         if(value->counter_length != KMIP_UNSET)
         {
-            result = encode_integer(
-                ctx,
-                KMIP_TAG_COUNTER_LENGTH,
-                value->counter_length);
+            result = kmip_encode_integer(ctx, KMIP_TAG_COUNTER_LENGTH, value->counter_length);
             CHECK_RESULT(ctx, result);
         }
         
         if(value->initial_counter_value != KMIP_UNSET)
         {
-            result = encode_integer(
-                ctx,
-                KMIP_TAG_INITIAL_COUNTER_VALUE,
-                value->initial_counter_value);
+            result = kmip_encode_integer(ctx, KMIP_TAG_INITIAL_COUNTER_VALUE, value->initial_counter_value);
             CHECK_RESULT(ctx, result);
         }
     }
@@ -7525,46 +7254,31 @@ encode_cryptographic_parameters(struct kmip *ctx,
     {
         if(value->salt_length != KMIP_UNSET)
         {
-            result = encode_integer(
-                ctx,
-                KMIP_TAG_SALT_LENGTH,
-                value->salt_length);
+            result = kmip_encode_integer(ctx, KMIP_TAG_SALT_LENGTH, value->salt_length);
             CHECK_RESULT(ctx, result);
         }
         
         if(value->mask_generator != 0)
         {
-            result = encode_enum(
-                ctx,
-                KMIP_TAG_MASK_GENERATOR,
-                value->mask_generator);
+            result = kmip_encode_enum(ctx, KMIP_TAG_MASK_GENERATOR, value->mask_generator);
             CHECK_RESULT(ctx, result);
         }
         
         if(value->mask_generator_hashing_algorithm != 0)
         {
-            result = encode_enum(
-                ctx,
-                KMIP_TAG_MASK_GENERATOR_HASHING_ALGORITHM,
-                value->mask_generator_hashing_algorithm);
+            result = kmip_encode_enum(ctx, KMIP_TAG_MASK_GENERATOR_HASHING_ALGORITHM, value->mask_generator_hashing_algorithm);
             CHECK_RESULT(ctx, result);
         }
         
         if(value->p_source != NULL)
         {
-            result = encode_byte_string(
-                ctx,
-                KMIP_TAG_P_SOURCE,
-                value->p_source);
+            result = kmip_encode_byte_string(ctx, KMIP_TAG_P_SOURCE, value->p_source);
             CHECK_RESULT(ctx, result);
         }
         
         if(value->trailer_field != KMIP_UNSET)
         {
-            result = encode_integer(
-                ctx,
-                KMIP_TAG_TRAILER_FIELD,
-                value->trailer_field);
+            result = kmip_encode_integer(ctx, KMIP_TAG_TRAILER_FIELD, value->trailer_field);
             CHECK_RESULT(ctx, result);
         }
     }
@@ -7572,7 +7286,7 @@ encode_cryptographic_parameters(struct kmip *ctx,
     uint8 *curr_index = ctx->index;
     ctx->index = length_index;
     
-    encode_int32_be(ctx, curr_index - value_index);
+    kmip_encode_int32_be(ctx, curr_index - value_index);
     
     ctx->index = curr_index;
     
@@ -7580,35 +7294,28 @@ encode_cryptographic_parameters(struct kmip *ctx,
 }
 
 int
-encode_encryption_key_information(struct kmip *ctx, 
-                                  const struct encryption_key_information *value)
+kmip_encode_encryption_key_information(KMIP *ctx, const EncryptionKeyInformation *value)
 {
     int result = 0;
-    result = encode_int32_be(
-        ctx, 
-        TAG_TYPE(KMIP_TAG_ENCRYPTION_KEY_INFORMATION, KMIP_TYPE_STRUCTURE));
+    result = kmip_encode_int32_be(ctx, TAG_TYPE(KMIP_TAG_ENCRYPTION_KEY_INFORMATION, KMIP_TYPE_STRUCTURE));
     CHECK_RESULT(ctx, result);
     
     uint8 *length_index = ctx->index;
     uint8 *value_index = ctx->index += 4;
     
-    result = encode_text_string(
-        ctx, KMIP_TAG_UNIQUE_IDENTIFIER, 
-        value->unique_identifier);
+    result = kmip_encode_text_string(ctx, KMIP_TAG_UNIQUE_IDENTIFIER, value->unique_identifier);
     CHECK_RESULT(ctx, result);
     
     if(value->cryptographic_parameters != 0)
     {
-        result = encode_cryptographic_parameters(
-            ctx, 
-            value->cryptographic_parameters);
+        result = kmip_encode_cryptographic_parameters(ctx, value->cryptographic_parameters);
         CHECK_RESULT(ctx, result);
     }
     
     uint8 *curr_index = ctx->index;
     ctx->index = length_index;
     
-    encode_int32_be(ctx, curr_index - value_index);
+    kmip_encode_int32_be(ctx, curr_index - value_index);
     
     ctx->index = curr_index;
     
@@ -7616,36 +7323,28 @@ encode_encryption_key_information(struct kmip *ctx,
 }
 
 int
-encode_mac_signature_key_information(
-struct kmip *ctx, 
-const struct mac_signature_key_information *value)
+kmip_encode_mac_signature_key_information(KMIP *ctx, const MACSignatureKeyInformation *value)
 {
     int result = 0;
-    result = encode_int32_be(
-        ctx, 
-        TAG_TYPE(KMIP_TAG_MAC_SIGNATURE_KEY_INFORMATION, KMIP_TYPE_STRUCTURE));
+    result = kmip_encode_int32_be(ctx, TAG_TYPE(KMIP_TAG_MAC_SIGNATURE_KEY_INFORMATION, KMIP_TYPE_STRUCTURE));
     CHECK_RESULT(ctx, result);
     
     uint8 *length_index = ctx->index;
     uint8 *value_index = ctx->index += 4;
     
-    result = encode_text_string(
-        ctx, KMIP_TAG_UNIQUE_IDENTIFIER, 
-        value->unique_identifier);
+    result = kmip_encode_text_string(ctx, KMIP_TAG_UNIQUE_IDENTIFIER, value->unique_identifier);
     CHECK_RESULT(ctx, result);
     
     if(value->cryptographic_parameters != 0)
     {
-        result = encode_cryptographic_parameters(
-            ctx, 
-            value->cryptographic_parameters);
+        result = kmip_encode_cryptographic_parameters(ctx, value->cryptographic_parameters);
         CHECK_RESULT(ctx, result);
     }
     
     uint8 *curr_index = ctx->index;
     ctx->index = length_index;
     
-    encode_int32_be(ctx, curr_index - value_index);
+    kmip_encode_int32_be(ctx, curr_index - value_index);
     
     ctx->index = curr_index;
     
@@ -7653,66 +7352,52 @@ const struct mac_signature_key_information *value)
 }
 
 int
-encode_key_wrapping_data(struct kmip *ctx, 
-                         const struct key_wrapping_data *value)
+kmip_encode_key_wrapping_data(KMIP *ctx, const KeyWrappingData *value)
 {
     int result = 0;
-    result = encode_int32_be(
-        ctx, 
-        TAG_TYPE(KMIP_TAG_KEY_WRAPPING_DATA, KMIP_TYPE_STRUCTURE));
+    result = kmip_encode_int32_be(ctx, TAG_TYPE(KMIP_TAG_KEY_WRAPPING_DATA, KMIP_TYPE_STRUCTURE));
     CHECK_RESULT(ctx, result);
     
     uint8 *length_index = ctx->index;
     uint8 *value_index = ctx->index += 4;
     
-    result = encode_enum(ctx, KMIP_TAG_WRAPPING_METHOD, value->wrapping_method);
+    result = kmip_encode_enum(ctx, KMIP_TAG_WRAPPING_METHOD, value->wrapping_method);
     CHECK_RESULT(ctx, result);
     
     if(value->encryption_key_info != NULL)
     {
-        result = encode_encryption_key_information(
-            ctx, 
-            value->encryption_key_info);
+        result = kmip_encode_encryption_key_information(ctx, value->encryption_key_info);
         CHECK_RESULT(ctx, result);
     }
     
     if(value->mac_signature_key_info != NULL)
     {
-        result = encode_mac_signature_key_information(
-            ctx, 
-            value->mac_signature_key_info);
+        result = kmip_encode_mac_signature_key_information(ctx, value->mac_signature_key_info);
         CHECK_RESULT(ctx, result);
     }
     
     if(value->mac_signature != NULL)
     {
-        result = encode_byte_string(
-            ctx, KMIP_TAG_MAC_SIGNATURE, 
-            value->mac_signature);
+        result = kmip_encode_byte_string(ctx, KMIP_TAG_MAC_SIGNATURE, value->mac_signature);
         CHECK_RESULT(ctx, result);
     }
     
     if(value->iv_counter_nonce != NULL)
     {
-        result = encode_byte_string(
-            ctx, KMIP_TAG_IV_COUNTER_NONCE, 
-            value->iv_counter_nonce);
+        result = kmip_encode_byte_string(ctx, KMIP_TAG_IV_COUNTER_NONCE, value->iv_counter_nonce);
         CHECK_RESULT(ctx, result);
     }
     
     if(ctx->version >= KMIP_1_1)
     {
-        result = encode_enum(
-            ctx,
-            KMIP_TAG_ENCODING_OPTION,
-            value->encoding_option);
+        result = kmip_encode_enum(ctx, KMIP_TAG_ENCODING_OPTION, value->encoding_option);
         CHECK_RESULT(ctx, result);
     }
     
     uint8 *curr_index = ctx->index;
     ctx->index = length_index;
     
-    encode_int32_be(ctx, curr_index - value_index);
+    kmip_encode_int32_be(ctx, curr_index - value_index);
     
     ctx->index = curr_index;
     
@@ -7720,30 +7405,23 @@ encode_key_wrapping_data(struct kmip *ctx,
 }
 
 int
-encode_transparent_symmetric_key(
-struct kmip *ctx,
-const struct transparent_symmetric_key *value)
+kmip_encode_transparent_symmetric_key(KMIP *ctx, const TransparentSymmetricKey *value)
 {
     int result = 0;
     
-    result = encode_int32_be(
-        ctx,
-        TAG_TYPE(KMIP_TAG_KEY_MATERIAL, KMIP_TYPE_STRUCTURE));
+    result = kmip_encode_int32_be(ctx, TAG_TYPE(KMIP_TAG_KEY_MATERIAL, KMIP_TYPE_STRUCTURE));
     CHECK_RESULT(ctx, result);
     
     uint8 *length_index = ctx->index;
     uint8 *value_index = ctx->index += 4;
     
-    result = encode_byte_string(
-        ctx,
-        KMIP_TAG_KEY,
-        value->key);
+    result = kmip_encode_byte_string(ctx, KMIP_TAG_KEY, value->key);
     CHECK_RESULT(ctx, result);
     
     uint8 *curr_index = ctx->index;
     ctx->index = length_index;
     
-    encode_int32_be(ctx, curr_index - value_index);
+    kmip_encode_int32_be(ctx, curr_index - value_index);
     
     ctx->index = curr_index;
     
@@ -7751,9 +7429,7 @@ const struct transparent_symmetric_key *value)
 }
 
 int
-encode_key_material(struct kmip *ctx,
-                    enum key_format_type format,
-                    const void *value)
+kmip_encode_key_material(KMIP *ctx, enum key_format_type format, const void *value)
 {
     int result = 0;
     
@@ -7765,10 +7441,7 @@ encode_key_material(struct kmip *ctx,
         case KMIP_KEYFORMAT_PKCS8:
         case KMIP_KEYFORMAT_X509:
         case KMIP_KEYFORMAT_EC_PRIVATE_KEY:
-        result = encode_byte_string(
-            ctx,
-            KMIP_TAG_KEY_MATERIAL,
-            (struct byte_string*)value);
+        result = kmip_encode_byte_string(ctx, KMIP_TAG_KEY_MATERIAL, (ByteString*)value);
         CHECK_RESULT(ctx, result);
         return(KMIP_OK);
         break;
@@ -7780,9 +7453,7 @@ encode_key_material(struct kmip *ctx,
     switch(format)
     {
         case KMIP_KEYFORMAT_TRANS_SYMMETRIC_KEY:
-        result = encode_transparent_symmetric_key(
-            ctx,
-            (struct transparent_symmetric_key*)value);
+        result = kmip_encode_transparent_symmetric_key(ctx, (TransparentSymmetricKey*)value);
         CHECK_RESULT(ctx, result);
         break;
         
@@ -7858,31 +7529,28 @@ encode_key_material(struct kmip *ctx,
 }
 
 int
-encode_key_value(struct kmip *ctx, enum key_format_type format,
-                 const struct key_value *value)
+kmip_encode_key_value(KMIP *ctx, enum key_format_type format, const KeyValue *value)
 {
     int result = 0;
-    result = encode_int32_be(
-        ctx, 
-        TAG_TYPE(KMIP_TAG_KEY_VALUE, KMIP_TYPE_STRUCTURE));
+    result = kmip_encode_int32_be(ctx, TAG_TYPE(KMIP_TAG_KEY_VALUE, KMIP_TYPE_STRUCTURE));
     CHECK_RESULT(ctx, result);
     
     uint8 *length_index = ctx->index;
     uint8 *value_index = ctx->index += 4;
     
-    result = encode_key_material(ctx, format, value->key_material);
+    result = kmip_encode_key_material(ctx, format, value->key_material);
     CHECK_RESULT(ctx, result);
     
     for(size_t i = 0; i < value->attribute_count; i++)
     {
-        result = encode_attribute(ctx, &value->attributes[i]);
+        result = kmip_encode_attribute(ctx, &value->attributes[i]);
         CHECK_RESULT(ctx, result);
     }
     
     uint8 *curr_index = ctx->index;
     ctx->index = length_index;
     
-    encode_int32_be(ctx, curr_index - value_index);
+    kmip_encode_int32_be(ctx, curr_index - value_index);
     
     ctx->index = curr_index;
     
@@ -7890,73 +7558,56 @@ encode_key_value(struct kmip *ctx, enum key_format_type format,
 }
 
 int
-encode_key_block(struct kmip *ctx, const struct key_block *value)
+kmip_encode_key_block(KMIP *ctx, const KeyBlock *value)
 {
     int result = 0;
-    result = encode_int32_be(
-        ctx, 
-        TAG_TYPE(KMIP_TAG_KEY_BLOCK, KMIP_TYPE_STRUCTURE));
+    result = kmip_encode_int32_be(ctx, TAG_TYPE(KMIP_TAG_KEY_BLOCK, KMIP_TYPE_STRUCTURE));
     CHECK_RESULT(ctx, result);
     
     uint8 *length_index = ctx->index;
     uint8 *value_index = ctx->index += 4;
     
-    result = encode_enum(ctx, KMIP_TAG_KEY_FORMAT_TYPE, value->key_format_type);
+    result = kmip_encode_enum(ctx, KMIP_TAG_KEY_FORMAT_TYPE, value->key_format_type);
     CHECK_RESULT(ctx, result);
     
     if(value->key_compression_type != 0)
     {
-        result = encode_enum(
-            ctx,
-            KMIP_TAG_KEY_COMPRESSION_TYPE,
-            value->key_compression_type);
+        result = kmip_encode_enum(ctx, KMIP_TAG_KEY_COMPRESSION_TYPE, value->key_compression_type);
         CHECK_RESULT(ctx, result);
     }
     
     if(value->key_wrapping_data != NULL)
     {
-        result = encode_byte_string(
-            ctx,
-            KMIP_TAG_KEY_VALUE,
-            (struct byte_string*)value->key_value);
+        result = kmip_encode_byte_string(ctx, KMIP_TAG_KEY_VALUE, (ByteString*)value->key_value);
     }
     else
     {
-        result = encode_key_value(
-            ctx,
-            value->key_format_type,
-            (struct key_value*)value->key_value);
+        result = kmip_encode_key_value(ctx, value->key_format_type, (KeyValue*)value->key_value);
     }
     CHECK_RESULT(ctx, result);
     
     if(value->cryptographic_algorithm != 0)
     {
-        result = encode_enum(
-            ctx,
-            KMIP_TAG_CRYPTOGRAPHIC_ALGORITHM,
-            value->cryptographic_algorithm);
+        result = kmip_encode_enum(ctx, KMIP_TAG_CRYPTOGRAPHIC_ALGORITHM, value->cryptographic_algorithm);
         CHECK_RESULT(ctx, result);
     }
     
     if(value->cryptographic_length != KMIP_UNSET)
     {
-        result = encode_integer(
-            ctx,
-            KMIP_TAG_CRYPTOGRAPHIC_LENGTH,
-            value->cryptographic_length);
+        result = kmip_encode_integer(ctx, KMIP_TAG_CRYPTOGRAPHIC_LENGTH, value->cryptographic_length);
         CHECK_RESULT(ctx, result);
     }
     
     if(value->key_wrapping_data != NULL)
     {
-        result = encode_key_wrapping_data(ctx, value->key_wrapping_data);
+        result = kmip_encode_key_wrapping_data(ctx, value->key_wrapping_data);
         CHECK_RESULT(ctx, result);
     }
     
     uint8 *curr_index = ctx->index;
     ctx->index = length_index;
     
-    encode_int32_be(ctx, curr_index - value_index);
+    kmip_encode_int32_be(ctx, curr_index - value_index);
     
     ctx->index = curr_index;
     
@@ -7964,24 +7615,22 @@ encode_key_block(struct kmip *ctx, const struct key_block *value)
 }
 
 int
-encode_symmetric_key(struct kmip *ctx, const struct symmetric_key *value)
+kmip_encode_symmetric_key(KMIP *ctx, const SymmetricKey *value)
 {
     int result = 0;
-    result = encode_int32_be(
-        ctx, 
-        TAG_TYPE(KMIP_TAG_SYMMETRIC_KEY, KMIP_TYPE_STRUCTURE));
+    result = kmip_encode_int32_be(ctx, TAG_TYPE(KMIP_TAG_SYMMETRIC_KEY, KMIP_TYPE_STRUCTURE));
     CHECK_RESULT(ctx, result);
     
     uint8 *length_index = ctx->index;
     uint8 *value_index = ctx->index += 4;
     
-    result = encode_key_block(ctx, value->key_block);
+    result = kmip_encode_key_block(ctx, value->key_block);
     CHECK_RESULT(ctx, result);
     
     uint8 *curr_index = ctx->index;
     ctx->index = length_index;
     
-    encode_int32_be(ctx, curr_index - value_index);
+    kmip_encode_int32_be(ctx, curr_index - value_index);
     
     ctx->index = curr_index;
     
@@ -7989,24 +7638,22 @@ encode_symmetric_key(struct kmip *ctx, const struct symmetric_key *value)
 }
 
 int
-encode_public_key(struct kmip *ctx, const struct public_key *value)
+kmip_encode_public_key(KMIP *ctx, const PublicKey *value)
 {
     int result = 0;
-    result = encode_int32_be(
-        ctx, 
-        TAG_TYPE(KMIP_TAG_PUBLIC_KEY, KMIP_TYPE_STRUCTURE));
+    result = kmip_encode_int32_be(ctx, TAG_TYPE(KMIP_TAG_PUBLIC_KEY, KMIP_TYPE_STRUCTURE));
     CHECK_RESULT(ctx, result);
     
     uint8 *length_index = ctx->index;
     uint8 *value_index = ctx->index += 4;
     
-    result = encode_key_block(ctx, value->key_block);
+    result = kmip_encode_key_block(ctx, value->key_block);
     CHECK_RESULT(ctx, result);
     
     uint8 *curr_index = ctx->index;
     ctx->index = length_index;
     
-    encode_int32_be(ctx, curr_index - value_index);
+    kmip_encode_int32_be(ctx, curr_index - value_index);
     
     ctx->index = curr_index;
     
@@ -8014,24 +7661,22 @@ encode_public_key(struct kmip *ctx, const struct public_key *value)
 }
 
 int
-encode_private_key(struct kmip *ctx, const struct private_key *value)
+kmip_encode_private_key(KMIP *ctx, const PrivateKey *value)
 {
     int result = 0;
-    result = encode_int32_be(
-        ctx, 
-        TAG_TYPE(KMIP_TAG_PRIVATE_KEY, KMIP_TYPE_STRUCTURE));
+    result = kmip_encode_int32_be(ctx, TAG_TYPE(KMIP_TAG_PRIVATE_KEY, KMIP_TYPE_STRUCTURE));
     CHECK_RESULT(ctx, result);
     
     uint8 *length_index = ctx->index;
     uint8 *value_index = ctx->index += 4;
     
-    result = encode_key_block(ctx, value->key_block);
+    result = kmip_encode_key_block(ctx, value->key_block);
     CHECK_RESULT(ctx, result);
     
     uint8 *curr_index = ctx->index;
     ctx->index = length_index;
     
-    encode_int32_be(ctx, curr_index - value_index);
+    kmip_encode_int32_be(ctx, curr_index - value_index);
     
     ctx->index = curr_index;
     
@@ -8039,58 +7684,46 @@ encode_private_key(struct kmip *ctx, const struct private_key *value)
 }
 
 int
-encode_key_wrapping_specification(struct kmip *ctx,
-                                  const struct key_wrapping_specification *value)
+kmip_encode_key_wrapping_specification(KMIP *ctx, const KeyWrappingSpecification *value)
 {
     int result = 0;
-    result = encode_int32_be(
-        ctx, 
-        TAG_TYPE(KMIP_TAG_KEY_WRAPPING_SPECIFICATION, KMIP_TYPE_STRUCTURE));
+    result = kmip_encode_int32_be(ctx, TAG_TYPE(KMIP_TAG_KEY_WRAPPING_SPECIFICATION, KMIP_TYPE_STRUCTURE));
     CHECK_RESULT(ctx, result);
     
     uint8 *length_index = ctx->index;
     uint8 *value_index = ctx->index += 4;
     
-    result = encode_enum(ctx, KMIP_TAG_WRAPPING_METHOD, value->wrapping_method);
+    result = kmip_encode_enum(ctx, KMIP_TAG_WRAPPING_METHOD, value->wrapping_method);
     CHECK_RESULT(ctx, result);
     
     if(value->encryption_key_info != NULL)
     {
-        result = encode_encryption_key_information(
-            ctx,
-            value->encryption_key_info);
+        result = kmip_encode_encryption_key_information(ctx, value->encryption_key_info);
         CHECK_RESULT(ctx, result);
     }
     
     if(value->mac_signature_key_info != NULL)
     {
-        result = encode_mac_signature_key_information(
-            ctx,
-            value->mac_signature_key_info);
+        result = kmip_encode_mac_signature_key_information(ctx, value->mac_signature_key_info);
         CHECK_RESULT(ctx, result);
     }
     
     for(size_t i = 0; i < value->attribute_name_count; i++)
     {
-        result = encode_text_string(
-            ctx, KMIP_TAG_ATTRIBUTE_NAME, 
-            &value->attribute_names[i]);
+        result = kmip_encode_text_string(ctx, KMIP_TAG_ATTRIBUTE_NAME, &value->attribute_names[i]);
         CHECK_RESULT(ctx, result);
     }
     
     if(ctx->version >= KMIP_1_1)
     {
-        result = encode_enum(
-            ctx,
-            KMIP_TAG_ENCODING_OPTION,
-            value->encoding_option);
+        result = kmip_encode_enum(ctx, KMIP_TAG_ENCODING_OPTION, value->encoding_option);
         CHECK_RESULT(ctx, result);
     }
     
     uint8 *curr_index = ctx->index;
     ctx->index = length_index;
     
-    encode_int32_be(ctx, curr_index - value_index);
+    kmip_encode_int32_be(ctx, curr_index - value_index);
     
     ctx->index = curr_index;
     
@@ -8098,28 +7731,25 @@ encode_key_wrapping_specification(struct kmip *ctx,
 }
 
 int
-encode_create_request_payload(struct kmip *ctx, 
-                              const struct create_request_payload *value)
+kmip_encode_create_request_payload(KMIP *ctx, const CreateRequestPayload *value)
 {
     int result = 0;
-    result = encode_int32_be(
-        ctx, 
-        TAG_TYPE(KMIP_TAG_REQUEST_PAYLOAD, KMIP_TYPE_STRUCTURE));
+    result = kmip_encode_int32_be(ctx, TAG_TYPE(KMIP_TAG_REQUEST_PAYLOAD, KMIP_TYPE_STRUCTURE));
     CHECK_RESULT(ctx, result);
     
     uint8 *length_index = ctx->index;
     uint8 *value_index = ctx->index += 4;
     
-    result = encode_enum(ctx, KMIP_TAG_OBJECT_TYPE, value->object_type);
+    result = kmip_encode_enum(ctx, KMIP_TAG_OBJECT_TYPE, value->object_type);
     CHECK_RESULT(ctx, result);
     
-    result = encode_template_attribute(ctx, value->template_attribute);
+    result = kmip_encode_template_attribute(ctx, value->template_attribute);
     CHECK_RESULT(ctx, result);
     
     uint8 *curr_index = ctx->index;
     ctx->index = length_index;
     
-    encode_int32_be(ctx, curr_index - value_index);
+    kmip_encode_int32_be(ctx, curr_index - value_index);
     
     ctx->index = curr_index;
     
@@ -8127,36 +7757,31 @@ encode_create_request_payload(struct kmip *ctx,
 }
 
 int
-encode_create_response_payload(struct kmip *ctx, 
-                               const struct create_response_payload *value)
+kmip_encode_create_response_payload(KMIP *ctx, const CreateResponsePayload *value)
 {
     int result = 0;
-    result = encode_int32_be(
-        ctx,
-        TAG_TYPE(KMIP_TAG_RESPONSE_PAYLOAD, KMIP_TYPE_STRUCTURE));
+    result = kmip_encode_int32_be(ctx, TAG_TYPE(KMIP_TAG_RESPONSE_PAYLOAD, KMIP_TYPE_STRUCTURE));
     CHECK_RESULT(ctx, result);
     
     uint8 *length_index = ctx->index;
     uint8 *value_index = ctx->index += 4;
     
-    result = encode_enum(ctx, KMIP_TAG_OBJECT_TYPE, value->object_type);
+    result = kmip_encode_enum(ctx, KMIP_TAG_OBJECT_TYPE, value->object_type);
     CHECK_RESULT(ctx, result);
     
-    result = encode_text_string(
-        ctx, KMIP_TAG_UNIQUE_IDENTIFIER,
-        value->unique_identifier);
+    result = kmip_encode_text_string(ctx, KMIP_TAG_UNIQUE_IDENTIFIER, value->unique_identifier);
     CHECK_RESULT(ctx, result);
     
     if(value->template_attribute != NULL)
     {
-        result = encode_template_attribute(ctx, value->template_attribute);
+        result = kmip_encode_template_attribute(ctx, value->template_attribute);
         CHECK_RESULT(ctx, result);
     }
     
     uint8 *curr_index = ctx->index;
     ctx->index = length_index;
     
-    encode_int32_be(ctx, curr_index - value_index);
+    kmip_encode_int32_be(ctx, curr_index - value_index);
     
     ctx->index = curr_index;
     
@@ -8164,13 +7789,10 @@ encode_create_response_payload(struct kmip *ctx,
 }
 
 int
-encode_get_request_payload(struct kmip *ctx,
-                           const struct get_request_payload *value)
+kmip_encode_get_request_payload(KMIP *ctx, const GetRequestPayload *value)
 {
     int result = 0;
-    result = encode_int32_be(
-        ctx, 
-        TAG_TYPE(KMIP_TAG_REQUEST_PAYLOAD, KMIP_TYPE_STRUCTURE));
+    result = kmip_encode_int32_be(ctx, TAG_TYPE(KMIP_TAG_REQUEST_PAYLOAD, KMIP_TYPE_STRUCTURE));
     CHECK_RESULT(ctx, result);
     
     uint8 *length_index = ctx->index;
@@ -8178,18 +7800,13 @@ encode_get_request_payload(struct kmip *ctx,
     
     if(value->unique_identifier != NULL)
     {
-        result = encode_text_string(
-            ctx, KMIP_TAG_UNIQUE_IDENTIFIER,
-            value->unique_identifier);
+        result = kmip_encode_text_string(ctx, KMIP_TAG_UNIQUE_IDENTIFIER, value->unique_identifier);
         CHECK_RESULT(ctx, result);
     }
     
     if(value->key_format_type != 0)
     {
-        result = encode_enum(
-            ctx,
-            KMIP_TAG_KEY_FORMAT_TYPE,
-            value->key_format_type);
+        result = kmip_encode_enum(ctx, KMIP_TAG_KEY_FORMAT_TYPE, value->key_format_type);
         CHECK_RESULT(ctx, result);
     }
     
@@ -8197,35 +7814,27 @@ encode_get_request_payload(struct kmip *ctx,
     {
         if(value->key_wrap_type != 0)
         {
-            result = encode_enum(
-                ctx,
-                KMIP_TAG_KEY_WRAP_TYPE,
-                value->key_wrap_type);
+            result = kmip_encode_enum(ctx, KMIP_TAG_KEY_WRAP_TYPE, value->key_wrap_type);
             CHECK_RESULT(ctx, result);
         }
     }
     
     if(value->key_compression_type != 0)
     {
-        result = encode_enum(
-            ctx,
-            KMIP_TAG_KEY_COMPRESSION_TYPE,
-            value->key_compression_type);
+        result = kmip_encode_enum(ctx, KMIP_TAG_KEY_COMPRESSION_TYPE, value->key_compression_type);
         CHECK_RESULT(ctx, result);
     }
     
     if(value->key_wrapping_spec != NULL)
     {
-        result = encode_key_wrapping_specification(
-            ctx,
-            value->key_wrapping_spec);
+        result = kmip_encode_key_wrapping_specification(ctx, value->key_wrapping_spec);
         CHECK_RESULT(ctx, result);
     }
     
     uint8 *curr_index = ctx->index;
     ctx->index = length_index;
     
-    encode_int32_be(ctx, curr_index - value_index);
+    kmip_encode_int32_be(ctx, curr_index - value_index);
     
     ctx->index = curr_index;
     
@@ -8233,46 +7842,35 @@ encode_get_request_payload(struct kmip *ctx,
 }
 
 int
-encode_get_response_payload(struct kmip *ctx,
-                            const struct get_response_payload *value)
+kmip_encode_get_response_payload(KMIP *ctx, const GetResponsePayload *value)
 {
     int result = 0;
-    result = encode_int32_be(
-        ctx, 
-        TAG_TYPE(KMIP_TAG_RESPONSE_PAYLOAD, KMIP_TYPE_STRUCTURE));
+    result = kmip_encode_int32_be(ctx, TAG_TYPE(KMIP_TAG_RESPONSE_PAYLOAD, KMIP_TYPE_STRUCTURE));
     CHECK_RESULT(ctx, result);
     
     uint8 *length_index = ctx->index;
     uint8 *value_index = ctx->index += 4;
     
-    result = encode_enum(ctx, KMIP_TAG_OBJECT_TYPE, value->object_type);
+    result = kmip_encode_enum(ctx, KMIP_TAG_OBJECT_TYPE, value->object_type);
     CHECK_RESULT(ctx, result);
     
-    result = encode_text_string(
-        ctx, KMIP_TAG_UNIQUE_IDENTIFIER,
-        value->unique_identifier);
+    result = kmip_encode_text_string(ctx, KMIP_TAG_UNIQUE_IDENTIFIER, value->unique_identifier);
     CHECK_RESULT(ctx, result);
     
     switch(value->object_type)
     {
         case KMIP_OBJTYPE_SYMMETRIC_KEY:
-        result = encode_symmetric_key(
-            ctx,
-            (const struct symmetric_key*)value->object);
+        result = kmip_encode_symmetric_key(ctx, (const SymmetricKey*)value->object);
         CHECK_RESULT(ctx, result);
         break;
         
         case KMIP_OBJTYPE_PUBLIC_KEY:
-        result = encode_public_key(
-            ctx,
-            (const struct public_key*)value->object);
+        result = kmip_encode_public_key(ctx, (const PublicKey*)value->object);
         CHECK_RESULT(ctx, result);
         break;
         
         case KMIP_OBJTYPE_PRIVATE_KEY:
-        result = encode_private_key(
-            ctx,
-            (const struct private_key*)value->object);
+        result = kmip_encode_private_key(ctx, (const PrivateKey*)value->object);
         CHECK_RESULT(ctx, result);
         break;
         
@@ -8285,7 +7883,7 @@ encode_get_response_payload(struct kmip *ctx,
     uint8 *curr_index = ctx->index;
     ctx->index = length_index;
     
-    encode_int32_be(ctx, curr_index - value_index);
+    kmip_encode_int32_be(ctx, curr_index - value_index);
     
     ctx->index = curr_index;
     
@@ -8293,13 +7891,10 @@ encode_get_response_payload(struct kmip *ctx,
 }
 
 int
-encode_destroy_request_payload(struct kmip *ctx, 
-                               const struct destroy_request_payload *value)
+kmip_encode_destroy_request_payload(KMIP *ctx, const DestroyRequestPayload *value)
 {
     int result = 0;
-    result = encode_int32_be(
-        ctx, 
-        TAG_TYPE(KMIP_TAG_REQUEST_PAYLOAD, KMIP_TYPE_STRUCTURE));
+    result = kmip_encode_int32_be(ctx, TAG_TYPE(KMIP_TAG_REQUEST_PAYLOAD, KMIP_TYPE_STRUCTURE));
     CHECK_RESULT(ctx, result);
     
     uint8 *length_index = ctx->index;
@@ -8307,16 +7902,14 @@ encode_destroy_request_payload(struct kmip *ctx,
     
     if(value->unique_identifier != NULL)
     {
-        result = encode_text_string(
-            ctx, KMIP_TAG_UNIQUE_IDENTIFIER,
-            value->unique_identifier);
+        result = kmip_encode_text_string(ctx, KMIP_TAG_UNIQUE_IDENTIFIER, value->unique_identifier);
         CHECK_RESULT(ctx, result);
     }
     
     uint8 *curr_index = ctx->index;
     ctx->index = length_index;
     
-    encode_int32_be(ctx, curr_index - value_index);
+    kmip_encode_int32_be(ctx, curr_index - value_index);
     
     ctx->index = curr_index;
     
@@ -8324,27 +7917,22 @@ encode_destroy_request_payload(struct kmip *ctx,
 }
 
 int
-encode_destroy_response_payload(struct kmip *ctx, 
-                                const struct destroy_response_payload *value)
+kmip_encode_destroy_response_payload(KMIP *ctx, const DestroyResponsePayload *value)
 {
     int result = 0;
-    result = encode_int32_be(
-        ctx, 
-        TAG_TYPE(KMIP_TAG_RESPONSE_PAYLOAD, KMIP_TYPE_STRUCTURE));
+    result = kmip_encode_int32_be(ctx, TAG_TYPE(KMIP_TAG_RESPONSE_PAYLOAD, KMIP_TYPE_STRUCTURE));
     CHECK_RESULT(ctx, result);
     
     uint8 *length_index = ctx->index;
     uint8 *value_index = ctx->index += 4;
     
-    result = encode_text_string(
-        ctx, KMIP_TAG_UNIQUE_IDENTIFIER,
-        value->unique_identifier);
+    result = kmip_encode_text_string(ctx, KMIP_TAG_UNIQUE_IDENTIFIER, value->unique_identifier);
     CHECK_RESULT(ctx, result);
     
     uint8 *curr_index = ctx->index;
     ctx->index = length_index;
     
-    encode_int32_be(ctx, curr_index - value_index);
+    kmip_encode_int32_be(ctx, curr_index - value_index);
     
     ctx->index = curr_index;
     
@@ -8352,33 +7940,25 @@ encode_destroy_response_payload(struct kmip *ctx,
 }
 
 int
-encode_nonce(struct kmip *ctx, const struct nonce *value)
+kmip_encode_nonce(KMIP *ctx, const Nonce *value)
 {
     int result = 0;
-    result = encode_int32_be(
-        ctx,
-        TAG_TYPE(KMIP_TAG_NONCE, KMIP_TYPE_STRUCTURE));
+    result = kmip_encode_int32_be(ctx, TAG_TYPE(KMIP_TAG_NONCE, KMIP_TYPE_STRUCTURE));
     CHECK_RESULT(ctx, result);
     
     uint8 *length_index = ctx->index;
     uint8 *value_index = ctx->index += 4;
     
-    result = encode_byte_string(
-        ctx,
-        KMIP_TAG_NONCE_ID,
-        value->nonce_id);
+    result = kmip_encode_byte_string(ctx, KMIP_TAG_NONCE_ID, value->nonce_id);
     CHECK_RESULT(ctx, result);
     
-    result = encode_byte_string(
-        ctx,
-        KMIP_TAG_NONCE_VALUE,
-        value->nonce_value);
+    result = kmip_encode_byte_string(ctx, KMIP_TAG_NONCE_VALUE, value->nonce_value);
     CHECK_RESULT(ctx, result);
     
     uint8 *curr_index = ctx->index;
     ctx->index = length_index;
     
-    encode_int32_be(ctx, curr_index - value_index);
+    kmip_encode_int32_be(ctx, curr_index - value_index);
     
     ctx->index = curr_index;
     
@@ -8386,36 +7966,28 @@ encode_nonce(struct kmip *ctx, const struct nonce *value)
 }
 
 int
-encode_username_password_credential(
-struct kmip *ctx, 
-const struct username_password_credential *value)
+kmip_encode_username_password_credential(KMIP *ctx, const UsernamePasswordCredential *value)
 {
     int result = 0;
-    result = encode_int32_be(
-        ctx, 
-        TAG_TYPE(KMIP_TAG_CREDENTIAL_VALUE, KMIP_TYPE_STRUCTURE));
+    result = kmip_encode_int32_be(ctx, TAG_TYPE(KMIP_TAG_CREDENTIAL_VALUE, KMIP_TYPE_STRUCTURE));
     CHECK_RESULT(ctx, result);
     
     uint8 *length_index = ctx->index;
     uint8 *value_index = ctx->index += 4;
     
-    result = encode_text_string(
-        ctx, KMIP_TAG_USERNAME,
-        value->username);
+    result = kmip_encode_text_string(ctx, KMIP_TAG_USERNAME, value->username);
     CHECK_RESULT(ctx, result);
     
     if(value->password != NULL)
     {
-        result = encode_text_string(
-            ctx, KMIP_TAG_PASSWORD,
-            value->password);
+        result = kmip_encode_text_string(ctx, KMIP_TAG_PASSWORD, value->password);
         CHECK_RESULT(ctx, result);
     }
     
     uint8 *curr_index = ctx->index;
     ctx->index = length_index;
     
-    encode_int32_be(ctx, curr_index - value_index);
+    kmip_encode_int32_be(ctx, curr_index - value_index);
     
     ctx->index = curr_index;
     
@@ -8423,13 +7995,10 @@ const struct username_password_credential *value)
 }
 
 int
-encode_device_credential(struct kmip *ctx,
-                         const struct device_credential *value)
+kmip_encode_device_credential(KMIP *ctx, const DeviceCredential *value)
 {
     int result = 0;
-    result = encode_int32_be(
-        ctx,
-        TAG_TYPE(KMIP_TAG_CREDENTIAL_VALUE, KMIP_TYPE_STRUCTURE));
+    result = kmip_encode_int32_be(ctx, TAG_TYPE(KMIP_TAG_CREDENTIAL_VALUE, KMIP_TYPE_STRUCTURE));
     CHECK_RESULT(ctx, result);
     
     uint8 *length_index = ctx->index;
@@ -8437,56 +8006,44 @@ encode_device_credential(struct kmip *ctx,
     
     if(value->device_serial_number != NULL)
     {
-        result = encode_text_string(
-            ctx, KMIP_TAG_DEVICE_SERIAL_NUMBER,
-            value->device_serial_number);
+        result = kmip_encode_text_string(ctx, KMIP_TAG_DEVICE_SERIAL_NUMBER, value->device_serial_number);
         CHECK_RESULT(ctx, result);
     }
     
     if(value->password != NULL)
     {
-        result = encode_text_string(
-            ctx, KMIP_TAG_PASSWORD,
-            value->password);
+        result = kmip_encode_text_string(ctx, KMIP_TAG_PASSWORD, value->password);
         CHECK_RESULT(ctx, result);
     }
     
     if(value->device_identifier != NULL)
     {
-        result = encode_text_string(
-            ctx, KMIP_TAG_DEVICE_IDENTIFIER,
-            value->device_identifier);
+        result = kmip_encode_text_string(ctx, KMIP_TAG_DEVICE_IDENTIFIER, value->device_identifier);
         CHECK_RESULT(ctx, result);
     }
     
     if(value->network_identifier != NULL)
     {
-        result = encode_text_string(
-            ctx, KMIP_TAG_NETWORK_IDENTIFIER,
-            value->network_identifier);
+        result = kmip_encode_text_string(ctx, KMIP_TAG_NETWORK_IDENTIFIER, value->network_identifier);
         CHECK_RESULT(ctx, result);
     }
     
     if(value->machine_identifier != NULL)
     {
-        result = encode_text_string(
-            ctx, KMIP_TAG_MACHINE_IDENTIFIER,
-            value->machine_identifier);
+        result = kmip_encode_text_string(ctx, KMIP_TAG_MACHINE_IDENTIFIER, value->machine_identifier);
         CHECK_RESULT(ctx, result);
     }
     
     if(value->media_identifier != NULL)
     {
-        result = encode_text_string(
-            ctx, KMIP_TAG_MEDIA_IDENTIFIER,
-            value->media_identifier);
+        result = kmip_encode_text_string(ctx, KMIP_TAG_MEDIA_IDENTIFIER, value->media_identifier);
         CHECK_RESULT(ctx, result);
     }
     
     uint8 *curr_index = ctx->index;
     ctx->index = length_index;
     
-    encode_int32_be(ctx, curr_index - value_index);
+    kmip_encode_int32_be(ctx, curr_index - value_index);
     
     ctx->index = curr_index;
     
@@ -8494,47 +8051,37 @@ encode_device_credential(struct kmip *ctx,
 }
 
 int
-encode_attestation_credential(struct kmip *ctx,
-                              const struct attestation_credential *value)
+kmip_encode_attestation_credential(KMIP *ctx, const AttestationCredential *value)
 {
     int result = 0;
-    result = encode_int32_be(
-        ctx,
-        TAG_TYPE(KMIP_TAG_CREDENTIAL_VALUE, KMIP_TYPE_STRUCTURE));
+    result = kmip_encode_int32_be(ctx, TAG_TYPE(KMIP_TAG_CREDENTIAL_VALUE, KMIP_TYPE_STRUCTURE));
     CHECK_RESULT(ctx, result);
     
     uint8 *length_index = ctx->index;
     uint8 *value_index = ctx->index += 4;
     
-    result = encode_nonce(ctx, value->nonce);
+    result = kmip_encode_nonce(ctx, value->nonce);
     CHECK_RESULT(ctx, result);
     
-    result = encode_enum(
-        ctx,
-        KMIP_TAG_ATTESTATION_TYPE,
-        value->attestation_type);
+    result = kmip_encode_enum(ctx, KMIP_TAG_ATTESTATION_TYPE, value->attestation_type);
     CHECK_RESULT(ctx, result);
     
     if(value->attestation_measurement != NULL)
     {
-        result = encode_byte_string(
-            ctx, KMIP_TAG_ATTESTATION_MEASUREMENT,
-            value->attestation_measurement);
+        result = kmip_encode_byte_string(ctx, KMIP_TAG_ATTESTATION_MEASUREMENT, value->attestation_measurement);
         CHECK_RESULT(ctx, result);
     }
     
     if(value->attestation_assertion != NULL)
     {
-        result = encode_byte_string(
-            ctx, KMIP_TAG_ATTESTATION_ASSERTION,
-            value->attestation_assertion);
+        result = kmip_encode_byte_string(ctx, KMIP_TAG_ATTESTATION_ASSERTION, value->attestation_assertion);
         CHECK_RESULT(ctx, result);
     }
     
     uint8 *curr_index = ctx->index;
     ctx->index = length_index;
     
-    encode_int32_be(ctx, curr_index - value_index);
+    kmip_encode_int32_be(ctx, curr_index - value_index);
     
     ctx->index = curr_index;
     
@@ -8542,30 +8089,22 @@ encode_attestation_credential(struct kmip *ctx,
 }
 
 int
-encode_credential_value(struct kmip *ctx, 
-                        enum credential_type type, 
-                        void *value)
+kmip_encode_credential_value(KMIP *ctx, enum credential_type type, void *value)
 {
     int result = 0;
     
     switch(type)
     {
         case KMIP_CRED_USERNAME_AND_PASSWORD:
-        result = encode_username_password_credential(
-            ctx, 
-            (struct username_password_credential*)value);
+        result = kmip_encode_username_password_credential(ctx, (UsernamePasswordCredential*)value);
         break;
         
         case KMIP_CRED_DEVICE:
-        result = encode_device_credential(
-            ctx,
-            (struct device_credential*)value);
+        result = kmip_encode_device_credential(ctx, (DeviceCredential*)value);
         break;
         
         case KMIP_CRED_ATTESTATION:
-        result = encode_attestation_credential(
-            ctx,
-            (struct attestation_credential*)value);
+        result = kmip_encode_attestation_credential(ctx, (AttestationCredential*)value);
         break;
         
         default:
@@ -8579,30 +8118,25 @@ encode_credential_value(struct kmip *ctx,
 }
 
 int
-encode_credential(struct kmip *ctx, const struct credential *value)
+kmip_encode_credential(KMIP *ctx, const Credential *value)
 {
     int result = 0;
-    result = encode_int32_be(
-        ctx,
-        TAG_TYPE(KMIP_TAG_CREDENTIAL, KMIP_TYPE_STRUCTURE));
+    result = kmip_encode_int32_be(ctx, TAG_TYPE(KMIP_TAG_CREDENTIAL, KMIP_TYPE_STRUCTURE));
     CHECK_RESULT(ctx, result);
     
     uint8 *length_index = ctx->index;
     uint8 *value_index = ctx->index += 4;
     
-    result = encode_enum(ctx, KMIP_TAG_CREDENTIAL_TYPE, value->credential_type);
+    result = kmip_encode_enum(ctx, KMIP_TAG_CREDENTIAL_TYPE, value->credential_type);
     CHECK_RESULT(ctx, result);
     
-    result = encode_credential_value(
-        ctx,
-        value->credential_type,
-        value->credential_value);
+    result = kmip_encode_credential_value(ctx, value->credential_type, value->credential_value);
     CHECK_RESULT(ctx, result);
     
     uint8 *curr_index = ctx->index;
     ctx->index = length_index;
     
-    encode_int32_be(ctx, curr_index - value_index);
+    kmip_encode_int32_be(ctx, curr_index - value_index);
     
     ctx->index = curr_index;
     
@@ -8610,24 +8144,22 @@ encode_credential(struct kmip *ctx, const struct credential *value)
 }
 
 int
-encode_authentication(struct kmip *ctx, const struct authentication *value)
+kmip_encode_authentication(KMIP *ctx, const Authentication *value)
 {
     int result = 0;
-    result = encode_int32_be(
-        ctx,
-        TAG_TYPE(KMIP_TAG_AUTHENTICATION, KMIP_TYPE_STRUCTURE));
+    result = kmip_encode_int32_be(ctx, TAG_TYPE(KMIP_TAG_AUTHENTICATION, KMIP_TYPE_STRUCTURE));
     CHECK_RESULT(ctx, result);
     
     uint8 *length_index = ctx->index;
     uint8 *value_index = ctx->index += 4;
     
-    result = encode_credential(ctx, value->credential);
+    result = kmip_encode_credential(ctx, value->credential);
     CHECK_RESULT(ctx, result);
     
     uint8 *curr_index = ctx->index;
     ctx->index = length_index;
     
-    encode_int32_be(ctx, curr_index - value_index);
+    kmip_encode_int32_be(ctx, curr_index - value_index);
     
     ctx->index = curr_index;
     
@@ -8635,27 +8167,22 @@ encode_authentication(struct kmip *ctx, const struct authentication *value)
 }
 
 int
-encode_request_header(struct kmip *ctx, const struct request_header *value)
+kmip_encode_request_header(KMIP *ctx, const RequestHeader *value)
 {
     int result = 0;
-    result = encode_int32_be(
-        ctx,
-        TAG_TYPE(KMIP_TAG_REQUEST_HEADER, KMIP_TYPE_STRUCTURE));
+    result = kmip_encode_int32_be(ctx, TAG_TYPE(KMIP_TAG_REQUEST_HEADER, KMIP_TYPE_STRUCTURE));
     CHECK_RESULT(ctx, result);
     
     uint8 *length_index = ctx->index;
     uint8 *value_index = ctx->index += 4;
     
-    result = encode_protocol_version(ctx, value->protocol_version);
+    result = kmip_encode_protocol_version(ctx, value->protocol_version);
     CHECK_RESULT(ctx, result);
     
     /* HERE (ph) Stopped working here after bug with 0 vs KMIP_UNSET */
     if(value->maximum_response_size != KMIP_UNSET)
     {
-        result = encode_integer(
-            ctx,
-            KMIP_TAG_MAXIMUM_RESPONSE_SIZE,
-            value->maximum_response_size);
+        result = kmip_encode_integer(ctx, KMIP_TAG_MAXIMUM_RESPONSE_SIZE, value->maximum_response_size);
         CHECK_RESULT(ctx, result);
     }
     
@@ -8663,29 +8190,20 @@ encode_request_header(struct kmip *ctx, const struct request_header *value)
     {
         if(value->client_correlation_value != NULL)
         {
-            result = encode_text_string(
-                ctx,
-                KMIP_TAG_CLIENT_CORRELATION_VALUE,
-                value->client_correlation_value);
+            result = kmip_encode_text_string(ctx, KMIP_TAG_CLIENT_CORRELATION_VALUE, value->client_correlation_value);
             CHECK_RESULT(ctx, result);
         }
         
         if(value->server_correlation_value != NULL)
         {
-            result = encode_text_string(
-                ctx,
-                KMIP_TAG_SERVER_CORRELATION_VALUE,
-                value->server_correlation_value);
+            result = kmip_encode_text_string(ctx, KMIP_TAG_SERVER_CORRELATION_VALUE, value->server_correlation_value);
             CHECK_RESULT(ctx, result);
         }
     }
     
     if(value->asynchronous_indicator != KMIP_UNSET)
     {
-        result = encode_bool(
-            ctx,
-            KMIP_TAG_ASYNCHRONOUS_INDICATOR,
-            value->asynchronous_indicator);
+        result = kmip_encode_bool(ctx, KMIP_TAG_ASYNCHRONOUS_INDICATOR, value->asynchronous_indicator);
         CHECK_RESULT(ctx, result);
     }
     
@@ -8693,60 +8211,48 @@ encode_request_header(struct kmip *ctx, const struct request_header *value)
     {
         if(value->attestation_capable_indicator != KMIP_UNSET)
         {
-            result = encode_bool(
-                ctx,
-                KMIP_TAG_ATTESTATION_CAPABLE_INDICATOR,
-                value->attestation_capable_indicator);
+            result = kmip_encode_bool(ctx, KMIP_TAG_ATTESTATION_CAPABLE_INDICATOR, value->attestation_capable_indicator);
             CHECK_RESULT(ctx, result);
         }
         
         for(size_t i = 0; i < value->attestation_type_count; i++)
         {
-            result = encode_enum(
-                ctx,
-                KMIP_TAG_ATTESTATION_TYPE,
-                value->attestation_types[i]);
+            result = kmip_encode_enum(ctx, KMIP_TAG_ATTESTATION_TYPE, value->attestation_types[i]);
             CHECK_RESULT(ctx, result);
         }
     }
     
     if(value->authentication != NULL)
     {
-        result = encode_authentication(ctx, value->authentication);
+        result = kmip_encode_authentication(ctx, value->authentication);
         CHECK_RESULT(ctx, result);
     }
     
     if(value->batch_error_continuation_option != 0)
     {
-        result = encode_enum(
-            ctx,
-            KMIP_TAG_BATCH_ERROR_CONTINUATION_OPTION,
-            value->batch_error_continuation_option);
+        result = kmip_encode_enum(ctx, KMIP_TAG_BATCH_ERROR_CONTINUATION_OPTION, value->batch_error_continuation_option);
         CHECK_RESULT(ctx, result);
     }
     
     if(value->batch_order_option != KMIP_UNSET)
     {
-        result = encode_bool(
-            ctx,
-            KMIP_TAG_BATCH_ORDER_OPTION,
-            value->batch_order_option);
+        result = kmip_encode_bool(ctx, KMIP_TAG_BATCH_ORDER_OPTION, value->batch_order_option);
         CHECK_RESULT(ctx, result);
     }
     
     if(value->time_stamp != 0)
     {
-        result = encode_date_time(ctx, KMIP_TAG_TIME_STAMP, value->time_stamp);
+        result = kmip_encode_date_time(ctx, KMIP_TAG_TIME_STAMP, value->time_stamp);
         CHECK_RESULT(ctx, result);
     }
     
-    result = encode_integer(ctx, KMIP_TAG_BATCH_COUNT, value->batch_count);
+    result = kmip_encode_integer(ctx, KMIP_TAG_BATCH_COUNT, value->batch_count);
     CHECK_RESULT(ctx, result);
     
     uint8 *curr_index = ctx->index;
     ctx->index = length_index;
     
-    encode_int32_be(ctx, curr_index - value_index);
+    kmip_encode_int32_be(ctx, curr_index - value_index);
     
     ctx->index = curr_index;
     
@@ -8754,37 +8260,32 @@ encode_request_header(struct kmip *ctx, const struct request_header *value)
 }
 
 int
-encode_response_header(struct kmip *ctx, const struct response_header *value)
+kmip_encode_response_header(KMIP *ctx, const ResponseHeader *value)
 {
     int result = 0;
-    result = encode_int32_be(
-        ctx,
-        TAG_TYPE(KMIP_TAG_RESPONSE_HEADER, KMIP_TYPE_STRUCTURE));
+    result = kmip_encode_int32_be(ctx, TAG_TYPE(KMIP_TAG_RESPONSE_HEADER, KMIP_TYPE_STRUCTURE));
     CHECK_RESULT(ctx, result);
     
     uint8 *length_index = ctx->index;
     uint8 *value_index = ctx->index += 4;
     
-    result = encode_protocol_version(ctx, value->protocol_version);
+    result = kmip_encode_protocol_version(ctx, value->protocol_version);
     CHECK_RESULT(ctx, result);
     
-    result = encode_date_time(ctx, KMIP_TAG_TIME_STAMP, value->time_stamp);
+    result = kmip_encode_date_time(ctx, KMIP_TAG_TIME_STAMP, value->time_stamp);
     CHECK_RESULT(ctx, result);
     
     if(ctx->version >= KMIP_1_2)
     {
         if(value->nonce != NULL)
         {
-            result = encode_nonce(ctx, value->nonce);
+            result = kmip_encode_nonce(ctx, value->nonce);
             CHECK_RESULT(ctx, result);
         }
         
         for(size_t i = 0; i < value->attestation_type_count; i++)
         {
-            result = encode_enum(
-                ctx,
-                KMIP_TAG_ATTESTATION_TYPE,
-                value->attestation_types[i]);
+            result = kmip_encode_enum(ctx, KMIP_TAG_ATTESTATION_TYPE, value->attestation_types[i]);
             CHECK_RESULT(ctx, result);
         }
     }
@@ -8793,30 +8294,24 @@ encode_response_header(struct kmip *ctx, const struct response_header *value)
     {
         if(value->client_correlation_value != NULL)
         {
-            result = encode_text_string(
-                ctx,
-                KMIP_TAG_CLIENT_CORRELATION_VALUE,
-                value->client_correlation_value);
+            result = kmip_encode_text_string(ctx, KMIP_TAG_CLIENT_CORRELATION_VALUE, value->client_correlation_value);
             CHECK_RESULT(ctx, result);
         }
         
         if(value->server_correlation_value != NULL)
         {
-            result = encode_text_string(
-                ctx,
-                KMIP_TAG_SERVER_CORRELATION_VALUE,
-                value->server_correlation_value);
+            result = kmip_encode_text_string(ctx, KMIP_TAG_SERVER_CORRELATION_VALUE, value->server_correlation_value);
             CHECK_RESULT(ctx, result);
         }
     }
     
-    result = encode_integer(ctx, KMIP_TAG_BATCH_COUNT, value->batch_count);
+    result = kmip_encode_integer(ctx, KMIP_TAG_BATCH_COUNT, value->batch_count);
     CHECK_RESULT(ctx, result);
     
     uint8 *curr_index = ctx->index;
     ctx->index = length_index;
     
-    encode_int32_be(ctx, curr_index - value_index);
+    kmip_encode_int32_be(ctx, curr_index - value_index);
     
     ctx->index = curr_index;
     
@@ -8824,48 +8319,36 @@ encode_response_header(struct kmip *ctx, const struct response_header *value)
 }
 
 int
-encode_request_batch_item(struct kmip *ctx,
-                          const struct request_batch_item *value)
+kmip_encode_request_batch_item(KMIP *ctx, const RequestBatchItem *value)
 {
     int result = 0;
-    result = encode_int32_be(
-        ctx,
-        TAG_TYPE(KMIP_TAG_BATCH_ITEM, KMIP_TYPE_STRUCTURE));
+    result = kmip_encode_int32_be(ctx, TAG_TYPE(KMIP_TAG_BATCH_ITEM, KMIP_TYPE_STRUCTURE));
     CHECK_RESULT(ctx, result);
     
     uint8 *length_index = ctx->index;
     uint8 *value_index = ctx->index += 4;
     
-    result = encode_enum(ctx, KMIP_TAG_OPERATION, value->operation);
+    result = kmip_encode_enum(ctx, KMIP_TAG_OPERATION, value->operation);
     CHECK_RESULT(ctx, result);
     
     if(value->unique_batch_item_id != NULL)
     {
-        result = encode_byte_string(
-            ctx,
-            KMIP_TAG_UNIQUE_BATCH_ITEM_ID,
-            value->unique_batch_item_id);
+        result = kmip_encode_byte_string(ctx, KMIP_TAG_UNIQUE_BATCH_ITEM_ID, value->unique_batch_item_id);
         CHECK_RESULT(ctx, result);
     }
     
     switch(value->operation)
     {
         case KMIP_OP_CREATE:
-        result = encode_create_request_payload(
-            ctx, 
-            (struct create_request_payload*)value->request_payload);
+        result = kmip_encode_create_request_payload(ctx, (CreateRequestPayload*)value->request_payload);
         break;
         
         case KMIP_OP_GET:
-        result = encode_get_request_payload(
-            ctx, 
-            (struct get_request_payload*)value->request_payload);
+        result = kmip_encode_get_request_payload(ctx, (GetRequestPayload*)value->request_payload);
         break;
         
         case KMIP_OP_DESTROY:
-        result = encode_destroy_request_payload(
-            ctx,
-            (struct destroy_request_payload*)value->request_payload);
+        result = kmip_encode_destroy_request_payload(ctx, (DestroyRequestPayload*)value->request_payload);
         break;
         
         default:
@@ -8878,7 +8361,7 @@ encode_request_batch_item(struct kmip *ctx,
     uint8 *curr_index = ctx->index;
     ctx->index = length_index;
     
-    encode_int32_be(ctx, curr_index - value_index);
+    kmip_encode_int32_be(ctx, curr_index - value_index);
     
     ctx->index = curr_index;
     
@@ -8886,78 +8369,57 @@ encode_request_batch_item(struct kmip *ctx,
 }
 
 int
-encode_response_batch_item(struct kmip *ctx,
-                           const struct response_batch_item *value)
+kmip_encode_response_batch_item(KMIP *ctx, const ResponseBatchItem *value)
 {
     int result = 0;
-    result = encode_int32_be(
-        ctx,
-        TAG_TYPE(KMIP_TAG_BATCH_ITEM, KMIP_TYPE_STRUCTURE));
+    result = kmip_encode_int32_be(ctx, TAG_TYPE(KMIP_TAG_BATCH_ITEM, KMIP_TYPE_STRUCTURE));
     CHECK_RESULT(ctx, result);
     
     uint8 *length_index = ctx->index;
     uint8 *value_index = ctx->index += 4;
     
-    result = encode_enum(ctx, KMIP_TAG_OPERATION, value->operation);
+    result = kmip_encode_enum(ctx, KMIP_TAG_OPERATION, value->operation);
     CHECK_RESULT(ctx, result);
     
     if(value->unique_batch_item_id != NULL)
     {
-        result = encode_byte_string(
-            ctx,
-            KMIP_TAG_UNIQUE_BATCH_ITEM_ID,
-            value->unique_batch_item_id);
+        result = kmip_encode_byte_string(ctx, KMIP_TAG_UNIQUE_BATCH_ITEM_ID, value->unique_batch_item_id);
         CHECK_RESULT(ctx, result);
     }
     
-    result = encode_enum(ctx, KMIP_TAG_RESULT_STATUS, value->result_status);
+    result = kmip_encode_enum(ctx, KMIP_TAG_RESULT_STATUS, value->result_status);
     CHECK_RESULT(ctx, result);
     
     if(value->result_reason != 0)
     {
-        result = encode_enum(
-            ctx,
-            KMIP_TAG_RESULT_REASON,
-            value->result_reason);
+        result = kmip_encode_enum(ctx, KMIP_TAG_RESULT_REASON, value->result_reason);
         CHECK_RESULT(ctx, result);
     }
     
     if(value->result_message != NULL)
     {
-        result = encode_text_string(
-            ctx,
-            KMIP_TAG_RESULT_MESSAGE,
-            value->result_message);
+        result = kmip_encode_text_string(ctx, KMIP_TAG_RESULT_MESSAGE, value->result_message);
         CHECK_RESULT(ctx, result);
     }
     
     if(value->asynchronous_correlation_value != NULL)
     {
-        result = encode_byte_string(
-            ctx,
-            KMIP_TAG_ASYNCHRONOUS_CORRELATION_VALUE,
-            value->asynchronous_correlation_value);
+        result = kmip_encode_byte_string(ctx, KMIP_TAG_ASYNCHRONOUS_CORRELATION_VALUE, value->asynchronous_correlation_value);
         CHECK_RESULT(ctx, result);
     }
     
     switch(value->operation)
     {
         case KMIP_OP_CREATE:
-        result = encode_create_response_payload(
-            ctx,
-            (struct create_response_payload*)value->response_payload);
+        result = kmip_encode_create_response_payload(ctx, (CreateResponsePayload*)value->response_payload);
         break;
         
         case KMIP_OP_GET:
-        result = encode_get_response_payload(
-            ctx, 
-            (struct get_response_payload*)value->response_payload);
+        result = kmip_encode_get_response_payload(ctx, (GetResponsePayload*)value->response_payload);
         break;
         
         case KMIP_OP_DESTROY:
-        result = encode_destroy_response_payload(
-            ctx,
-            (struct destroy_response_payload*)value->response_payload);
+        result = kmip_encode_destroy_response_payload(ctx, (DestroyResponsePayload*)value->response_payload);
         break;
         
         default:
@@ -8970,7 +8432,7 @@ encode_response_batch_item(struct kmip *ctx,
     uint8 *curr_index = ctx->index;
     ctx->index = length_index;
     
-    encode_int32_be(ctx, curr_index - value_index);
+    kmip_encode_int32_be(ctx, curr_index - value_index);
     
     ctx->index = curr_index;
     
@@ -8978,30 +8440,28 @@ encode_response_batch_item(struct kmip *ctx,
 }
 
 int
-encode_request_message(struct kmip *ctx, const struct request_message *value)
+kmip_encode_request_message(KMIP *ctx, const RequestMessage *value)
 {
     int result = 0;
-    result = encode_int32_be(
-        ctx,
-        TAG_TYPE(KMIP_TAG_REQUEST_MESSAGE, KMIP_TYPE_STRUCTURE));
+    result = kmip_encode_int32_be(ctx, TAG_TYPE(KMIP_TAG_REQUEST_MESSAGE, KMIP_TYPE_STRUCTURE));
     CHECK_RESULT(ctx, result);
     
     uint8 *length_index = ctx->index;
     uint8 *value_index = ctx->index += 4;
     
-    result = encode_request_header(ctx, value->request_header);
+    result = kmip_encode_request_header(ctx, value->request_header);
     CHECK_RESULT(ctx, result);
     
     for(size_t i = 0; i < value->batch_count; i++)
     {
-        result = encode_request_batch_item(ctx, &value->batch_items[i]);
+        result = kmip_encode_request_batch_item(ctx, &value->batch_items[i]);
         CHECK_RESULT(ctx, result);
     }
     
     uint8 *curr_index = ctx->index;
     ctx->index = length_index;
     
-    encode_int32_be(ctx, curr_index - value_index);
+    kmip_encode_int32_be(ctx, curr_index - value_index);
     
     ctx->index = curr_index;
     
@@ -9009,30 +8469,28 @@ encode_request_message(struct kmip *ctx, const struct request_message *value)
 }
 
 int
-encode_response_message(struct kmip *ctx, const struct response_message *value)
+kmip_encode_response_message(KMIP *ctx, const ResponseMessage *value)
 {
     int result = 0;
-    result = encode_int32_be(
-        ctx,
-        TAG_TYPE(KMIP_TAG_RESPONSE_MESSAGE, KMIP_TYPE_STRUCTURE));
+    result = kmip_encode_int32_be(ctx, TAG_TYPE(KMIP_TAG_RESPONSE_MESSAGE, KMIP_TYPE_STRUCTURE));
     CHECK_RESULT(ctx, result);
     
     uint8 *length_index = ctx->index;
     uint8 *value_index = ctx->index += 4;
     
-    result = encode_response_header(ctx, value->response_header);
+    result = kmip_encode_response_header(ctx, value->response_header);
     CHECK_RESULT(ctx, result);
     
     for(size_t i = 0; i < value->batch_count; i++)
     {
-        result = encode_response_batch_item(ctx, &value->batch_items[i]);
+        result = kmip_encode_response_batch_item(ctx, &value->batch_items[i]);
         CHECK_RESULT(ctx, result);
     }
     
     uint8 *curr_index = ctx->index;
     ctx->index = length_index;
     
-    encode_int32_be(ctx, curr_index - value_index);
+    kmip_encode_int32_be(ctx, curr_index - value_index);
     
     ctx->index = curr_index;
     
@@ -9044,7 +8502,7 @@ Decoding Functions
 */
 
 int
-decode_int8_be(struct kmip *ctx, void *value)
+kmip_decode_int8_be(KMIP *ctx, void *value)
 {
     CHECK_BUFFER_FULL(ctx, sizeof(int8));
     
@@ -9057,7 +8515,7 @@ decode_int8_be(struct kmip *ctx, void *value)
 }
 
 int
-decode_int32_be(struct kmip *ctx, void *value)
+kmip_decode_int32_be(KMIP *ctx, void *value)
 {
     CHECK_BUFFER_FULL(ctx, sizeof(int32));
     
@@ -9073,7 +8531,7 @@ decode_int32_be(struct kmip *ctx, void *value)
 }
 
 int
-decode_int64_be(struct kmip *ctx, void *value)
+kmip_decode_int64_be(KMIP *ctx, void *value)
 {
     CHECK_BUFFER_FULL(ctx, sizeof(int64));
     
@@ -9093,7 +8551,7 @@ decode_int64_be(struct kmip *ctx, void *value)
 }
 
 int
-decode_integer(struct kmip *ctx, enum tag t, int32 *value)
+kmip_decode_integer(KMIP *ctx, enum tag t, int32 *value)
 {
     CHECK_BUFFER_FULL(ctx, 16);
     
@@ -9101,41 +8559,41 @@ decode_integer(struct kmip *ctx, enum tag t, int32 *value)
     int32 length = 0;
     int32 padding = 0;
     
-    decode_int32_be(ctx, &tag_type);
+    kmip_decode_int32_be(ctx, &tag_type);
     CHECK_TAG_TYPE(ctx, tag_type, t, KMIP_TYPE_INTEGER);
     
-    decode_int32_be(ctx, &length);
+    kmip_decode_int32_be(ctx, &length);
     CHECK_LENGTH(ctx, length, 4);
     
-    decode_int32_be(ctx, value);
+    kmip_decode_int32_be(ctx, value);
     
-    decode_int32_be(ctx, &padding);
+    kmip_decode_int32_be(ctx, &padding);
     CHECK_PADDING(ctx, padding);
     
     return(KMIP_OK);
 }
 
 int
-decode_long(struct kmip *ctx, enum tag t, int64 *value)
+kmip_decode_long(KMIP *ctx, enum tag t, int64 *value)
 {
     CHECK_BUFFER_FULL(ctx, 16);
     
     int32 tag_type = 0;
     int32 length = 0;
     
-    decode_int32_be(ctx, &tag_type);
+    kmip_decode_int32_be(ctx, &tag_type);
     CHECK_TAG_TYPE(ctx, tag_type, t, KMIP_TYPE_LONG_INTEGER);
     
-    decode_int32_be(ctx, &length);
+    kmip_decode_int32_be(ctx, &length);
     CHECK_LENGTH(ctx, length, 8);
     
-    decode_int64_be(ctx, value);
+    kmip_decode_int64_be(ctx, value);
     
     return(KMIP_OK);
 }
 
 int
-decode_enum(struct kmip *ctx, enum tag t, void *value)
+kmip_decode_enum(KMIP *ctx, enum tag t, void *value)
 {
     CHECK_BUFFER_FULL(ctx, 16);
     
@@ -9144,22 +8602,22 @@ decode_enum(struct kmip *ctx, enum tag t, void *value)
     int32 *v = (int32*)value;
     int32 padding = 0;
     
-    decode_int32_be(ctx, &tag_type);
+    kmip_decode_int32_be(ctx, &tag_type);
     CHECK_TAG_TYPE(ctx, tag_type, t, KMIP_TYPE_ENUMERATION);
     
-    decode_int32_be(ctx, &length);
+    kmip_decode_int32_be(ctx, &length);
     CHECK_LENGTH(ctx, length, 4);
     
-    decode_int32_be(ctx, v);
+    kmip_decode_int32_be(ctx, v);
     
-    decode_int32_be(ctx, &padding);
+    kmip_decode_int32_be(ctx, &padding);
     CHECK_PADDING(ctx, padding);
     
     return(KMIP_OK);
 }
 
 int
-decode_bool(struct kmip *ctx, enum tag t, bool32 *value)
+kmip_decode_bool(KMIP *ctx, enum tag t, bool32 *value)
 {
     CHECK_BUFFER_FULL(ctx, 16);
     
@@ -9167,23 +8625,23 @@ decode_bool(struct kmip *ctx, enum tag t, bool32 *value)
     int32 length = 0;
     int32 padding = 0;
     
-    decode_int32_be(ctx, &tag_type);
+    kmip_decode_int32_be(ctx, &tag_type);
     CHECK_TAG_TYPE(ctx, tag_type, t, KMIP_TYPE_BOOLEAN);
     
-    decode_int32_be(ctx, &length);
+    kmip_decode_int32_be(ctx, &length);
     CHECK_LENGTH(ctx, length, 8);
     
-    decode_int32_be(ctx, &padding);
+    kmip_decode_int32_be(ctx, &padding);
     CHECK_PADDING(ctx, padding);
     
-    decode_int32_be(ctx, value);
+    kmip_decode_int32_be(ctx, value);
     CHECK_BOOLEAN(ctx, *value);
     
     return(KMIP_OK);
 }
 
 int
-decode_text_string(struct kmip *ctx, enum tag t, struct text_string *value)
+kmip_decode_text_string(KMIP *ctx, enum tag t, TextString *value)
 {
     CHECK_BUFFER_FULL(ctx, 8);
     
@@ -9192,10 +8650,10 @@ decode_text_string(struct kmip *ctx, enum tag t, struct text_string *value)
     int32 padding = 0;
     int8 spacer = 0;
     
-    decode_int32_be(ctx, &tag_type);
+    kmip_decode_int32_be(ctx, &tag_type);
     CHECK_TAG_TYPE(ctx, tag_type, t, KMIP_TYPE_TEXT_STRING);
     
-    decode_int32_be(ctx, &length);
+    kmip_decode_int32_be(ctx, &length);
     padding = (8 - (length % 8)) % 8;
     CHECK_BUFFER_FULL(ctx, (uint32)(length + padding));
     
@@ -9206,11 +8664,11 @@ decode_text_string(struct kmip *ctx, enum tag t, struct text_string *value)
     
     for(int32 i = 0; i < length; i++)
     {
-        decode_int8_be(ctx, (int8*)index++);
+        kmip_decode_int8_be(ctx, (int8*)index++);
     }
     for(int32 i = 0; i < padding; i++)
     {
-        decode_int8_be(ctx, &spacer);
+        kmip_decode_int8_be(ctx, &spacer);
         CHECK_PADDING(ctx, spacer);
     }
     
@@ -9218,7 +8676,7 @@ decode_text_string(struct kmip *ctx, enum tag t, struct text_string *value)
 }
 
 int
-decode_byte_string(struct kmip *ctx, enum tag t, struct byte_string *value)
+kmip_decode_byte_string(KMIP *ctx, enum tag t, ByteString *value)
 {
     CHECK_BUFFER_FULL(ctx, 8);
     
@@ -9227,10 +8685,10 @@ decode_byte_string(struct kmip *ctx, enum tag t, struct byte_string *value)
     int32 padding = 0;
     int8 spacer = 0;
     
-    decode_int32_be(ctx, &tag_type);
+    kmip_decode_int32_be(ctx, &tag_type);
     CHECK_TAG_TYPE(ctx, tag_type, t, KMIP_TYPE_BYTE_STRING);
     
-    decode_int32_be(ctx, &length);
+    kmip_decode_int32_be(ctx, &length);
     padding = (8 - (length % 8)) % 8;
     CHECK_BUFFER_FULL(ctx, (uint32)(length + padding));
     
@@ -9241,11 +8699,11 @@ decode_byte_string(struct kmip *ctx, enum tag t, struct byte_string *value)
     
     for(int32 i = 0; i < length; i++)
     {
-        decode_int8_be(ctx, index++);
+        kmip_decode_int8_be(ctx, index++);
     }
     for(int32 i = 0; i < padding; i++)
     {
-        decode_int8_be(ctx, &spacer);
+        kmip_decode_int8_be(ctx, &spacer);
         CHECK_PADDING(ctx, spacer);
     }
     
@@ -9253,26 +8711,26 @@ decode_byte_string(struct kmip *ctx, enum tag t, struct byte_string *value)
 }
 
 int
-decode_date_time(struct kmip *ctx, enum tag t, uint64 *value)
+kmip_decode_date_time(KMIP *ctx, enum tag t, uint64 *value)
 {
     CHECK_BUFFER_FULL(ctx, 16);
     
     int32 tag_type = 0;
     int32 length = 0;
     
-    decode_int32_be(ctx, &tag_type);
+    kmip_decode_int32_be(ctx, &tag_type);
     CHECK_TAG_TYPE(ctx, tag_type, t, KMIP_TYPE_DATE_TIME);
     
-    decode_int32_be(ctx, &length);
+    kmip_decode_int32_be(ctx, &length);
     CHECK_LENGTH(ctx, length, 8);
     
-    decode_int64_be(ctx, value);
+    kmip_decode_int64_be(ctx, value);
     
     return(KMIP_OK);
 }
 
 int
-decode_interval(struct kmip *ctx, enum tag t, uint32 *value)
+kmip_decode_interval(KMIP *ctx, enum tag t, uint32 *value)
 {
     CHECK_BUFFER_FULL(ctx, 16);
     
@@ -9280,22 +8738,22 @@ decode_interval(struct kmip *ctx, enum tag t, uint32 *value)
     int32 length = 0;
     int32 padding = 0;
     
-    decode_int32_be(ctx, &tag_type);
+    kmip_decode_int32_be(ctx, &tag_type);
     CHECK_TAG_TYPE(ctx, tag_type, t, KMIP_TYPE_INTERVAL);
     
-    decode_int32_be(ctx, &length);
+    kmip_decode_int32_be(ctx, &length);
     CHECK_LENGTH(ctx, length, 4);
     
-    decode_int32_be(ctx, value);
+    kmip_decode_int32_be(ctx, value);
     
-    decode_int32_be(ctx, &padding);
+    kmip_decode_int32_be(ctx, &padding);
     CHECK_PADDING(ctx, padding);
     
     return(KMIP_OK);
 }
 
 int
-decode_name(struct kmip *ctx, struct name *value)
+kmip_decode_name(KMIP *ctx, Name *value)
 {
     CHECK_BUFFER_FULL(ctx, 8);
     
@@ -9303,21 +8761,18 @@ decode_name(struct kmip *ctx, struct name *value)
     int32 tag_type = 0;
     uint32 length = 0;
     
-    decode_int32_be(ctx, &tag_type);
+    kmip_decode_int32_be(ctx, &tag_type);
     CHECK_TAG_TYPE(ctx, tag_type, KMIP_TAG_NAME, KMIP_TYPE_STRUCTURE);
     
-    decode_int32_be(ctx, &length);
+    kmip_decode_int32_be(ctx, &length);
     CHECK_BUFFER_FULL(ctx, length);
     
-    value->value = ctx->calloc_func(
-        ctx->state,
-        1,
-        sizeof(struct text_string));
+    value->value = ctx->calloc_func(ctx->state, 1, sizeof(TextString));
     
-    result = decode_text_string(ctx, KMIP_TAG_NAME_VALUE, value->value);
+    result = kmip_decode_text_string(ctx, KMIP_TAG_NAME_VALUE, value->value);
     CHECK_RESULT(ctx, result);
     
-    result = decode_enum(ctx, KMIP_TAG_NAME_TYPE, (int32*)&value->type);
+    result = kmip_decode_enum(ctx, KMIP_TAG_NAME_TYPE, (int32*)&value->type);
     CHECK_RESULT(ctx, result);
     CHECK_ENUM(ctx, KMIP_TAG_NAME_TYPE, value->type);
     
@@ -9325,13 +8780,13 @@ decode_name(struct kmip *ctx, struct name *value)
 }
 
 int
-decode_attribute_name(struct kmip *ctx, enum attribute_type *value)
+kmip_decode_attribute_name(KMIP *ctx, enum attribute_type *value)
 {
     int result = 0;
     enum tag t = KMIP_TAG_ATTRIBUTE_NAME;
-    struct text_string n = {0};
+    TextString n = {0};
     
-    result = decode_text_string(ctx, t, &n);
+    result = kmip_decode_text_string(ctx, t, &n);
     CHECK_RESULT(ctx, result);
     
     if((n.size == 17) && (strncmp(n.value, "Unique Identifier", 17) == 0))
@@ -9346,8 +8801,7 @@ decode_attribute_name(struct kmip *ctx, enum attribute_type *value)
     {
         *value = KMIP_ATTR_OBJECT_TYPE;
     }
-    else if((n.size == 23) && 
-            (strncmp(n.value, "Cryptographic Algorithm", 23) == 0))
+    else if((n.size == 23) && (strncmp(n.value, "Cryptographic Algorithm", 23) == 0))
     {
         *value = KMIP_ATTR_CRYPTOGRAPHIC_ALGORITHM;
     }
@@ -9355,13 +8809,11 @@ decode_attribute_name(struct kmip *ctx, enum attribute_type *value)
     {
         *value = KMIP_ATTR_CRYPTOGRAPHIC_LENGTH;
     }
-    else if((n.size == 21) && 
-            (strncmp(n.value, "Operation Policy Name", 21) == 0))
+    else if((n.size == 21) && (strncmp(n.value, "Operation Policy Name", 21) == 0))
     {
         *value = KMIP_ATTR_OPERATION_POLICY_NAME;
     }
-    else if((n.size == 24) && 
-            (strncmp(n.value, "Cryptographic Usage Mask", 24) == 0))
+    else if((n.size == 24) && (strncmp(n.value, "Cryptographic Usage Mask", 24) == 0))
     {
         *value = KMIP_ATTR_CRYPTOGRAPHIC_USAGE_MASK;
     }
@@ -9369,44 +8821,41 @@ decode_attribute_name(struct kmip *ctx, enum attribute_type *value)
     {
         *value = KMIP_ATTR_STATE;
     }
-    /* TODO (peter-hamilton) Add all remaining attributes here. */
+    /* TODO (ph) Add all remaining attributes here. */
     else
     {
         kmip_push_error_frame(ctx, __func__, __LINE__);
-        free_text_string(ctx, &n);
+        kmip_free_text_string(ctx, &n);
         return(KMIP_ERROR_ATTR_UNSUPPORTED);
     }
     
-    free_text_string(ctx, &n);
+    kmip_free_text_string(ctx, &n);
     return(KMIP_OK);
 }
 
 int
-decode_attribute(struct kmip *ctx, struct attribute *value)
+kmip_decode_attribute(KMIP *ctx, Attribute *value)
 {
     CHECK_BUFFER_FULL(ctx, 8);
     
-    init_attribute(value);
+    kmip_init_attribute(value);
     
     int result = 0;
     int32 tag_type = 0;
     uint32 length = 0;
     
-    decode_int32_be(ctx, &tag_type);
+    kmip_decode_int32_be(ctx, &tag_type);
     CHECK_TAG_TYPE(ctx, tag_type, KMIP_TAG_ATTRIBUTE, KMIP_TYPE_STRUCTURE);
     
-    decode_int32_be(ctx, &length);
+    kmip_decode_int32_be(ctx, &length);
     CHECK_BUFFER_FULL(ctx, length);
     
-    result = decode_attribute_name(ctx, &value->type);
+    result = kmip_decode_attribute_name(ctx, &value->type);
     CHECK_RESULT(ctx, result);
     
-    if(is_tag_next(ctx, KMIP_TAG_ATTRIBUTE_INDEX))
+    if(kmip_is_tag_next(ctx, KMIP_TAG_ATTRIBUTE_INDEX))
     {
-        result = decode_integer(
-            ctx,
-            KMIP_TAG_ATTRIBUTE_INDEX,
-            &value->index);
+        result = kmip_decode_integer(ctx, KMIP_TAG_ATTRIBUTE_INDEX, &value->index);
         CHECK_RESULT(ctx, result);
     }
     
@@ -9417,54 +8866,33 @@ decode_attribute(struct kmip *ctx, struct attribute *value)
     switch(value->type)
     {
         case KMIP_ATTR_UNIQUE_IDENTIFIER:
-        value->value = ctx->calloc_func(
-            ctx->state,
-            1,
-            sizeof(struct text_string));
-        CHECK_NEW_MEMORY(
-            ctx,
-            value->value,
-            sizeof(struct text_string),
-            "UniqueIdentifier text string");
-        result = decode_text_string(
-            ctx,
-            t,
-            (struct text_string*)value->value);
+        value->value = ctx->calloc_func(ctx->state, 1, sizeof(TextString));
+        CHECK_NEW_MEMORY(ctx, value->value, sizeof(TextString), "UniqueIdentifier text string");
+        result = kmip_decode_text_string(ctx, t, (TextString*)value->value);
         CHECK_RESULT(ctx, result);
         break;
         
         case KMIP_ATTR_NAME:
         /* TODO (ph) Like encoding, this is messy. Better solution? */
-        value->value = ctx->calloc_func(ctx->state, 1, sizeof(struct name));
-        CHECK_NEW_MEMORY(
-            ctx,
-            value->value,
-            sizeof(struct name),
-            "Name structure");
+        value->value = ctx->calloc_func(ctx->state, 1, sizeof(Name));
+        CHECK_NEW_MEMORY(ctx, value->value, sizeof(Name), "Name structure");
         
-        if(is_tag_type_next(
-            ctx,
-            KMIP_TAG_ATTRIBUTE_VALUE,
-            KMIP_TYPE_STRUCTURE))
+        if(kmip_is_tag_type_next(ctx, KMIP_TAG_ATTRIBUTE_VALUE, KMIP_TYPE_STRUCTURE))
         {
             /* NOTE (ph) Decoding name structures will fail if the name tag */
             /* is not present in the encoding. Temporarily swap the tags, */
             /* decode the name structure, and then swap the tags back to */
             /* preserve the encoding. The tag/type check above guarantees */
             /* space exists for this to succeed. */
-            encode_int32_be(
-                ctx, 
-                TAG_TYPE(KMIP_TAG_NAME, KMIP_TYPE_STRUCTURE));
+            kmip_encode_int32_be(ctx, TAG_TYPE(KMIP_TAG_NAME, KMIP_TYPE_STRUCTURE));
             ctx->index = tag_index;
             
-            result = decode_name(ctx, (struct name*)value->value);
+            result = kmip_decode_name(ctx, (Name*)value->value);
             
             curr_index = ctx->index;
             ctx->index = tag_index;
             
-            encode_int32_be(
-                ctx,
-                TAG_TYPE(KMIP_TAG_ATTRIBUTE_VALUE, KMIP_TYPE_STRUCTURE));
+            kmip_encode_int32_be(ctx, TAG_TYPE(KMIP_TAG_ATTRIBUTE_VALUE, KMIP_TYPE_STRUCTURE));
             ctx->index = curr_index;
         }
         else
@@ -9477,78 +8905,45 @@ decode_attribute(struct kmip *ctx, struct attribute *value)
         
         case KMIP_ATTR_OBJECT_TYPE:
         value->value = ctx->calloc_func(ctx->state, 1, sizeof(int32));
-        CHECK_NEW_MEMORY(
-            ctx,
-            value->value,
-            sizeof(int32),
-            "ObjectType enumeration");
-        result = decode_enum(ctx, t, (int32 *)value->value);
+        CHECK_NEW_MEMORY(ctx, value->value, sizeof(int32), "ObjectType enumeration");
+        result = kmip_decode_enum(ctx, t, (int32 *)value->value);
         CHECK_RESULT(ctx, result);
         CHECK_ENUM(ctx, KMIP_TAG_OBJECT_TYPE, *(int32 *)value->value);
         break;
         
         case KMIP_ATTR_CRYPTOGRAPHIC_ALGORITHM:
         value->value = ctx->calloc_func(ctx->state, 1, sizeof(int32));
-        CHECK_NEW_MEMORY(
-            ctx,
-            value->value,
-            sizeof(int32),
-            "CryptographicAlgorithm enumeration");
-        result = decode_enum(ctx, t, (int32 *)value->value);
+        CHECK_NEW_MEMORY(ctx, value->value, sizeof(int32), "CryptographicAlgorithm enumeration");
+        result = kmip_decode_enum(ctx, t, (int32 *)value->value);
         CHECK_RESULT(ctx, result);
-        CHECK_ENUM(
-            ctx,
-            KMIP_TAG_CRYPTOGRAPHIC_ALGORITHM,
-            *(int32 *)value->value);
+        CHECK_ENUM(ctx, KMIP_TAG_CRYPTOGRAPHIC_ALGORITHM, *(int32 *)value->value);
         break;
         
         case KMIP_ATTR_CRYPTOGRAPHIC_LENGTH:
         value->value = ctx->calloc_func(ctx->state, 1, sizeof(int32));
-        CHECK_NEW_MEMORY(
-            ctx,
-            value->value,
-            sizeof(int32),
-            "CryptographicLength integer");
-        result = decode_integer(ctx, t, (int32 *)value->value);
+        CHECK_NEW_MEMORY(ctx, value->value, sizeof(int32), "CryptographicLength integer");
+        result = kmip_decode_integer(ctx, t, (int32 *)value->value);
         CHECK_RESULT(ctx, result);
         break;
         
         case KMIP_ATTR_OPERATION_POLICY_NAME:
-        value->value = ctx->calloc_func(
-            ctx->state,
-            1,
-            sizeof(struct text_string));
-        CHECK_NEW_MEMORY(
-            ctx,
-            value->value,
-            sizeof(struct text_string),
-            "OperationPolicyName text string");
-        result = decode_text_string(
-            ctx,
-            t,
-            (struct text_string*)value->value);
+        value->value = ctx->calloc_func(ctx->state, 1, sizeof(TextString));
+        CHECK_NEW_MEMORY(ctx, value->value, sizeof(TextString), "OperationPolicyName text string");
+        result = kmip_decode_text_string(ctx, t, (TextString*)value->value);
         CHECK_RESULT(ctx, result);
         break;
         
         case KMIP_ATTR_CRYPTOGRAPHIC_USAGE_MASK:
         value->value = ctx->calloc_func(ctx->state, 1, sizeof(int32));
-        CHECK_NEW_MEMORY(
-            ctx,
-            value->value,
-            sizeof(int32),
-            "CryptographicUsageMask integer");
-        result = decode_integer(ctx, t, (int32 *)value->value);
+        CHECK_NEW_MEMORY(ctx, value->value, sizeof(int32), "CryptographicUsageMask integer");
+        result = kmip_decode_integer(ctx, t, (int32 *)value->value);
         CHECK_RESULT(ctx, result);
         break;
         
         case KMIP_ATTR_STATE:
         value->value = ctx->calloc_func(ctx->state, 1, sizeof(int32));
-        CHECK_NEW_MEMORY(
-            ctx,
-            value->value,
-            sizeof(int32),
-            "State enumeration");
-        result = decode_enum(ctx, t, (int32 *)value->value);
+        CHECK_NEW_MEMORY(ctx, value->value, sizeof(int32), "State enumeration");
+        result = kmip_decode_enum(ctx, t, (int32 *)value->value);
         CHECK_RESULT(ctx, result);
         CHECK_ENUM(ctx, KMIP_TAG_STATE, *(int32 *)value->value);
         break;
@@ -9564,8 +8959,7 @@ decode_attribute(struct kmip *ctx, struct attribute *value)
 }
 
 int
-decode_template_attribute(struct kmip *ctx, 
-                          struct template_attribute *value)
+kmip_decode_template_attribute(KMIP *ctx, TemplateAttribute *value)
 {
     CHECK_BUFFER_FULL(ctx, 8);
     
@@ -9573,52 +8967,34 @@ decode_template_attribute(struct kmip *ctx,
     int32 tag_type = 0;
     uint32 length = 0;
     
-    decode_int32_be(ctx, &tag_type);
-    CHECK_TAG_TYPE(
-        ctx,
-        tag_type,
-        KMIP_TAG_TEMPLATE_ATTRIBUTE,
-        KMIP_TYPE_STRUCTURE);
+    kmip_decode_int32_be(ctx, &tag_type);
+    CHECK_TAG_TYPE(ctx, tag_type, KMIP_TAG_TEMPLATE_ATTRIBUTE, KMIP_TYPE_STRUCTURE);
     
-    decode_int32_be(ctx, &length);
+    kmip_decode_int32_be(ctx, &length);
     CHECK_BUFFER_FULL(ctx, length);
     
-    value->name_count = get_num_items_next(ctx, KMIP_TAG_NAME);
+    value->name_count = kmip_get_num_items_next(ctx, KMIP_TAG_NAME);
     if(value->name_count > 0)
     {
-        value->names = ctx->calloc_func(
-            ctx->state,
-            value->name_count,
-            sizeof(struct name));
-        CHECK_NEW_MEMORY(
-            ctx,
-            value->names,
-            value->name_count * sizeof(struct name),
-            "sequence of Name structures");
+        value->names = ctx->calloc_func(ctx->state, value->name_count, sizeof(Name));
+        CHECK_NEW_MEMORY(ctx, value->names, value->name_count * sizeof(Name), "sequence of Name structures");
         
         for(size_t i = 0; i < value->name_count; i++)
         {
-            result = decode_name(ctx, &value->names[i]);
+            result = kmip_decode_name(ctx, &value->names[i]);
             CHECK_RESULT(ctx, result);
         }
     }
     
-    value->attribute_count = get_num_items_next(ctx, KMIP_TAG_ATTRIBUTE);
+    value->attribute_count = kmip_get_num_items_next(ctx, KMIP_TAG_ATTRIBUTE);
     if(value->attribute_count > 0)
     {
-        value->attributes = ctx->calloc_func(
-            ctx->state,
-            value->attribute_count,
-            sizeof(struct attribute));
-        CHECK_NEW_MEMORY(
-            ctx,
-            value->attributes,
-            value->attribute_count * sizeof(struct attribute),
-            "sequence of Attribute structures");
+        value->attributes = ctx->calloc_func(ctx->state, value->attribute_count, sizeof(Attribute));
+        CHECK_NEW_MEMORY(ctx, value->attributes, value->attribute_count * sizeof(Attribute), "sequence of Attribute structures");
         
         for(size_t i = 0; i < value->attribute_count; i++)
         {
-            result = decode_attribute(ctx, &value->attributes[i]);
+            result = kmip_decode_attribute(ctx, &value->attributes[i]);
             CHECK_RESULT(ctx, result);
         }
     }
@@ -9627,8 +9003,7 @@ decode_template_attribute(struct kmip *ctx,
 }
 
 int
-decode_protocol_version(struct kmip *ctx, 
-                        struct protocol_version *value)
+kmip_decode_protocol_version(KMIP *ctx, ProtocolVersion *value)
 {
     CHECK_BUFFER_FULL(ctx, 40);
     
@@ -9636,34 +9011,23 @@ decode_protocol_version(struct kmip *ctx,
     int32 tag_type = 0;
     uint32 length = 0;
     
-    decode_int32_be(ctx, &tag_type);
-    CHECK_TAG_TYPE(
-        ctx,
-        tag_type,
-        KMIP_TAG_PROTOCOL_VERSION,
-        KMIP_TYPE_STRUCTURE);
+    kmip_decode_int32_be(ctx, &tag_type);
+    CHECK_TAG_TYPE(ctx, tag_type, KMIP_TAG_PROTOCOL_VERSION, KMIP_TYPE_STRUCTURE);
     
-    decode_int32_be(ctx, &length);
+    kmip_decode_int32_be(ctx, &length);
     CHECK_LENGTH(ctx, length, 32);
     
-    result = decode_integer(
-        ctx,
-        KMIP_TAG_PROTOCOL_VERSION_MAJOR,
-        &value->major);
+    result = kmip_decode_integer(ctx, KMIP_TAG_PROTOCOL_VERSION_MAJOR, &value->major);
     CHECK_RESULT(ctx, result);
     
-    result = decode_integer(
-        ctx,
-        KMIP_TAG_PROTOCOL_VERSION_MINOR,
-        &value->minor);
+    result = kmip_decode_integer(ctx, KMIP_TAG_PROTOCOL_VERSION_MINOR, &value->minor);
     CHECK_RESULT(ctx, result);
     
     return(KMIP_OK);
 }
 
 int
-decode_transparent_symmetric_key(struct kmip *ctx,
-                                 struct transparent_symmetric_key *value)
+kmip_decode_transparent_symmetric_key(KMIP *ctx, TransparentSymmetricKey *value)
 {
     CHECK_BUFFER_FULL(ctx, 8);
     
@@ -9671,36 +9035,23 @@ decode_transparent_symmetric_key(struct kmip *ctx,
     int32 tag_type = 0;
     uint32 length = 0;
     
-    decode_int32_be(ctx, &tag_type);
-    CHECK_TAG_TYPE(
-        ctx,
-        tag_type,
-        KMIP_TAG_KEY_MATERIAL,
-        KMIP_TYPE_STRUCTURE);
+    kmip_decode_int32_be(ctx, &tag_type);
+    CHECK_TAG_TYPE(ctx, tag_type, KMIP_TAG_KEY_MATERIAL, KMIP_TYPE_STRUCTURE);
     
-    decode_int32_be(ctx, &length);
+    kmip_decode_int32_be(ctx, &length);
     CHECK_BUFFER_FULL(ctx, length);
     
-    value->key = ctx->calloc_func(
-        ctx->state,
-        1,
-        sizeof(struct byte_string));
-    CHECK_NEW_MEMORY(
-        ctx,
-        value->key,
-        sizeof(struct byte_string),
-        "Key byte string");
+    value->key = ctx->calloc_func(ctx->state, 1, sizeof(ByteString));
+    CHECK_NEW_MEMORY(ctx, value->key, sizeof(ByteString), "Key byte string");
     
-    result = decode_byte_string(ctx, KMIP_TAG_KEY, value->key);
+    result = kmip_decode_byte_string(ctx, KMIP_TAG_KEY, value->key);
     CHECK_RESULT(ctx, result);
     
     return(KMIP_OK);
 }
 
 int
-decode_key_material(struct kmip *ctx,
-                    enum key_format_type format,
-                    void **value)
+kmip_decode_key_material(KMIP *ctx, enum key_format_type format, void **value)
 {
     int result = 0;
     
@@ -9712,19 +9063,9 @@ decode_key_material(struct kmip *ctx,
         case KMIP_KEYFORMAT_PKCS8:
         case KMIP_KEYFORMAT_X509:
         case KMIP_KEYFORMAT_EC_PRIVATE_KEY:
-        *value = ctx->calloc_func(
-            ctx->state,
-            1,
-            sizeof(struct byte_string));
-        CHECK_NEW_MEMORY(
-            ctx,
-            *value,
-            sizeof(struct byte_string),
-            "KeyMaterial byte string");
-        result = decode_byte_string(
-            ctx,
-            KMIP_TAG_KEY_MATERIAL,
-            (struct byte_string*)*value);
+        *value = ctx->calloc_func(ctx->state, 1, sizeof(ByteString));
+        CHECK_NEW_MEMORY(ctx, *value, sizeof(ByteString), "KeyMaterial byte string");
+        result = kmip_decode_byte_string(ctx, KMIP_TAG_KEY_MATERIAL, (ByteString*)*value);
         CHECK_RESULT(ctx, result);
         return(KMIP_OK);
         break;
@@ -9736,22 +9077,13 @@ decode_key_material(struct kmip *ctx,
     switch(format)
     {
         case KMIP_KEYFORMAT_TRANS_SYMMETRIC_KEY:
-        *value = ctx->calloc_func(
-            ctx->state,
-            1,
-            sizeof(struct transparent_symmetric_key));
-        CHECK_NEW_MEMORY(
-            ctx,
-            *value,
-            sizeof(struct transparent_symmetric_key),
-            "TransparentSymmetricKey structure");
-        result = decode_transparent_symmetric_key(
-            ctx,
-            (struct transparent_symmetric_key*)*value);
+        *value = ctx->calloc_func(ctx->state, 1, sizeof(TransparentSymmetricKey));
+        CHECK_NEW_MEMORY(ctx, *value, sizeof(TransparentSymmetricKey), "TransparentSymmetricKey structure");
+        result = kmip_decode_transparent_symmetric_key(ctx, (TransparentSymmetricKey*)*value);
         CHECK_RESULT(ctx, result);
         break;
         
-        /* TODO (peter-hamilton) The rest require BigInteger support. */
+        /* TODO (ph) The rest require BigInteger support. */
         
         case KMIP_KEYFORMAT_TRANS_DSA_PRIVATE_KEY:
         case KMIP_KEYFORMAT_TRANS_DSA_PUBLIC_KEY:
@@ -9775,9 +9107,7 @@ decode_key_material(struct kmip *ctx,
 }
 
 int
-decode_key_value(struct kmip *ctx,
-                 enum key_format_type format,
-                 struct key_value *value)
+kmip_decode_key_value(KMIP *ctx, enum key_format_type format, KeyValue *value)
 {
     CHECK_BUFFER_FULL(ctx, 8);
     
@@ -9785,35 +9115,24 @@ decode_key_value(struct kmip *ctx,
     int32 tag_type = 0;
     uint32 length = 0;
     
-    decode_int32_be(ctx, &tag_type);
-    CHECK_TAG_TYPE(
-        ctx,
-        tag_type,
-        KMIP_TAG_KEY_VALUE,
-        KMIP_TYPE_STRUCTURE);
+    kmip_decode_int32_be(ctx, &tag_type);
+    CHECK_TAG_TYPE(ctx, tag_type, KMIP_TAG_KEY_VALUE, KMIP_TYPE_STRUCTURE);
     
-    decode_int32_be(ctx, &length);
+    kmip_decode_int32_be(ctx, &length);
     CHECK_BUFFER_FULL(ctx, length);
     
-    result = decode_key_material(ctx, format, &value->key_material);
+    result = kmip_decode_key_material(ctx, format, &value->key_material);
     CHECK_RESULT(ctx, result);
     
-    value->attribute_count = get_num_items_next(ctx, KMIP_TAG_ATTRIBUTE);
+    value->attribute_count = kmip_get_num_items_next(ctx, KMIP_TAG_ATTRIBUTE);
     if(value->attribute_count > 0)
     {
-        value->attributes = ctx->calloc_func(
-            ctx->state,
-            value->attribute_count,
-            sizeof(struct attribute));
-        CHECK_NEW_MEMORY(
-            ctx,
-            value->attributes,
-            value->attribute_count * sizeof(struct attribute),
-            "sequence of Attribute structures");
+        value->attributes = ctx->calloc_func(ctx->state, value->attribute_count, sizeof(Attribute));
+        CHECK_NEW_MEMORY(ctx, value->attributes, value->attribute_count * sizeof(Attribute), "sequence of Attribute structures");
         
         for(size_t i = 0; i < value->attribute_count; i++)
         {
-            result = decode_attribute(ctx, &value->attributes[i]);
+            result = kmip_decode_attribute(ctx, &value->attributes[i]);
             CHECK_RESULT(ctx, result);
         }
     }
@@ -9822,218 +9141,143 @@ decode_key_value(struct kmip *ctx,
 }
 
 int
-decode_cryptographic_parameters(struct kmip *ctx, 
-                                struct cryptographic_parameters *value)
+kmip_decode_cryptographic_parameters(KMIP *ctx, CryptographicParameters *value)
 {
     CHECK_BUFFER_FULL(ctx, 8);
     
-    init_cryptographic_parameters(value);
+    kmip_init_cryptographic_parameters(value);
     
     int result = 0;
     int32 tag_type = 0;
     uint32 length = 0;
     
-    decode_int32_be(ctx, &tag_type);
-    CHECK_TAG_TYPE(
-        ctx,
-        tag_type,
-        KMIP_TAG_CRYPTOGRAPHIC_PARAMETERS,
-        KMIP_TYPE_STRUCTURE);
+    kmip_decode_int32_be(ctx, &tag_type);
+    CHECK_TAG_TYPE(ctx, tag_type, KMIP_TAG_CRYPTOGRAPHIC_PARAMETERS, KMIP_TYPE_STRUCTURE);
     
-    decode_int32_be(ctx, &length);
+    kmip_decode_int32_be(ctx, &length);
     CHECK_BUFFER_FULL(ctx, length);
     
-    if(is_tag_next(ctx, KMIP_TAG_BLOCK_CIPHER_MODE))
+    if(kmip_is_tag_next(ctx, KMIP_TAG_BLOCK_CIPHER_MODE))
     {
-        result = decode_enum(
-            ctx,
-            KMIP_TAG_BLOCK_CIPHER_MODE,
-            &value->block_cipher_mode);
+        result = kmip_decode_enum(ctx, KMIP_TAG_BLOCK_CIPHER_MODE, &value->block_cipher_mode);
         CHECK_RESULT(ctx, result);
         CHECK_ENUM(ctx, KMIP_TAG_BLOCK_CIPHER_MODE, value->block_cipher_mode);
     }
     
-    if(is_tag_next(ctx, KMIP_TAG_PADDING_METHOD))
+    if(kmip_is_tag_next(ctx, KMIP_TAG_PADDING_METHOD))
     {
-        result = decode_enum(
-            ctx,
-            KMIP_TAG_PADDING_METHOD,
-            &value->padding_method);
+        result = kmip_decode_enum(ctx, KMIP_TAG_PADDING_METHOD, &value->padding_method);
         CHECK_RESULT(ctx, result);
         CHECK_ENUM(ctx, KMIP_TAG_PADDING_METHOD, value->padding_method);
     }
     
-    if(is_tag_next(ctx, KMIP_TAG_HASHING_ALGORITHM))
+    if(kmip_is_tag_next(ctx, KMIP_TAG_HASHING_ALGORITHM))
     {
-        result = decode_enum(
-            ctx,
-            KMIP_TAG_HASHING_ALGORITHM,
-            &value->hashing_algorithm);
+        result = kmip_decode_enum(ctx, KMIP_TAG_HASHING_ALGORITHM, &value->hashing_algorithm);
         CHECK_RESULT(ctx, result);
         CHECK_ENUM(ctx, KMIP_TAG_HASHING_ALGORITHM, value->hashing_algorithm);
     }
     
-    if(is_tag_next(ctx, KMIP_TAG_KEY_ROLE_TYPE))
+    if(kmip_is_tag_next(ctx, KMIP_TAG_KEY_ROLE_TYPE))
     {
-        result = decode_enum(
-            ctx,
-            KMIP_TAG_KEY_ROLE_TYPE,
-            &value->key_role_type);
+        result = kmip_decode_enum(ctx, KMIP_TAG_KEY_ROLE_TYPE, &value->key_role_type);
         CHECK_RESULT(ctx, result);
         CHECK_ENUM(ctx, KMIP_TAG_KEY_ROLE_TYPE, value->key_role_type);
     }
     
     if(ctx->version >= KMIP_1_2)
     {
-        if(is_tag_next(ctx, KMIP_TAG_DIGITAL_SIGNATURE_ALGORITHM))
+        if(kmip_is_tag_next(ctx, KMIP_TAG_DIGITAL_SIGNATURE_ALGORITHM))
         {
-            result = decode_enum(
-                ctx,
-                KMIP_TAG_DIGITAL_SIGNATURE_ALGORITHM,
-                &value->digital_signature_algorithm);
+            result = kmip_decode_enum(ctx, KMIP_TAG_DIGITAL_SIGNATURE_ALGORITHM, &value->digital_signature_algorithm);
             CHECK_RESULT(ctx, result);
-            CHECK_ENUM(
-                ctx,
-                KMIP_TAG_DIGITAL_SIGNATURE_ALGORITHM,
-                value->digital_signature_algorithm);
+            CHECK_ENUM(ctx, KMIP_TAG_DIGITAL_SIGNATURE_ALGORITHM, value->digital_signature_algorithm);
         }
         
-        if(is_tag_next(ctx, KMIP_TAG_CRYPTOGRAPHIC_ALGORITHM))
+        if(kmip_is_tag_next(ctx, KMIP_TAG_CRYPTOGRAPHIC_ALGORITHM))
         {
-            result = decode_enum(
-                ctx,
-                KMIP_TAG_CRYPTOGRAPHIC_ALGORITHM,
-                &value->cryptographic_algorithm);
+            result = kmip_decode_enum(ctx, KMIP_TAG_CRYPTOGRAPHIC_ALGORITHM, &value->cryptographic_algorithm);
             CHECK_RESULT(ctx, result);
-            CHECK_ENUM(
-                ctx,
-                KMIP_TAG_CRYPTOGRAPHIC_ALGORITHM,
-                value->cryptographic_algorithm);
+            CHECK_ENUM(ctx, KMIP_TAG_CRYPTOGRAPHIC_ALGORITHM, value->cryptographic_algorithm);
         }
         
-        if(is_tag_next(ctx, KMIP_TAG_RANDOM_IV))
+        if(kmip_is_tag_next(ctx, KMIP_TAG_RANDOM_IV))
         {
-            result = decode_bool(
-                ctx,
-                KMIP_TAG_RANDOM_IV,
-                &value->random_iv);
+            result = kmip_decode_bool(ctx, KMIP_TAG_RANDOM_IV, &value->random_iv);
             CHECK_RESULT(ctx, result);
         }
         
-        if(is_tag_next(ctx, KMIP_TAG_IV_LENGTH))
+        if(kmip_is_tag_next(ctx, KMIP_TAG_IV_LENGTH))
         {
-            result = decode_integer(
-                ctx,
-                KMIP_TAG_IV_LENGTH,
-                &value->iv_length);
+            result = kmip_decode_integer(ctx, KMIP_TAG_IV_LENGTH, &value->iv_length);
             CHECK_RESULT(ctx, result);
         }
         
-        if(is_tag_next(ctx, KMIP_TAG_TAG_LENGTH))
+        if(kmip_is_tag_next(ctx, KMIP_TAG_TAG_LENGTH))
         {
-            result = decode_integer(
-                ctx,
-                KMIP_TAG_TAG_LENGTH,
-                &value->tag_length);
+            result = kmip_decode_integer(ctx, KMIP_TAG_TAG_LENGTH, &value->tag_length);
             CHECK_RESULT(ctx, result);
         }
         
-        if(is_tag_next(ctx, KMIP_TAG_FIXED_FIELD_LENGTH))
+        if(kmip_is_tag_next(ctx, KMIP_TAG_FIXED_FIELD_LENGTH))
         {
-            result = decode_integer(
-                ctx,
-                KMIP_TAG_FIXED_FIELD_LENGTH,
-                &value->fixed_field_length);
+            result = kmip_decode_integer(ctx, KMIP_TAG_FIXED_FIELD_LENGTH, &value->fixed_field_length);
             CHECK_RESULT(ctx, result);
         }
         
-        if(is_tag_next(ctx, KMIP_TAG_INVOCATION_FIELD_LENGTH))
+        if(kmip_is_tag_next(ctx, KMIP_TAG_INVOCATION_FIELD_LENGTH))
         {
-            result = decode_integer(
-                ctx,
-                KMIP_TAG_INVOCATION_FIELD_LENGTH,
-                &value->invocation_field_length);
+            result = kmip_decode_integer(ctx, KMIP_TAG_INVOCATION_FIELD_LENGTH, &value->invocation_field_length);
             CHECK_RESULT(ctx, result);
         }
         
-        if(is_tag_next(ctx, KMIP_TAG_COUNTER_LENGTH))
+        if(kmip_is_tag_next(ctx, KMIP_TAG_COUNTER_LENGTH))
         {
-            result = decode_integer(
-                ctx,
-                KMIP_TAG_COUNTER_LENGTH,
-                &value->counter_length);
+            result = kmip_decode_integer(ctx, KMIP_TAG_COUNTER_LENGTH, &value->counter_length);
             CHECK_RESULT(ctx, result);
         }
         
-        if(is_tag_next(ctx, KMIP_TAG_INITIAL_COUNTER_VALUE))
+        if(kmip_is_tag_next(ctx, KMIP_TAG_INITIAL_COUNTER_VALUE))
         {
-            result = decode_integer(
-                ctx,
-                KMIP_TAG_INITIAL_COUNTER_VALUE,
-                &value->initial_counter_value);
+            result = kmip_decode_integer(ctx, KMIP_TAG_INITIAL_COUNTER_VALUE, &value->initial_counter_value);
             CHECK_RESULT(ctx, result);
         }
     }
     
     if(ctx->version >= KMIP_1_4)
     {
-        if(is_tag_next(ctx, KMIP_TAG_SALT_LENGTH))
+        if(kmip_is_tag_next(ctx, KMIP_TAG_SALT_LENGTH))
         {
-            result = decode_integer(
-                ctx,
-                KMIP_TAG_SALT_LENGTH,
-                &value->salt_length);
+            result = kmip_decode_integer(ctx, KMIP_TAG_SALT_LENGTH, &value->salt_length);
             CHECK_RESULT(ctx, result);
         }
         
-        if(is_tag_next(ctx, KMIP_TAG_MASK_GENERATOR))
+        if(kmip_is_tag_next(ctx, KMIP_TAG_MASK_GENERATOR))
         {
-            result = decode_enum(
-                ctx,
-                KMIP_TAG_MASK_GENERATOR,
-                &value->mask_generator);
+            result = kmip_decode_enum(ctx, KMIP_TAG_MASK_GENERATOR, &value->mask_generator);
             CHECK_RESULT(ctx, result);
             CHECK_ENUM(ctx, KMIP_TAG_MASK_GENERATOR, value->mask_generator);
         }
         
-        if(is_tag_next(ctx, KMIP_TAG_MASK_GENERATOR_HASHING_ALGORITHM))
+        if(kmip_is_tag_next(ctx, KMIP_TAG_MASK_GENERATOR_HASHING_ALGORITHM))
         {
-            result = decode_enum(
-                ctx,
-                KMIP_TAG_MASK_GENERATOR_HASHING_ALGORITHM,
-                &value->mask_generator_hashing_algorithm);
+            result = kmip_decode_enum(ctx, KMIP_TAG_MASK_GENERATOR_HASHING_ALGORITHM, &value->mask_generator_hashing_algorithm);
             CHECK_RESULT(ctx, result);
-            CHECK_ENUM(
-                ctx,
-                KMIP_TAG_HASHING_ALGORITHM,
-                value->mask_generator_hashing_algorithm);
+            CHECK_ENUM(ctx, KMIP_TAG_HASHING_ALGORITHM, value->mask_generator_hashing_algorithm);
         }
         
-        if(is_tag_next(ctx, KMIP_TAG_P_SOURCE))
+        if(kmip_is_tag_next(ctx, KMIP_TAG_P_SOURCE))
         {
-            value->p_source = ctx->calloc_func(
-                ctx->state,
-                1,
-                sizeof(struct byte_string));
-            CHECK_NEW_MEMORY(
-                ctx,
-                value->p_source,
-                sizeof(struct byte_string),
-                "P Source byte string");
+            value->p_source = ctx->calloc_func(ctx->state, 1, sizeof(ByteString));
+            CHECK_NEW_MEMORY(ctx, value->p_source, sizeof(ByteString), "P Source byte string");
             
-            result = decode_byte_string(
-                ctx,
-                KMIP_TAG_P_SOURCE,
-                value->p_source);
+            result = kmip_decode_byte_string(ctx, KMIP_TAG_P_SOURCE, value->p_source);
             CHECK_RESULT(ctx, result);
         }
         
-        if(is_tag_next(ctx, KMIP_TAG_TRAILER_FIELD))
+        if(kmip_is_tag_next(ctx, KMIP_TAG_TRAILER_FIELD))
         {
-            result = decode_integer(
-                ctx,
-                KMIP_TAG_TRAILER_FIELD,
-                &value->trailer_field);
+            result = kmip_decode_integer(ctx, KMIP_TAG_TRAILER_FIELD, &value->trailer_field);
             CHECK_RESULT(ctx, result);
         }
     }
@@ -10042,8 +9286,7 @@ decode_cryptographic_parameters(struct kmip *ctx,
 }
 
 int
-decode_encryption_key_information(struct kmip *ctx, 
-                                  struct encryption_key_information *value)
+kmip_decode_encryption_key_information(KMIP *ctx, EncryptionKeyInformation *value)
 {
     CHECK_BUFFER_FULL(ctx, 8);
     
@@ -10051,47 +9294,24 @@ decode_encryption_key_information(struct kmip *ctx,
     int32 tag_type = 0;
     uint32 length = 0;
     
-    decode_int32_be(ctx, &tag_type);
-    CHECK_TAG_TYPE(
-        ctx,
-        tag_type,
-        KMIP_TAG_ENCRYPTION_KEY_INFORMATION,
-        KMIP_TYPE_STRUCTURE);
+    kmip_decode_int32_be(ctx, &tag_type);
+    CHECK_TAG_TYPE(ctx, tag_type, KMIP_TAG_ENCRYPTION_KEY_INFORMATION, KMIP_TYPE_STRUCTURE);
     
-    decode_int32_be(ctx, &length);
+    kmip_decode_int32_be(ctx, &length);
     CHECK_BUFFER_FULL(ctx, length);
     
-    value->unique_identifier = ctx->calloc_func(
-        ctx->state,
-        1,
-        sizeof(struct text_string));
-    CHECK_NEW_MEMORY(
-        ctx,
-        value->unique_identifier,
-        sizeof(struct text_string),
-        "UniqueIdentifier text string");
+    value->unique_identifier = ctx->calloc_func(ctx->state, 1, sizeof(TextString));
+    CHECK_NEW_MEMORY(ctx, value->unique_identifier, sizeof(TextString), "UniqueIdentifier text string");
     
-    result = decode_text_string(
-        ctx,
-        KMIP_TAG_UNIQUE_IDENTIFIER,
-        value->unique_identifier);
+    result = kmip_decode_text_string(ctx, KMIP_TAG_UNIQUE_IDENTIFIER, value->unique_identifier);
     CHECK_RESULT(ctx, result);
     
-    if(is_tag_next(ctx, KMIP_TAG_CRYPTOGRAPHIC_PARAMETERS))
+    if(kmip_is_tag_next(ctx, KMIP_TAG_CRYPTOGRAPHIC_PARAMETERS))
     {
-        value->cryptographic_parameters = ctx->calloc_func(
-            ctx->state,
-            1,
-            sizeof(struct cryptographic_parameters));
-        CHECK_NEW_MEMORY(
-            ctx,
-            value->cryptographic_parameters,
-            sizeof(struct cryptographic_parameters),
-            "CryptographicParameters structure");
+        value->cryptographic_parameters = ctx->calloc_func(ctx->state, 1, sizeof(CryptographicParameters));
+        CHECK_NEW_MEMORY(ctx, value->cryptographic_parameters, sizeof(CryptographicParameters), "CryptographicParameters structure");
         
-        result = decode_cryptographic_parameters(
-            ctx,
-            value->cryptographic_parameters);
+        result = kmip_decode_cryptographic_parameters(ctx, value->cryptographic_parameters);
         CHECK_RESULT(ctx, result);
     }
     
@@ -10099,8 +9319,7 @@ decode_encryption_key_information(struct kmip *ctx,
 }
 
 int
-decode_mac_signature_key_information(struct kmip *ctx, 
-                                     struct mac_signature_key_information *value)
+kmip_decode_mac_signature_key_information(KMIP *ctx, MACSignatureKeyInformation *value)
 {
     CHECK_BUFFER_FULL(ctx, 8);
     
@@ -10108,47 +9327,24 @@ decode_mac_signature_key_information(struct kmip *ctx,
     int32 tag_type = 0;
     uint32 length = 0;
     
-    decode_int32_be(ctx, &tag_type);
-    CHECK_TAG_TYPE(
-        ctx,
-        tag_type,
-        KMIP_TAG_MAC_SIGNATURE_KEY_INFORMATION,
-        KMIP_TYPE_STRUCTURE);
+    kmip_decode_int32_be(ctx, &tag_type);
+    CHECK_TAG_TYPE(ctx, tag_type, KMIP_TAG_MAC_SIGNATURE_KEY_INFORMATION, KMIP_TYPE_STRUCTURE);
     
-    decode_int32_be(ctx, &length);
+    kmip_decode_int32_be(ctx, &length);
     CHECK_BUFFER_FULL(ctx, length);
     
-    value->unique_identifier = ctx->calloc_func(
-        ctx->state,
-        1,
-        sizeof(struct text_string));
-    CHECK_NEW_MEMORY(
-        ctx,
-        value->unique_identifier,
-        sizeof(struct text_string),
-        "UniqueIdentifier text string");
+    value->unique_identifier = ctx->calloc_func(ctx->state, 1, sizeof(TextString));
+    CHECK_NEW_MEMORY(ctx, value->unique_identifier, sizeof(TextString), "UniqueIdentifier text string");
     
-    result = decode_text_string(
-        ctx,
-        KMIP_TAG_UNIQUE_IDENTIFIER,
-        value->unique_identifier);
+    result = kmip_decode_text_string(ctx, KMIP_TAG_UNIQUE_IDENTIFIER, value->unique_identifier);
     CHECK_RESULT(ctx, result);
     
-    if(is_tag_next(ctx, KMIP_TAG_CRYPTOGRAPHIC_PARAMETERS))
+    if(kmip_is_tag_next(ctx, KMIP_TAG_CRYPTOGRAPHIC_PARAMETERS))
     {
-        value->cryptographic_parameters = ctx->calloc_func(
-            ctx->state,
-            1,
-            sizeof(struct cryptographic_parameters));
-        CHECK_NEW_MEMORY(
-            ctx,
-            value->cryptographic_parameters,
-            sizeof(struct cryptographic_parameters),
-            "CryptographicParameters structure");
+        value->cryptographic_parameters = ctx->calloc_func(ctx->state, 1, sizeof(CryptographicParameters));
+        CHECK_NEW_MEMORY(ctx, value->cryptographic_parameters, sizeof(CryptographicParameters), "CryptographicParameters structure");
         
-        result = decode_cryptographic_parameters(
-            ctx,
-            value->cryptographic_parameters);
+        result = kmip_decode_cryptographic_parameters(ctx, value->cryptographic_parameters);
         CHECK_RESULT(ctx, result);
     }
     
@@ -10157,8 +9353,7 @@ decode_mac_signature_key_information(struct kmip *ctx,
 
 
 int
-decode_key_wrapping_data(struct kmip *ctx, 
-                         struct key_wrapping_data *value)
+kmip_decode_key_wrapping_data(KMIP *ctx, KeyWrappingData *value)
 {
     CHECK_BUFFER_FULL(ctx, 8);
     
@@ -10166,102 +9361,57 @@ decode_key_wrapping_data(struct kmip *ctx,
     int32 tag_type = 0;
     uint32 length = 0;
     
-    decode_int32_be(ctx, &tag_type);
-    CHECK_TAG_TYPE(
-        ctx,
-        tag_type,
-        KMIP_TAG_KEY_WRAPPING_DATA,
-        KMIP_TYPE_STRUCTURE);
+    kmip_decode_int32_be(ctx, &tag_type);
+    CHECK_TAG_TYPE(ctx, tag_type, KMIP_TAG_KEY_WRAPPING_DATA, KMIP_TYPE_STRUCTURE);
     
-    decode_int32_be(ctx, &length);
+    kmip_decode_int32_be(ctx, &length);
     CHECK_BUFFER_FULL(ctx, length);
     
-    result = decode_enum(ctx, KMIP_TAG_WRAPPING_METHOD, &value->wrapping_method);
+    result = kmip_decode_enum(ctx, KMIP_TAG_WRAPPING_METHOD, &value->wrapping_method);
     CHECK_RESULT(ctx, result);
     CHECK_ENUM(ctx, KMIP_TAG_WRAPPING_METHOD, value->wrapping_method);
     
-    if(is_tag_next(ctx, KMIP_TAG_ENCRYPTION_KEY_INFORMATION))
+    if(kmip_is_tag_next(ctx, KMIP_TAG_ENCRYPTION_KEY_INFORMATION))
     {
-        value->encryption_key_info = ctx->calloc_func(
-            ctx->state,
-            1,
-            sizeof(struct encryption_key_information));
-        CHECK_NEW_MEMORY(
-            ctx,
-            value->encryption_key_info,
-            sizeof(struct encryption_key_information),
-            "EncryptionKeyInformation structure");
+        value->encryption_key_info = ctx->calloc_func(ctx->state, 1, sizeof(EncryptionKeyInformation));
+        CHECK_NEW_MEMORY(ctx, value->encryption_key_info, sizeof(EncryptionKeyInformation), "EncryptionKeyInformation structure");
         
-        result = decode_encryption_key_information(
-            ctx,
-            value->encryption_key_info);
+        result = kmip_decode_encryption_key_information(ctx, value->encryption_key_info);
         CHECK_RESULT(ctx, result);
     }
     
-    if(is_tag_next(ctx, KMIP_TAG_MAC_SIGNATURE_KEY_INFORMATION))
+    if(kmip_is_tag_next(ctx, KMIP_TAG_MAC_SIGNATURE_KEY_INFORMATION))
     {
-        value->mac_signature_key_info = ctx->calloc_func(
-            ctx->state,
-            1,
-            sizeof(struct mac_signature_key_information));
-        CHECK_NEW_MEMORY(
-            ctx,
-            value->mac_signature_key_info,
-            sizeof(struct mac_signature_key_information),
-            "MAC/SignatureKeyInformation structure");
+        value->mac_signature_key_info = ctx->calloc_func(ctx->state, 1, sizeof(MACSignatureKeyInformation));
+        CHECK_NEW_MEMORY(ctx, value->mac_signature_key_info, sizeof(MACSignatureKeyInformation), "MAC/SignatureKeyInformation structure");
         
-        result = decode_mac_signature_key_information(
-            ctx,
-            value->mac_signature_key_info);
+        result = kmip_decode_mac_signature_key_information(ctx, value->mac_signature_key_info);
         CHECK_RESULT(ctx, result);
     }
     
-    if(is_tag_next(ctx, KMIP_TAG_MAC_SIGNATURE))
+    if(kmip_is_tag_next(ctx, KMIP_TAG_MAC_SIGNATURE))
     {
-        value->mac_signature = ctx->calloc_func(
-            ctx->state,
-            1,
-            sizeof(struct byte_string));
-        CHECK_NEW_MEMORY(
-            ctx,
-            value->mac_signature,
-            sizeof(struct byte_string),
-            "MAC/Signature byte string");
+        value->mac_signature = ctx->calloc_func(ctx->state, 1, sizeof(ByteString));
+        CHECK_NEW_MEMORY(ctx, value->mac_signature, sizeof(ByteString), "MAC/Signature byte string");
         
-        result = decode_byte_string(
-            ctx,
-            KMIP_TAG_MAC_SIGNATURE,
-            value->mac_signature);
+        result = kmip_decode_byte_string(ctx, KMIP_TAG_MAC_SIGNATURE, value->mac_signature);
         CHECK_RESULT(ctx, result);
     }
     
-    if(is_tag_next(ctx, KMIP_TAG_IV_COUNTER_NONCE))
+    if(kmip_is_tag_next(ctx, KMIP_TAG_IV_COUNTER_NONCE))
     {
-        value->iv_counter_nonce = ctx->calloc_func(
-            ctx->state,
-            1,
-            sizeof(struct byte_string));
-        CHECK_NEW_MEMORY(
-            ctx,
-            value->iv_counter_nonce,
-            sizeof(struct byte_string),
-            "IV/Counter/Nonce byte string");
+        value->iv_counter_nonce = ctx->calloc_func(ctx->state, 1, sizeof(ByteString));
+        CHECK_NEW_MEMORY(ctx, value->iv_counter_nonce, sizeof(ByteString), "IV/Counter/Nonce byte string");
         
-        result = decode_byte_string(
-            ctx,
-            KMIP_TAG_IV_COUNTER_NONCE,
-            value->iv_counter_nonce);
+        result = kmip_decode_byte_string(ctx, KMIP_TAG_IV_COUNTER_NONCE, value->iv_counter_nonce);
         CHECK_RESULT(ctx, result);
     }
     
     if(ctx->version >= KMIP_1_1)
     {
-        if(is_tag_next(ctx, KMIP_TAG_ENCODING_OPTION))
+        if(kmip_is_tag_next(ctx, KMIP_TAG_ENCODING_OPTION))
         {
-            result = decode_enum(
-                ctx,
-                KMIP_TAG_ENCODING_OPTION,
-                &value->encoding_option);
+            result = kmip_decode_enum(ctx, KMIP_TAG_ENCODING_OPTION, &value->encoding_option);
             CHECK_RESULT(ctx, result);
             CHECK_ENUM(ctx, KMIP_TAG_ENCODING_OPTION, value->encoding_option);
         }
@@ -10271,7 +9421,7 @@ decode_key_wrapping_data(struct kmip *ctx,
 }
 
 int
-decode_key_block(struct kmip *ctx, struct key_block *value)
+kmip_decode_key_block(KMIP *ctx, KeyBlock *value)
 {
     CHECK_BUFFER_FULL(ctx, 8);
     
@@ -10279,103 +9429,60 @@ decode_key_block(struct kmip *ctx, struct key_block *value)
     int32 tag_type = 0;
     uint32 length = 0;
     
-    decode_int32_be(ctx, &tag_type);
-    CHECK_TAG_TYPE(
-        ctx,
-        tag_type,
-        KMIP_TAG_KEY_BLOCK,
-        KMIP_TYPE_STRUCTURE);
+    kmip_decode_int32_be(ctx, &tag_type);
+    CHECK_TAG_TYPE(ctx, tag_type, KMIP_TAG_KEY_BLOCK, KMIP_TYPE_STRUCTURE);
     
-    decode_int32_be(ctx, &length);
+    kmip_decode_int32_be(ctx, &length);
     CHECK_BUFFER_FULL(ctx, length);
     
-    result = decode_enum(ctx, KMIP_TAG_KEY_FORMAT_TYPE, &value->key_format_type);
+    result = kmip_decode_enum(ctx, KMIP_TAG_KEY_FORMAT_TYPE, &value->key_format_type);
     CHECK_RESULT(ctx, result);
     CHECK_ENUM(ctx, KMIP_TAG_KEY_FORMAT_TYPE, value->key_format_type);
     
-    if(is_tag_next(ctx, KMIP_TAG_KEY_COMPRESSION_TYPE))
+    if(kmip_is_tag_next(ctx, KMIP_TAG_KEY_COMPRESSION_TYPE))
     {
-        result = decode_enum(
-            ctx,
-            KMIP_TAG_KEY_COMPRESSION_TYPE,
-            &value->key_compression_type);
+        result = kmip_decode_enum(ctx, KMIP_TAG_KEY_COMPRESSION_TYPE, &value->key_compression_type);
         CHECK_RESULT(ctx, result);
         CHECK_ENUM(ctx, KMIP_TAG_KEY_COMPRESSION_TYPE, value->key_compression_type);
     }
     
-    if(is_tag_type_next(ctx, KMIP_TAG_KEY_VALUE, KMIP_TYPE_BYTE_STRING))
+    if(kmip_is_tag_type_next(ctx, KMIP_TAG_KEY_VALUE, KMIP_TYPE_BYTE_STRING))
     {
         value->key_value_type = KMIP_TYPE_BYTE_STRING;
-        value->key_value = ctx->calloc_func(
-            ctx->state,
-            1,
-            sizeof(struct byte_string));
-        CHECK_NEW_MEMORY(
-            ctx,
-            value->key_value,
-            sizeof(struct byte_string),
-            "KeyValue byte string");
+        value->key_value = ctx->calloc_func(ctx->state, 1, sizeof(ByteString));
+        CHECK_NEW_MEMORY(ctx, value->key_value, sizeof(ByteString), "KeyValue byte string");
         
-        result = decode_byte_string(
-            ctx,
-            KMIP_TAG_KEY_VALUE,
-            (struct byte_string *)value->key_value);
+        result = kmip_decode_byte_string(ctx, KMIP_TAG_KEY_VALUE, (ByteString *)value->key_value);
     }
     else
     {
         value->key_value_type = KMIP_TYPE_STRUCTURE;
-        value->key_value = ctx->calloc_func(
-            ctx->state,
-            1,
-            sizeof(struct key_value));
-        CHECK_NEW_MEMORY(
-            ctx,
-            value->key_value,
-            sizeof(struct key_value),
-            "KeyValue structure");
+        value->key_value = ctx->calloc_func(ctx->state, 1, sizeof(KeyValue));
+        CHECK_NEW_MEMORY(ctx, value->key_value, sizeof(KeyValue), "KeyValue structure");
         
-        result = decode_key_value(
-            ctx,
-            value->key_format_type,
-            (struct key_value *)value->key_value);
+        result = kmip_decode_key_value(ctx, value->key_format_type, (KeyValue *)value->key_value);
     }
     CHECK_RESULT(ctx, result);
     
-    if(is_tag_next(ctx, KMIP_TAG_CRYPTOGRAPHIC_ALGORITHM))
+    if(kmip_is_tag_next(ctx, KMIP_TAG_CRYPTOGRAPHIC_ALGORITHM))
     {
-        result = decode_enum(
-            ctx,
-            KMIP_TAG_CRYPTOGRAPHIC_ALGORITHM,
-            &value->cryptographic_algorithm);
+        result = kmip_decode_enum(ctx, KMIP_TAG_CRYPTOGRAPHIC_ALGORITHM, &value->cryptographic_algorithm);
         CHECK_RESULT(ctx, result);
-        CHECK_ENUM(
-            ctx,
-            KMIP_TAG_CRYPTOGRAPHIC_ALGORITHM,
-            value->cryptographic_algorithm);
+        CHECK_ENUM(ctx, KMIP_TAG_CRYPTOGRAPHIC_ALGORITHM, value->cryptographic_algorithm);
     }
     
-    if(is_tag_next(ctx, KMIP_TAG_CRYPTOGRAPHIC_LENGTH))
+    if(kmip_is_tag_next(ctx, KMIP_TAG_CRYPTOGRAPHIC_LENGTH))
     {
-        result = decode_integer(
-            ctx,
-            KMIP_TAG_CRYPTOGRAPHIC_LENGTH,
-            &value->cryptographic_length);
+        result = kmip_decode_integer(ctx, KMIP_TAG_CRYPTOGRAPHIC_LENGTH, &value->cryptographic_length);
         CHECK_RESULT(ctx, result);
     }
     
-    if(is_tag_next(ctx, KMIP_TAG_KEY_WRAPPING_DATA))
+    if(kmip_is_tag_next(ctx, KMIP_TAG_KEY_WRAPPING_DATA))
     {
-        value->key_wrapping_data = ctx->calloc_func(
-            ctx->state,
-            1,
-            sizeof(struct key_wrapping_data));
-        CHECK_NEW_MEMORY(
-            ctx,
-            value->key_wrapping_data,
-            sizeof(struct key_wrapping_data),
-            "KeyWrappingData structure");
+        value->key_wrapping_data = ctx->calloc_func(ctx->state, 1, sizeof(KeyWrappingData));
+        CHECK_NEW_MEMORY(ctx, value->key_wrapping_data, sizeof(KeyWrappingData), "KeyWrappingData structure");
         
-        result = decode_key_wrapping_data(ctx, value->key_wrapping_data);
+        result = kmip_decode_key_wrapping_data(ctx, value->key_wrapping_data);
         CHECK_RESULT(ctx, result);
     }
     
@@ -10383,7 +9490,7 @@ decode_key_block(struct kmip *ctx, struct key_block *value)
 }
 
 int
-decode_symmetric_key(struct kmip *ctx, struct symmetric_key *value)
+kmip_decode_symmetric_key(KMIP *ctx, SymmetricKey *value)
 {
     CHECK_BUFFER_FULL(ctx, 8);
     
@@ -10391,34 +9498,23 @@ decode_symmetric_key(struct kmip *ctx, struct symmetric_key *value)
     int32 tag_type = 0;
     uint32 length = 0;
     
-    decode_int32_be(ctx, &tag_type);
-    CHECK_TAG_TYPE(
-        ctx,
-        tag_type,
-        KMIP_TAG_SYMMETRIC_KEY,
-        KMIP_TYPE_STRUCTURE);
+    kmip_decode_int32_be(ctx, &tag_type);
+    CHECK_TAG_TYPE(ctx, tag_type, KMIP_TAG_SYMMETRIC_KEY, KMIP_TYPE_STRUCTURE);
     
-    decode_int32_be(ctx, &length);
+    kmip_decode_int32_be(ctx, &length);
     CHECK_BUFFER_FULL(ctx, length);
     
-    value->key_block = ctx->calloc_func(
-        ctx->state,
-        1,
-        sizeof(struct key_block));
-    CHECK_NEW_MEMORY(
-        ctx,
-        value->key_block,
-        sizeof(struct key_block),
-        "KeyBlock structure");
+    value->key_block = ctx->calloc_func(ctx->state, 1, sizeof(KeyBlock));
+    CHECK_NEW_MEMORY(ctx, value->key_block, sizeof(KeyBlock), "KeyBlock structure");
     
-    result = decode_key_block(ctx, value->key_block);
+    result = kmip_decode_key_block(ctx, value->key_block);
     CHECK_RESULT(ctx, result);
     
     return(KMIP_OK);
 }
 
 int
-decode_public_key(struct kmip *ctx, struct public_key *value)
+kmip_decode_public_key(KMIP *ctx, PublicKey *value)
 {
     CHECK_BUFFER_FULL(ctx, 8);
     
@@ -10426,34 +9522,23 @@ decode_public_key(struct kmip *ctx, struct public_key *value)
     int32 tag_type = 0;
     uint32 length = 0;
     
-    decode_int32_be(ctx, &tag_type);
-    CHECK_TAG_TYPE(
-        ctx,
-        tag_type,
-        KMIP_TAG_PUBLIC_KEY,
-        KMIP_TYPE_STRUCTURE);
+    kmip_decode_int32_be(ctx, &tag_type);
+    CHECK_TAG_TYPE(ctx, tag_type, KMIP_TAG_PUBLIC_KEY, KMIP_TYPE_STRUCTURE);
     
-    decode_int32_be(ctx, &length);
+    kmip_decode_int32_be(ctx, &length);
     CHECK_BUFFER_FULL(ctx, length);
     
-    value->key_block = ctx->calloc_func(
-        ctx->state,
-        1,
-        sizeof(struct key_block));
-    CHECK_NEW_MEMORY(
-        ctx,
-        value->key_block,
-        sizeof(struct key_block),
-        "KeyBlock structure");
+    value->key_block = ctx->calloc_func(ctx->state, 1, sizeof(KeyBlock));
+    CHECK_NEW_MEMORY(ctx, value->key_block, sizeof(KeyBlock), "KeyBlock structure");
     
-    result = decode_key_block(ctx, value->key_block);
+    result = kmip_decode_key_block(ctx, value->key_block);
     CHECK_RESULT(ctx, result);
     
     return(KMIP_OK);
 }
 
 int
-decode_private_key(struct kmip *ctx, struct private_key *value)
+kmip_decode_private_key(KMIP *ctx, PrivateKey *value)
 {
     CHECK_BUFFER_FULL(ctx, 8);
     
@@ -10461,35 +9546,23 @@ decode_private_key(struct kmip *ctx, struct private_key *value)
     int32 tag_type = 0;
     uint32 length = 0;
     
-    decode_int32_be(ctx, &tag_type);
-    CHECK_TAG_TYPE(
-        ctx,
-        tag_type,
-        KMIP_TAG_PRIVATE_KEY,
-        KMIP_TYPE_STRUCTURE);
+    kmip_decode_int32_be(ctx, &tag_type);
+    CHECK_TAG_TYPE(ctx, tag_type, KMIP_TAG_PRIVATE_KEY, KMIP_TYPE_STRUCTURE);
     
-    decode_int32_be(ctx, &length);
+    kmip_decode_int32_be(ctx, &length);
     CHECK_BUFFER_FULL(ctx, length);
     
-    value->key_block = ctx->calloc_func(
-        ctx->state,
-        1,
-        sizeof(struct key_block));
-    CHECK_NEW_MEMORY(
-        ctx,
-        value->key_block,
-        sizeof(struct key_block),
-        "KeyBlock structure");
+    value->key_block = ctx->calloc_func(ctx->state, 1, sizeof(KeyBlock));
+    CHECK_NEW_MEMORY(ctx, value->key_block, sizeof(KeyBlock), "KeyBlock structure");
     
-    result = decode_key_block(ctx, value->key_block);
+    result = kmip_decode_key_block(ctx, value->key_block);
     CHECK_RESULT(ctx, result);
     
     return(KMIP_OK);
 }
 
 int
-decode_key_wrapping_specification(struct kmip *ctx,
-                                  struct key_wrapping_specification *value)
+kmip_decode_key_wrapping_specification(KMIP *ctx, KeyWrappingSpecification *value)
 {
     CHECK_BUFFER_FULL(ctx, 8);
     
@@ -10497,88 +9570,48 @@ decode_key_wrapping_specification(struct kmip *ctx,
     int32 tag_type = 0;
     uint32 length = 0;
     
-    decode_int32_be(ctx, &tag_type);
-    CHECK_TAG_TYPE(
-        ctx,
-        tag_type,
-        KMIP_TAG_KEY_WRAPPING_SPECIFICATION,
-        KMIP_TYPE_STRUCTURE);
+    kmip_decode_int32_be(ctx, &tag_type);
+    CHECK_TAG_TYPE(ctx, tag_type, KMIP_TAG_KEY_WRAPPING_SPECIFICATION, KMIP_TYPE_STRUCTURE);
     
-    decode_int32_be(ctx, &length);
+    kmip_decode_int32_be(ctx, &length);
     CHECK_BUFFER_FULL(ctx, length);
     
-    result = decode_enum(
-        ctx,
-        KMIP_TAG_WRAPPING_METHOD,
-        &value->wrapping_method);
+    result = kmip_decode_enum(ctx, KMIP_TAG_WRAPPING_METHOD, &value->wrapping_method);
     CHECK_RESULT(ctx, result);
     CHECK_ENUM(ctx, KMIP_TAG_WRAPPING_METHOD, value->wrapping_method);
     
-    if(is_tag_next(ctx, KMIP_TAG_ENCRYPTION_KEY_INFORMATION))
+    if(kmip_is_tag_next(ctx, KMIP_TAG_ENCRYPTION_KEY_INFORMATION))
     {
-        value->encryption_key_info = ctx->calloc_func(
-            ctx->state,
-            1,
-            sizeof(struct encryption_key_information));
-        CHECK_NEW_MEMORY(
-            ctx,
-            value->encryption_key_info,
-            sizeof(struct encryption_key_information),
-            "EncryptionKeyInformation structure");
-        result = decode_encryption_key_information(
-            ctx,
-            value->encryption_key_info);
+        value->encryption_key_info = ctx->calloc_func(ctx->state, 1, sizeof(EncryptionKeyInformation));
+        CHECK_NEW_MEMORY(ctx, value->encryption_key_info, sizeof(EncryptionKeyInformation), "EncryptionKeyInformation structure");
+        result = kmip_decode_encryption_key_information(ctx, value->encryption_key_info);
         CHECK_RESULT(ctx, result);
     }
     
-    if(is_tag_next(ctx, KMIP_TAG_MAC_SIGNATURE_KEY_INFORMATION))
+    if(kmip_is_tag_next(ctx, KMIP_TAG_MAC_SIGNATURE_KEY_INFORMATION))
     {
-        value->mac_signature_key_info = ctx->calloc_func(
-            ctx->state,
-            1,
-            sizeof(struct mac_signature_key_information));
-        CHECK_NEW_MEMORY(
-            ctx,
-            value->mac_signature_key_info,
-            sizeof(struct mac_signature_key_information),
-            "MACSignatureKeyInformation structure");
-        result = decode_mac_signature_key_information(
-            ctx,
-            value->mac_signature_key_info);
+        value->mac_signature_key_info = ctx->calloc_func(ctx->state, 1, sizeof(MACSignatureKeyInformation));
+        CHECK_NEW_MEMORY(ctx, value->mac_signature_key_info, sizeof(MACSignatureKeyInformation), "MACSignatureKeyInformation structure");
+        result = kmip_decode_mac_signature_key_information(ctx, value->mac_signature_key_info);
         CHECK_RESULT(ctx, result);
     }
     
-    value->attribute_name_count = get_num_items_next(
-        ctx,
-        KMIP_TAG_ATTRIBUTE_NAME);
+    value->attribute_name_count = kmip_get_num_items_next(ctx, KMIP_TAG_ATTRIBUTE_NAME);
     if(value->attribute_name_count > 0)
     {
-        value->attribute_names = ctx->calloc_func(
-            ctx->state,
-            value->attribute_name_count,
-            sizeof(struct text_string));
-        CHECK_NEW_MEMORY(
-            ctx,
-            value->attribute_names,
-            value->attribute_name_count * sizeof(struct text_string),
-            "sequence of AttributeName text strings");
+        value->attribute_names = ctx->calloc_func(ctx->state, value->attribute_name_count, sizeof(TextString));
+        CHECK_NEW_MEMORY(ctx, value->attribute_names, value->attribute_name_count * sizeof(TextString), "sequence of AttributeName text strings");
         
         for(size_t i = 0; i < value->attribute_name_count; i++)
         {
-            result = decode_text_string(
-                ctx,
-                KMIP_TAG_ATTRIBUTE_NAME,
-                &value->attribute_names[i]);
+            result = kmip_decode_text_string(ctx, KMIP_TAG_ATTRIBUTE_NAME, &value->attribute_names[i]);
             CHECK_RESULT(ctx, result);
         }
     }
     
     if(ctx->version >= KMIP_1_1)
     {
-        result = decode_enum(
-            ctx,
-            KMIP_TAG_ENCODING_OPTION,
-            &value->encoding_option);
+        result = kmip_decode_enum(ctx, KMIP_TAG_ENCODING_OPTION, &value->encoding_option);
         CHECK_RESULT(ctx, result);
         CHECK_ENUM(ctx, KMIP_TAG_ENCODING_OPTION, value->encoding_option);
     }
@@ -10587,8 +9620,7 @@ decode_key_wrapping_specification(struct kmip *ctx,
 }
 
 int
-decode_create_request_payload(struct kmip *ctx, 
-                              struct create_request_payload *value)
+kmip_decode_create_request_payload(KMIP *ctx, CreateRequestPayload *value)
 {
     CHECK_BUFFER_FULL(ctx, 8);
     
@@ -10596,38 +9628,26 @@ decode_create_request_payload(struct kmip *ctx,
     int32 tag_type = 0;
     uint32 length = 0;
     
-    decode_int32_be(ctx, &tag_type);
-    CHECK_TAG_TYPE(
-        ctx,
-        tag_type,
-        KMIP_TAG_REQUEST_PAYLOAD,
-        KMIP_TYPE_STRUCTURE);
+    kmip_decode_int32_be(ctx, &tag_type);
+    CHECK_TAG_TYPE(ctx, tag_type, KMIP_TAG_REQUEST_PAYLOAD, KMIP_TYPE_STRUCTURE);
     
-    decode_int32_be(ctx, &length);
+    kmip_decode_int32_be(ctx, &length);
     CHECK_BUFFER_FULL(ctx, length);
     
-    result = decode_enum(ctx, KMIP_TAG_OBJECT_TYPE, &value->object_type);
+    result = kmip_decode_enum(ctx, KMIP_TAG_OBJECT_TYPE, &value->object_type);
     CHECK_RESULT(ctx, result);
     CHECK_ENUM(ctx, KMIP_TAG_OBJECT_TYPE, value->object_type);
     
-    value->template_attribute = ctx->calloc_func(
-        ctx->state,
-        1,
-        sizeof(struct template_attribute));
-    CHECK_NEW_MEMORY(
-        ctx,
-        value->template_attribute,
-        sizeof(struct template_attribute),
-        "TemplateAttribute structure");
-    result = decode_template_attribute(ctx, value->template_attribute);
+    value->template_attribute = ctx->calloc_func(ctx->state, 1, sizeof(TemplateAttribute));
+    CHECK_NEW_MEMORY(ctx, value->template_attribute, sizeof(TemplateAttribute), "TemplateAttribute structure");
+    result = kmip_decode_template_attribute(ctx, value->template_attribute);
     CHECK_RESULT(ctx, result);
     
     return(KMIP_OK);
 }
 
 int
-decode_create_response_payload(struct kmip *ctx, 
-                               struct create_response_payload *value)
+kmip_decode_create_response_payload(KMIP *ctx, CreateResponsePayload *value)
 {
     CHECK_BUFFER_FULL(ctx, 8);
     
@@ -10635,49 +9655,28 @@ decode_create_response_payload(struct kmip *ctx,
     int32 tag_type = 0;
     uint32 length = 0;
     
-    decode_int32_be(ctx, &tag_type);
-    CHECK_TAG_TYPE(
-        ctx,
-        tag_type,
-        KMIP_TAG_RESPONSE_PAYLOAD,
-        KMIP_TYPE_STRUCTURE);
+    kmip_decode_int32_be(ctx, &tag_type);
+    CHECK_TAG_TYPE(ctx, tag_type, KMIP_TAG_RESPONSE_PAYLOAD, KMIP_TYPE_STRUCTURE);
     
-    decode_int32_be(ctx, &length);
+    kmip_decode_int32_be(ctx, &length);
     CHECK_BUFFER_FULL(ctx, length);
     
-    result = decode_enum(ctx, KMIP_TAG_OBJECT_TYPE, &value->object_type);
+    result = kmip_decode_enum(ctx, KMIP_TAG_OBJECT_TYPE, &value->object_type);
     CHECK_RESULT(ctx, result);
     CHECK_ENUM(ctx, KMIP_TAG_OBJECT_TYPE, value->object_type);
     
-    value->unique_identifier = ctx->calloc_func(
-        ctx->state,
-        1,
-        sizeof(struct text_string));
-    CHECK_NEW_MEMORY(
-        ctx,
-        value->unique_identifier,
-        sizeof(struct text_string),
-        "UniqueIdentifier text string");
+    value->unique_identifier = ctx->calloc_func(ctx->state, 1, sizeof(TextString));
+    CHECK_NEW_MEMORY(ctx, value->unique_identifier, sizeof(TextString), "UniqueIdentifier text string");
     
-    result = decode_text_string(
-        ctx,
-        KMIP_TAG_UNIQUE_IDENTIFIER,
-        value->unique_identifier);
+    result = kmip_decode_text_string(ctx, KMIP_TAG_UNIQUE_IDENTIFIER, value->unique_identifier);
     CHECK_RESULT(ctx, result);
     
-    if(is_tag_next(ctx, KMIP_TAG_TEMPLATE_ATTRIBUTE))
+    if(kmip_is_tag_next(ctx, KMIP_TAG_TEMPLATE_ATTRIBUTE))
     {
-        value->template_attribute = ctx->calloc_func(
-            ctx->state,
-            1,
-            sizeof(struct template_attribute));
-        CHECK_NEW_MEMORY(
-            ctx,
-            value->template_attribute,
-            sizeof(struct template_attribute),
-            "TemplateAttribute structure");
+        value->template_attribute = ctx->calloc_func(ctx->state, 1, sizeof(TemplateAttribute));
+        CHECK_NEW_MEMORY(ctx, value->template_attribute, sizeof(TemplateAttribute), "TemplateAttribute structure");
         
-        result = decode_template_attribute(ctx, value->template_attribute);
+        result = kmip_decode_template_attribute(ctx, value->template_attribute);
         CHECK_RESULT(ctx, result);
     }
     
@@ -10685,8 +9684,7 @@ decode_create_response_payload(struct kmip *ctx,
 }
 
 int
-decode_get_request_payload(struct kmip *ctx,
-                           struct get_request_payload *value)
+kmip_decode_get_request_payload(KMIP *ctx, GetRequestPayload *value)
 {
     CHECK_BUFFER_FULL(ctx, 8);
     
@@ -10694,84 +9692,49 @@ decode_get_request_payload(struct kmip *ctx,
     int32 tag_type = 0;
     uint32 length = 0;
     
-    decode_int32_be(ctx, &tag_type);
-    CHECK_TAG_TYPE(
-        ctx,
-        tag_type,
-        KMIP_TAG_REQUEST_PAYLOAD,
-        KMIP_TYPE_STRUCTURE);
+    kmip_decode_int32_be(ctx, &tag_type);
+    CHECK_TAG_TYPE(ctx, tag_type, KMIP_TAG_REQUEST_PAYLOAD, KMIP_TYPE_STRUCTURE);
     
-    decode_int32_be(ctx, &length);
+    kmip_decode_int32_be(ctx, &length);
     CHECK_BUFFER_FULL(ctx, length);
 
-    if(is_tag_next(ctx, KMIP_TAG_UNIQUE_IDENTIFIER))
+    if(kmip_is_tag_next(ctx, KMIP_TAG_UNIQUE_IDENTIFIER))
     {
-        value->unique_identifier = ctx->calloc_func(
-            ctx->state,
-            1,
-            sizeof(struct text_string));
-        CHECK_NEW_MEMORY(
-            ctx,
-            value->unique_identifier,
-            sizeof(struct text_string),
-            "UniqueIdentifier text string");
-        result = decode_text_string(
-            ctx,
-            KMIP_TAG_UNIQUE_IDENTIFIER,
-            value->unique_identifier);
+        value->unique_identifier = ctx->calloc_func(ctx->state, 1, sizeof(TextString));
+        CHECK_NEW_MEMORY(ctx, value->unique_identifier, sizeof(TextString), "UniqueIdentifier text string");
+        result = kmip_decode_text_string(ctx, KMIP_TAG_UNIQUE_IDENTIFIER, value->unique_identifier);
         CHECK_RESULT(ctx, result);
     }
     
-    if(is_tag_next(ctx, KMIP_TAG_KEY_FORMAT_TYPE))
+    if(kmip_is_tag_next(ctx, KMIP_TAG_KEY_FORMAT_TYPE))
     {
-        result = decode_enum(
-            ctx,
-            KMIP_TAG_KEY_FORMAT_TYPE,
-            &value->key_format_type);
+        result = kmip_decode_enum(ctx, KMIP_TAG_KEY_FORMAT_TYPE, &value->key_format_type);
         CHECK_RESULT(ctx, result);
         CHECK_ENUM(ctx, KMIP_TAG_KEY_FORMAT_TYPE, value->key_format_type);
     }
     
     if(ctx->version >= KMIP_1_4)
     {
-        if(is_tag_next(ctx, KMIP_TAG_KEY_WRAP_TYPE))
+        if(kmip_is_tag_next(ctx, KMIP_TAG_KEY_WRAP_TYPE))
         {
-            result = decode_enum(
-                ctx,
-                KMIP_TAG_KEY_WRAP_TYPE,
-                &value->key_wrap_type);
+            result = kmip_decode_enum(ctx, KMIP_TAG_KEY_WRAP_TYPE, &value->key_wrap_type);
             CHECK_RESULT(ctx, result);
             CHECK_ENUM(ctx, KMIP_TAG_KEY_WRAP_TYPE, value->key_wrap_type);
         }
     }
     
-    if(is_tag_next(ctx, KMIP_TAG_KEY_COMPRESSION_TYPE))
+    if(kmip_is_tag_next(ctx, KMIP_TAG_KEY_COMPRESSION_TYPE))
     {
-        result = decode_enum(
-            ctx,
-            KMIP_TAG_KEY_COMPRESSION_TYPE,
-            &value->key_compression_type);
+        result = kmip_decode_enum(ctx, KMIP_TAG_KEY_COMPRESSION_TYPE, &value->key_compression_type);
         CHECK_RESULT(ctx, result);
-        CHECK_ENUM(
-            ctx,
-            KMIP_TAG_KEY_COMPRESSION_TYPE,
-            value->key_compression_type);
+        CHECK_ENUM(ctx, KMIP_TAG_KEY_COMPRESSION_TYPE, value->key_compression_type);
     }
     
-    if(is_tag_next(ctx, KMIP_TAG_KEY_WRAPPING_SPECIFICATION))
+    if(kmip_is_tag_next(ctx, KMIP_TAG_KEY_WRAPPING_SPECIFICATION))
     {
-        value->key_wrapping_spec = ctx->calloc_func(
-            ctx->state,
-            1,
-            sizeof(struct key_wrapping_specification));
-        CHECK_NEW_MEMORY(
-            ctx,
-            value->key_wrapping_spec,
-            sizeof(struct key_wrapping_specification),
-            "KeyWrappingSpecification structure");
-        result = decode_key_wrapping_specification(
-            ctx,
-            value->key_wrapping_spec);
+        value->key_wrapping_spec = ctx->calloc_func(ctx->state, 1, sizeof(KeyWrappingSpecification));
+        CHECK_NEW_MEMORY(ctx, value->key_wrapping_spec, sizeof(KeyWrappingSpecification), "KeyWrappingSpecification structure");
+        result = kmip_decode_key_wrapping_specification(ctx, value->key_wrapping_spec);
         CHECK_RESULT(ctx, result);
     }
     
@@ -10779,8 +9742,7 @@ decode_get_request_payload(struct kmip *ctx,
 }
 
 int
-decode_get_response_payload(struct kmip *ctx,
-                            struct get_response_payload *value)
+kmip_decode_get_response_payload(KMIP *ctx, GetResponsePayload *value)
 {
     CHECK_BUFFER_FULL(ctx, 8);
     
@@ -10788,83 +9750,42 @@ decode_get_response_payload(struct kmip *ctx,
     int32 tag_type = 0;
     uint32 length = 0;
     
-    decode_int32_be(ctx, &tag_type);
-    CHECK_TAG_TYPE(
-        ctx,
-        tag_type,
-        KMIP_TAG_RESPONSE_PAYLOAD,
-        KMIP_TYPE_STRUCTURE);
+    kmip_decode_int32_be(ctx, &tag_type);
+    CHECK_TAG_TYPE(ctx, tag_type, KMIP_TAG_RESPONSE_PAYLOAD, KMIP_TYPE_STRUCTURE);
     
-    decode_int32_be(ctx, &length);
+    kmip_decode_int32_be(ctx, &length);
     CHECK_BUFFER_FULL(ctx, length);
     
-    result = decode_enum(ctx, KMIP_TAG_OBJECT_TYPE, &value->object_type);
+    result = kmip_decode_enum(ctx, KMIP_TAG_OBJECT_TYPE, &value->object_type);
     CHECK_RESULT(ctx, result);
     CHECK_ENUM(ctx, KMIP_TAG_OBJECT_TYPE, value->object_type);
     
-    value->unique_identifier = ctx->calloc_func(
-        ctx->state,
-        1,
-        sizeof(struct text_string));
-    CHECK_NEW_MEMORY(
-        ctx,
-        value->unique_identifier,
-        sizeof(struct text_string),
-        "UniqueIdentifier text string");
+    value->unique_identifier = ctx->calloc_func(ctx->state, 1, sizeof(TextString));
+    CHECK_NEW_MEMORY(ctx, value->unique_identifier, sizeof(TextString), "UniqueIdentifier text string");
     
-    result = decode_text_string(
-        ctx,
-        KMIP_TAG_UNIQUE_IDENTIFIER,
-        value->unique_identifier);
+    result = kmip_decode_text_string(ctx, KMIP_TAG_UNIQUE_IDENTIFIER, value->unique_identifier);
     CHECK_RESULT(ctx, result);
     
     switch(value->object_type)
     {
         case KMIP_OBJTYPE_SYMMETRIC_KEY:
-        value->object = ctx->calloc_func(
-            ctx->state,
-            1,
-            sizeof(struct symmetric_key));
-        CHECK_NEW_MEMORY(
-            ctx,
-            value->object,
-            sizeof(struct symmetric_key),
-            "SymmetricKey structure");
-        result = decode_symmetric_key(
-            ctx,
-            (struct symmetric_key*)value->object);
+        value->object = ctx->calloc_func(ctx->state, 1, sizeof(SymmetricKey));
+        CHECK_NEW_MEMORY(ctx, value->object, sizeof(SymmetricKey), "SymmetricKey structure");
+        result = kmip_decode_symmetric_key(ctx, (SymmetricKey*)value->object);
         CHECK_RESULT(ctx, result);
         break;
         
         case KMIP_OBJTYPE_PUBLIC_KEY:
-        value->object = ctx->calloc_func(
-            ctx->state,
-            1,
-            sizeof(struct public_key));
-        CHECK_NEW_MEMORY(
-            ctx,
-            value->object,
-            sizeof(struct public_key),
-            "PublicKey structure");
-        result = decode_public_key(
-            ctx,
-            (struct public_key*)value->object);
+        value->object = ctx->calloc_func(ctx->state, 1, sizeof(PublicKey));
+        CHECK_NEW_MEMORY(ctx, value->object, sizeof(PublicKey), "PublicKey structure");
+        result = kmip_decode_public_key(ctx, (PublicKey*)value->object);
         CHECK_RESULT(ctx, result);
         break;
         
         case KMIP_OBJTYPE_PRIVATE_KEY:
-        value->object = ctx->calloc_func(
-            ctx->state,
-            1,
-            sizeof(struct private_key));
-        CHECK_NEW_MEMORY(
-            ctx,
-            value->object,
-            sizeof(struct private_key),
-            "PrivateKey structure");
-        result = decode_private_key(
-            ctx,
-            (struct private_key*)value->object);
+        value->object = ctx->calloc_func(ctx->state, 1, sizeof(PrivateKey));
+        CHECK_NEW_MEMORY(ctx, value->object, sizeof(PrivateKey), "PrivateKey structure");
+        result = kmip_decode_private_key(ctx, (PrivateKey*)value->object);
         CHECK_RESULT(ctx, result);
         break;
         
@@ -10878,8 +9799,7 @@ decode_get_response_payload(struct kmip *ctx,
 }
 
 int
-decode_destroy_request_payload(struct kmip *ctx, 
-                               struct destroy_request_payload *value)
+kmip_decode_destroy_request_payload(KMIP *ctx, DestroyRequestPayload *value)
 {
     CHECK_BUFFER_FULL(ctx, 8);
     
@@ -10887,31 +9807,17 @@ decode_destroy_request_payload(struct kmip *ctx,
     int32 tag_type = 0;
     uint32 length = 0;
     
-    decode_int32_be(ctx, &tag_type);
-    CHECK_TAG_TYPE(
-        ctx,
-        tag_type,
-        KMIP_TAG_REQUEST_PAYLOAD,
-        KMIP_TYPE_STRUCTURE);
+    kmip_decode_int32_be(ctx, &tag_type);
+    CHECK_TAG_TYPE(ctx, tag_type, KMIP_TAG_REQUEST_PAYLOAD, KMIP_TYPE_STRUCTURE);
     
-    decode_int32_be(ctx, &length);
+    kmip_decode_int32_be(ctx, &length);
     CHECK_BUFFER_FULL(ctx, length);
     
-    if(is_tag_next(ctx, KMIP_TAG_UNIQUE_IDENTIFIER))
+    if(kmip_is_tag_next(ctx, KMIP_TAG_UNIQUE_IDENTIFIER))
     {
-        value->unique_identifier = ctx->calloc_func(
-            ctx->state,
-            1,
-            sizeof(struct text_string));
-        CHECK_NEW_MEMORY(
-            ctx,
-            value->unique_identifier,
-            sizeof(struct text_string),
-            "UniqueIdentifier text string");
-        result = decode_text_string(
-            ctx,
-            KMIP_TAG_UNIQUE_IDENTIFIER,
-            value->unique_identifier);
+        value->unique_identifier = ctx->calloc_func(ctx->state, 1, sizeof(TextString));
+        CHECK_NEW_MEMORY(ctx, value->unique_identifier, sizeof(TextString), "UniqueIdentifier text string");
+        result = kmip_decode_text_string(ctx, KMIP_TAG_UNIQUE_IDENTIFIER, value->unique_identifier);
         CHECK_RESULT(ctx, result);
     }
     
@@ -10919,8 +9825,7 @@ decode_destroy_request_payload(struct kmip *ctx,
 }
 
 int
-decode_destroy_response_payload(struct kmip *ctx, 
-                                struct destroy_response_payload *value)
+kmip_decode_destroy_response_payload(KMIP *ctx, DestroyResponsePayload *value)
 {
     CHECK_BUFFER_FULL(ctx, 8);
     
@@ -10928,38 +9833,23 @@ decode_destroy_response_payload(struct kmip *ctx,
     int32 tag_type = 0;
     uint32 length = 0;
     
-    decode_int32_be(ctx, &tag_type);
-    CHECK_TAG_TYPE(
-        ctx,
-        tag_type,
-        KMIP_TAG_RESPONSE_PAYLOAD,
-        KMIP_TYPE_STRUCTURE);
+    kmip_decode_int32_be(ctx, &tag_type);
+    CHECK_TAG_TYPE(ctx, tag_type, KMIP_TAG_RESPONSE_PAYLOAD, KMIP_TYPE_STRUCTURE);
     
-    decode_int32_be(ctx, &length);
+    kmip_decode_int32_be(ctx, &length);
     CHECK_BUFFER_FULL(ctx, length);
     
-    value->unique_identifier = ctx->calloc_func(
-        ctx->state,
-        1,
-        sizeof(struct text_string));
-    CHECK_NEW_MEMORY(
-        ctx,
-        value->unique_identifier,
-        sizeof(struct text_string),
-        "UniqueIdentifier text string");
+    value->unique_identifier = ctx->calloc_func(ctx->state, 1, sizeof(TextString));
+    CHECK_NEW_MEMORY(ctx, value->unique_identifier, sizeof(TextString), "UniqueIdentifier text string");
     
-    result = decode_text_string(
-        ctx,
-        KMIP_TAG_UNIQUE_IDENTIFIER,
-        value->unique_identifier);
+    result = kmip_decode_text_string(ctx, KMIP_TAG_UNIQUE_IDENTIFIER, value->unique_identifier);
     CHECK_RESULT(ctx, result);
     
     return(KMIP_OK);
 }
 
 int
-decode_request_batch_item(struct kmip *ctx,
-                          struct request_batch_item *value)
+kmip_decode_request_batch_item(KMIP *ctx, RequestBatchItem *value)
 {
     CHECK_BUFFER_FULL(ctx, 8);
     
@@ -10967,83 +9857,42 @@ decode_request_batch_item(struct kmip *ctx,
     int32 tag_type = 0;
     uint32 length = 0;
     
-    decode_int32_be(ctx, &tag_type);
-    CHECK_TAG_TYPE(
-        ctx,
-        tag_type,
-        KMIP_TAG_BATCH_ITEM,
-        KMIP_TYPE_STRUCTURE);
+    kmip_decode_int32_be(ctx, &tag_type);
+    CHECK_TAG_TYPE(ctx, tag_type, KMIP_TAG_BATCH_ITEM, KMIP_TYPE_STRUCTURE);
     
-    decode_int32_be(ctx, &length);
+    kmip_decode_int32_be(ctx, &length);
     CHECK_BUFFER_FULL(ctx, length);
     
-    result = decode_enum(ctx, KMIP_TAG_OPERATION, &value->operation);
+    result = kmip_decode_enum(ctx, KMIP_TAG_OPERATION, &value->operation);
     CHECK_RESULT(ctx, result);
     CHECK_ENUM(ctx, KMIP_TAG_OPERATION, value->operation);
     
-    if(is_tag_next(ctx, KMIP_TAG_UNIQUE_BATCH_ITEM_ID))
+    if(kmip_is_tag_next(ctx, KMIP_TAG_UNIQUE_BATCH_ITEM_ID))
     {
-        value->unique_batch_item_id = ctx->calloc_func(
-            ctx->state,
-            1,
-            sizeof(struct byte_string));
-        CHECK_NEW_MEMORY(
-            ctx,
-            value->unique_batch_item_id,
-            sizeof(struct byte_string),
-            "UniqueBatchItemID byte string");
-        result = decode_byte_string(
-            ctx,
-            KMIP_TAG_UNIQUE_BATCH_ITEM_ID,
-            value->unique_batch_item_id);
+        value->unique_batch_item_id = ctx->calloc_func(ctx->state, 1, sizeof(ByteString));
+        CHECK_NEW_MEMORY(ctx, value->unique_batch_item_id, sizeof(ByteString), "UniqueBatchItemID byte string");
+        result = kmip_decode_byte_string(ctx, KMIP_TAG_UNIQUE_BATCH_ITEM_ID, value->unique_batch_item_id);
         CHECK_RESULT(ctx, result);
     }
     
     switch(value->operation)
     {
         case KMIP_OP_CREATE:
-        value->request_payload = ctx->calloc_func(
-            ctx->state,
-            1,
-            sizeof(struct create_request_payload));
-        CHECK_NEW_MEMORY(
-            ctx,
-            value->request_payload,
-            sizeof(struct create_request_payload),
-            "CreateRequestPayload structure");
-        result = decode_create_request_payload(
-            ctx, 
-            (struct create_request_payload *)value->request_payload);
+        value->request_payload = ctx->calloc_func(ctx->state, 1, sizeof(CreateRequestPayload));
+        CHECK_NEW_MEMORY(ctx, value->request_payload, sizeof(CreateRequestPayload), "CreateRequestPayload structure");
+        result = kmip_decode_create_request_payload(ctx, (CreateRequestPayload *)value->request_payload);
         break;
         
         case KMIP_OP_GET:
-        value->request_payload = ctx->calloc_func(
-            ctx->state,
-            1,
-            sizeof(struct get_request_payload));
-        CHECK_NEW_MEMORY(
-            ctx,
-            value->request_payload,
-            sizeof(struct get_request_payload),
-            "GetRequestPayload structure");
-        result = decode_get_request_payload(
-            ctx, 
-            (struct get_request_payload*)value->request_payload);
+        value->request_payload = ctx->calloc_func(ctx->state, 1, sizeof(GetRequestPayload));
+        CHECK_NEW_MEMORY(ctx, value->request_payload, sizeof(GetRequestPayload), "GetRequestPayload structure");
+        result = kmip_decode_get_request_payload(ctx, (GetRequestPayload*)value->request_payload);
         break;
         
         case KMIP_OP_DESTROY:
-        value->request_payload = ctx->calloc_func(
-            ctx->state,
-            1,
-            sizeof(struct destroy_request_payload));
-        CHECK_NEW_MEMORY(
-            ctx,
-            value->request_payload,
-            sizeof(struct destroy_request_payload),
-            "DestroyRequestPayload structure");
-        result = decode_destroy_request_payload(
-            ctx,
-            (struct destroy_request_payload*)value->request_payload);
+        value->request_payload = ctx->calloc_func(ctx->state, 1, sizeof(DestroyRequestPayload));
+        CHECK_NEW_MEMORY(ctx, value->request_payload, sizeof(DestroyRequestPayload), "DestroyRequestPayload structure");
+        result = kmip_decode_destroy_request_payload(ctx, (DestroyRequestPayload*)value->request_payload);
         break;
         
         default:
@@ -11057,8 +9906,7 @@ decode_request_batch_item(struct kmip *ctx,
 }
 
 int
-decode_response_batch_item(struct kmip *ctx,
-                           struct response_batch_item *value)
+kmip_decode_response_batch_item(KMIP *ctx, ResponseBatchItem *value)
 {
     CHECK_BUFFER_FULL(ctx, 8);
     
@@ -11066,142 +9914,78 @@ decode_response_batch_item(struct kmip *ctx,
     int32 tag_type = 0;
     uint32 length = 0;
     
-    decode_int32_be(ctx, &tag_type);
-    CHECK_TAG_TYPE(
-        ctx,
-        tag_type,
-        KMIP_TAG_BATCH_ITEM,
-        KMIP_TYPE_STRUCTURE);
+    kmip_decode_int32_be(ctx, &tag_type);
+    CHECK_TAG_TYPE(ctx, tag_type, KMIP_TAG_BATCH_ITEM, KMIP_TYPE_STRUCTURE);
     
-    decode_int32_be(ctx, &length);
+    kmip_decode_int32_be(ctx, &length);
     CHECK_BUFFER_FULL(ctx, length);
     
-    if(is_tag_next(ctx, KMIP_TAG_OPERATION))
+    if(kmip_is_tag_next(ctx, KMIP_TAG_OPERATION))
     {
-        result = decode_enum(ctx, KMIP_TAG_OPERATION, &value->operation);
+        result = kmip_decode_enum(ctx, KMIP_TAG_OPERATION, &value->operation);
         CHECK_RESULT(ctx, result);
         CHECK_ENUM(ctx, KMIP_TAG_OPERATION, value->operation);
     }
     
-    if(is_tag_next(ctx, KMIP_TAG_UNIQUE_BATCH_ITEM_ID))
+    if(kmip_is_tag_next(ctx, KMIP_TAG_UNIQUE_BATCH_ITEM_ID))
     {
-        value->unique_batch_item_id = ctx->calloc_func(
-            ctx->state,
-            1,
-            sizeof(struct byte_string));
-        CHECK_NEW_MEMORY(
-            ctx,
-            value->unique_batch_item_id,
-            sizeof(struct byte_string),
-            "UniqueBatchItemID byte string");
+        value->unique_batch_item_id = ctx->calloc_func(ctx->state, 1, sizeof(ByteString));
+        CHECK_NEW_MEMORY(ctx, value->unique_batch_item_id, sizeof(ByteString), "UniqueBatchItemID byte string");
         
-        result = decode_byte_string(
-            ctx,
-            KMIP_TAG_UNIQUE_BATCH_ITEM_ID,
-            value->unique_batch_item_id);
+        result = kmip_decode_byte_string(ctx, KMIP_TAG_UNIQUE_BATCH_ITEM_ID, value->unique_batch_item_id);
         CHECK_RESULT(ctx, result);
     }
     
-    result = decode_enum(ctx, KMIP_TAG_RESULT_STATUS, &value->result_status);
+    result = kmip_decode_enum(ctx, KMIP_TAG_RESULT_STATUS, &value->result_status);
     CHECK_RESULT(ctx, result);
     CHECK_ENUM(ctx, KMIP_TAG_RESULT_STATUS, value->result_status);
     
-    if(is_tag_next(ctx, KMIP_TAG_RESULT_REASON))
+    if(kmip_is_tag_next(ctx, KMIP_TAG_RESULT_REASON))
     {
-        result = decode_enum(
-            ctx,
-            KMIP_TAG_RESULT_REASON,
-            &value->result_reason);
+        result = kmip_decode_enum(ctx, KMIP_TAG_RESULT_REASON, &value->result_reason);
         CHECK_RESULT(ctx, result);
     }
     
-    if(is_tag_next(ctx, KMIP_TAG_RESULT_MESSAGE))
+    if(kmip_is_tag_next(ctx, KMIP_TAG_RESULT_MESSAGE))
     {
-        value->result_message = ctx->calloc_func(
-            ctx->state,
-            1,
-            sizeof(struct text_string));
-        CHECK_NEW_MEMORY(
-            ctx,
-            value->result_message,
-            sizeof(struct text_string),
-            "ResultMessage text string");
+        value->result_message = ctx->calloc_func(ctx->state, 1, sizeof(TextString));
+        CHECK_NEW_MEMORY(ctx, value->result_message, sizeof(TextString), "ResultMessage text string");
         
-        result = decode_text_string(
-            ctx,
-            KMIP_TAG_RESULT_MESSAGE,
-            value->result_message);
+        result = kmip_decode_text_string(ctx, KMIP_TAG_RESULT_MESSAGE, value->result_message);
         CHECK_RESULT(ctx, result);
     }
     
-    if(is_tag_next(ctx, KMIP_TAG_ASYNCHRONOUS_CORRELATION_VALUE))
+    if(kmip_is_tag_next(ctx, KMIP_TAG_ASYNCHRONOUS_CORRELATION_VALUE))
     {
-        value->asynchronous_correlation_value = ctx->calloc_func(
-            ctx->state,
-            1,
-            sizeof(struct byte_string));
-        CHECK_NEW_MEMORY(
-            ctx,
-            value->asynchronous_correlation_value,
-            sizeof(struct byte_string),
-            "AsynchronousCorrelationValue byte string");
+        value->asynchronous_correlation_value = ctx->calloc_func(ctx->state, 1, sizeof(ByteString));
+        CHECK_NEW_MEMORY(ctx, value->asynchronous_correlation_value, sizeof(ByteString), "AsynchronousCorrelationValue byte string");
         
-        result = decode_byte_string(
-            ctx,
-            KMIP_TAG_ASYNCHRONOUS_CORRELATION_VALUE,
-            value->asynchronous_correlation_value);
+        result = kmip_decode_byte_string(ctx, KMIP_TAG_ASYNCHRONOUS_CORRELATION_VALUE, value->asynchronous_correlation_value);
         CHECK_RESULT(ctx, result);
     }
     
     /* NOTE (ph) Omitting the tag check is a good way to test error output. */
-    if(is_tag_next(ctx, KMIP_TAG_RESPONSE_PAYLOAD))
+    if(kmip_is_tag_next(ctx, KMIP_TAG_RESPONSE_PAYLOAD))
     {
         switch(value->operation)
         {
             case KMIP_OP_CREATE:
-            value->response_payload = ctx->calloc_func(
-                ctx->state,
-                1,
-                sizeof(struct create_response_payload));
-            CHECK_NEW_MEMORY(
-                ctx,
-                value->response_payload,
-                sizeof(struct create_response_payload),
-                "CreateResponsePayload structure");
-            result = decode_create_response_payload(
-                ctx,
-                value->response_payload);
+            value->response_payload = ctx->calloc_func(ctx->state, 1, sizeof(CreateResponsePayload));
+            CHECK_NEW_MEMORY(ctx, value->response_payload, sizeof(CreateResponsePayload), "CreateResponsePayload structure");
+            result = kmip_decode_create_response_payload(ctx, value->response_payload);
             break;
             
             case KMIP_OP_GET:
-            value->response_payload = ctx->calloc_func(
-                ctx->state,
-                1,
-                sizeof(struct get_response_payload));
-            CHECK_NEW_MEMORY(
-                ctx,
-                value->response_payload,
-                sizeof(struct get_response_payload),
-                "GetResponsePayload structure");
+            value->response_payload = ctx->calloc_func(ctx->state, 1, sizeof(GetResponsePayload));
+            CHECK_NEW_MEMORY(ctx, value->response_payload, sizeof(GetResponsePayload), "GetResponsePayload structure");
             
-            result = decode_get_response_payload(
-                ctx,
-                value->response_payload);
+            result = kmip_decode_get_response_payload(ctx, value->response_payload);
             break;
             
             case KMIP_OP_DESTROY:
-            value->response_payload = ctx->calloc_func(
-                ctx->state,
-                1,
-                sizeof(struct destroy_response_payload));
-            CHECK_NEW_MEMORY(
-                ctx,
-                value->response_payload,
-                sizeof(struct destroy_response_payload),
-                "DestroyResponsePayload structure");
-            result = decode_destroy_response_payload(
-                ctx,
-                value->response_payload);
+            value->response_payload = ctx->calloc_func(ctx->state, 1, sizeof(DestroyResponsePayload));
+            CHECK_NEW_MEMORY(ctx, value->response_payload, sizeof(DestroyResponsePayload), "DestroyResponsePayload structure");
+            result = kmip_decode_destroy_response_payload(ctx, value->response_payload);
             break;
             
             default:
@@ -11216,7 +10000,7 @@ decode_response_batch_item(struct kmip *ctx,
 }
 
 int
-decode_nonce(struct kmip *ctx, struct nonce *value)
+kmip_decode_nonce(KMIP *ctx, Nonce *value)
 {
     CHECK_BUFFER_FULL(ctx, 8);
     
@@ -11224,54 +10008,29 @@ decode_nonce(struct kmip *ctx, struct nonce *value)
     int32 tag_type = 0;
     uint32 length = 0;
     
-    decode_int32_be(ctx, &tag_type);
-    CHECK_TAG_TYPE(
-        ctx,
-        tag_type,
-        KMIP_TAG_NONCE,
-        KMIP_TYPE_STRUCTURE);
+    kmip_decode_int32_be(ctx, &tag_type);
+    CHECK_TAG_TYPE(ctx, tag_type, KMIP_TAG_NONCE, KMIP_TYPE_STRUCTURE);
     
-    decode_int32_be(ctx, &length);
+    kmip_decode_int32_be(ctx, &length);
     CHECK_BUFFER_FULL(ctx, length);
     
-    value->nonce_id = ctx->calloc_func(
-        ctx->state,
-        1,
-        sizeof(struct byte_string));
-    CHECK_NEW_MEMORY(
-        ctx,
-        value->nonce_id,
-        sizeof(struct byte_string),
-        "NonceID byte string");
+    value->nonce_id = ctx->calloc_func(ctx->state, 1, sizeof(ByteString));
+    CHECK_NEW_MEMORY(ctx, value->nonce_id, sizeof(ByteString), "NonceID byte string");
     
-    result = decode_byte_string(
-        ctx,
-        KMIP_TAG_NONCE_ID,
-        value->nonce_id);
+    result = kmip_decode_byte_string(ctx, KMIP_TAG_NONCE_ID, value->nonce_id);
     CHECK_RESULT(ctx, result);
     
-    value->nonce_value = ctx->calloc_func(
-        ctx->state,
-        1,
-        sizeof(struct byte_string));
-    CHECK_NEW_MEMORY(
-        ctx,
-        value->nonce_value,
-        sizeof(struct byte_string),
-        "NonceValue byte string");
+    value->nonce_value = ctx->calloc_func(ctx->state, 1, sizeof(ByteString));
+    CHECK_NEW_MEMORY(ctx, value->nonce_value, sizeof(ByteString), "NonceValue byte string");
     
-    result = decode_byte_string(
-        ctx,
-        KMIP_TAG_NONCE_VALUE,
-        value->nonce_value);
+    result = kmip_decode_byte_string(ctx, KMIP_TAG_NONCE_VALUE, value->nonce_value);
     CHECK_RESULT(ctx, result);
     
     return(KMIP_OK);
 }
 
 int
-decode_username_password_credential(struct kmip *ctx,
-                                    struct username_password_credential *value)
+kmip_decode_username_password_credential(KMIP *ctx, UsernamePasswordCredential *value)
 {
     CHECK_BUFFER_FULL(ctx, 8);
     
@@ -11279,48 +10038,24 @@ decode_username_password_credential(struct kmip *ctx,
     int32 tag_type = 0;
     uint32 length = 0;
     
-    decode_int32_be(ctx, &tag_type);
-    CHECK_TAG_TYPE(
-        ctx,
-        tag_type,
-        KMIP_TAG_CREDENTIAL_VALUE,
-        KMIP_TYPE_STRUCTURE);
+    kmip_decode_int32_be(ctx, &tag_type);
+    CHECK_TAG_TYPE(ctx, tag_type, KMIP_TAG_CREDENTIAL_VALUE, KMIP_TYPE_STRUCTURE);
     
-    decode_int32_be(ctx, &length);
+    kmip_decode_int32_be(ctx, &length);
     CHECK_BUFFER_FULL(ctx, length);
     
-    value->username = ctx->calloc_func(
-        ctx->state,
-        1,
-        sizeof(struct text_string));
-    CHECK_NEW_MEMORY(
-        ctx,
-        value->username,
-        sizeof(struct text_string),
-        "Username text string");
+    value->username = ctx->calloc_func(ctx->state, 1, sizeof(TextString));
+    CHECK_NEW_MEMORY(ctx, value->username, sizeof(TextString), "Username text string");
     
-    result = decode_text_string(
-        ctx,
-        KMIP_TAG_USERNAME,
-        value->username);
+    result = kmip_decode_text_string(ctx, KMIP_TAG_USERNAME, value->username);
     CHECK_RESULT(ctx, result);
     
-    if(is_tag_next(ctx, KMIP_TAG_PASSWORD))
+    if(kmip_is_tag_next(ctx, KMIP_TAG_PASSWORD))
     {
-        value->password = ctx->calloc_func(
-            ctx->state,
-            1,
-            sizeof(struct text_string));
-        CHECK_NEW_MEMORY(
-            ctx,
-            value->password,
-            sizeof(struct text_string),
-            "Password text string");
+        value->password = ctx->calloc_func(ctx->state, 1, sizeof(TextString));
+        CHECK_NEW_MEMORY(ctx, value->password, sizeof(TextString), "Password text string");
         
-        result = decode_text_string(
-            ctx,
-            KMIP_TAG_PASSWORD,
-            value->password);
+        result = kmip_decode_text_string(ctx, KMIP_TAG_PASSWORD, value->password);
         CHECK_RESULT(ctx, result);
     }
     
@@ -11328,8 +10063,7 @@ decode_username_password_credential(struct kmip *ctx,
 }
 
 int
-decode_device_credential(struct kmip *ctx,
-                         struct device_credential *value)
+kmip_decode_device_credential(KMIP *ctx, DeviceCredential *value)
 {
     CHECK_BUFFER_FULL(ctx, 8);
     
@@ -11337,127 +10071,63 @@ decode_device_credential(struct kmip *ctx,
     int32 tag_type = 0;
     uint32 length = 0;
     
-    decode_int32_be(ctx, &tag_type);
-    CHECK_TAG_TYPE(
-        ctx,
-        tag_type,
-        KMIP_TAG_CREDENTIAL_VALUE,
-        KMIP_TYPE_STRUCTURE);
+    kmip_decode_int32_be(ctx, &tag_type);
+    CHECK_TAG_TYPE(ctx, tag_type, KMIP_TAG_CREDENTIAL_VALUE, KMIP_TYPE_STRUCTURE);
     
-    decode_int32_be(ctx, &length);
+    kmip_decode_int32_be(ctx, &length);
     CHECK_BUFFER_FULL(ctx, length);
     
-    if(is_tag_next(ctx, KMIP_TAG_DEVICE_SERIAL_NUMBER))
+    if(kmip_is_tag_next(ctx, KMIP_TAG_DEVICE_SERIAL_NUMBER))
     {
-        value->device_serial_number = ctx->calloc_func(
-            ctx->state,
-            1,
-            sizeof(struct text_string));
-        CHECK_NEW_MEMORY(
-            ctx,
-            value->device_serial_number,
-            sizeof(struct text_string),
-            "DeviceSerialNumber text string");
+        value->device_serial_number = ctx->calloc_func(ctx->state, 1, sizeof(TextString));
+        CHECK_NEW_MEMORY(ctx, value->device_serial_number, sizeof(TextString), "DeviceSerialNumber text string");
         
-        result = decode_text_string(
-            ctx,
-            KMIP_TAG_DEVICE_SERIAL_NUMBER,
-            value->device_serial_number);
+        result = kmip_decode_text_string(ctx, KMIP_TAG_DEVICE_SERIAL_NUMBER, value->device_serial_number);
         CHECK_RESULT(ctx, result);
     }
     
-    if(is_tag_next(ctx, KMIP_TAG_PASSWORD))
+    if(kmip_is_tag_next(ctx, KMIP_TAG_PASSWORD))
     {
-        value->password = ctx->calloc_func(
-            ctx->state,
-            1,
-            sizeof(struct text_string));
-        CHECK_NEW_MEMORY(
-            ctx,
-            value->password,
-            sizeof(struct text_string),
-            "Password text string");
+        value->password = ctx->calloc_func(ctx->state, 1, sizeof(TextString));
+        CHECK_NEW_MEMORY(ctx, value->password, sizeof(TextString), "Password text string");
         
-        result = decode_text_string(
-            ctx,
-            KMIP_TAG_PASSWORD,
-            value->password);
+        result = kmip_decode_text_string(ctx, KMIP_TAG_PASSWORD, value->password);
         CHECK_RESULT(ctx, result);
     }
     
-    if(is_tag_next(ctx, KMIP_TAG_DEVICE_IDENTIFIER))
+    if(kmip_is_tag_next(ctx, KMIP_TAG_DEVICE_IDENTIFIER))
     {
-        value->device_identifier = ctx->calloc_func(
-            ctx->state,
-            1,
-            sizeof(struct text_string));
-        CHECK_NEW_MEMORY(
-            ctx,
-            value->device_identifier,
-            sizeof(struct text_string),
-            "DeviceIdentifier text string");
+        value->device_identifier = ctx->calloc_func(ctx->state, 1, sizeof(TextString));
+        CHECK_NEW_MEMORY(ctx, value->device_identifier, sizeof(TextString), "DeviceIdentifier text string");
         
-        result = decode_text_string(
-            ctx,
-            KMIP_TAG_DEVICE_IDENTIFIER,
-            value->device_identifier);
+        result = kmip_decode_text_string(ctx, KMIP_TAG_DEVICE_IDENTIFIER, value->device_identifier);
         CHECK_RESULT(ctx, result);
     }
     
-    if(is_tag_next(ctx, KMIP_TAG_NETWORK_IDENTIFIER))
+    if(kmip_is_tag_next(ctx, KMIP_TAG_NETWORK_IDENTIFIER))
     {
-        value->network_identifier = ctx->calloc_func(
-            ctx->state,
-            1,
-            sizeof(struct text_string));
-        CHECK_NEW_MEMORY(
-            ctx,
-            value->network_identifier,
-            sizeof(struct text_string),
-            "NetworkIdentifier text string");
+        value->network_identifier = ctx->calloc_func(ctx->state, 1, sizeof(TextString));
+        CHECK_NEW_MEMORY(ctx, value->network_identifier, sizeof(TextString), "NetworkIdentifier text string");
         
-        result = decode_text_string(
-            ctx,
-            KMIP_TAG_NETWORK_IDENTIFIER,
-            value->network_identifier);
+        result = kmip_decode_text_string(ctx, KMIP_TAG_NETWORK_IDENTIFIER, value->network_identifier);
         CHECK_RESULT(ctx, result);
     }
     
-    if(is_tag_next(ctx, KMIP_TAG_MACHINE_IDENTIFIER))
+    if(kmip_is_tag_next(ctx, KMIP_TAG_MACHINE_IDENTIFIER))
     {
-        value->machine_identifier = ctx->calloc_func(
-            ctx->state,
-            1,
-            sizeof(struct text_string));
-        CHECK_NEW_MEMORY(
-            ctx,
-            value->machine_identifier,
-            sizeof(struct text_string),
-            "MachineIdentifier text string");
+        value->machine_identifier = ctx->calloc_func(ctx->state, 1, sizeof(TextString));
+        CHECK_NEW_MEMORY(ctx, value->machine_identifier, sizeof(TextString), "MachineIdentifier text string");
         
-        result = decode_text_string(
-            ctx,
-            KMIP_TAG_MACHINE_IDENTIFIER,
-            value->machine_identifier);
+        result = kmip_decode_text_string(ctx, KMIP_TAG_MACHINE_IDENTIFIER, value->machine_identifier);
         CHECK_RESULT(ctx, result);
     }
     
-    if(is_tag_next(ctx, KMIP_TAG_MEDIA_IDENTIFIER))
+    if(kmip_is_tag_next(ctx, KMIP_TAG_MEDIA_IDENTIFIER))
     {
-        value->media_identifier = ctx->calloc_func(
-            ctx->state,
-            1,
-            sizeof(struct text_string));
-        CHECK_NEW_MEMORY(
-            ctx,
-            value->media_identifier,
-            sizeof(struct text_string),
-            "MediaIdentifier text string");
+        value->media_identifier = ctx->calloc_func(ctx->state, 1, sizeof(TextString));
+        CHECK_NEW_MEMORY(ctx, value->media_identifier, sizeof(TextString), "MediaIdentifier text string");
         
-        result = decode_text_string(
-            ctx,
-            KMIP_TAG_MEDIA_IDENTIFIER,
-            value->media_identifier);
+        result = kmip_decode_text_string(ctx, KMIP_TAG_MEDIA_IDENTIFIER, value->media_identifier);
         CHECK_RESULT(ctx, result);
     }
     
@@ -11465,8 +10135,7 @@ decode_device_credential(struct kmip *ctx,
 }
 
 int
-decode_attestation_credential(struct kmip *ctx,
-                              struct attestation_credential *value)
+kmip_decode_attestation_credential(KMIP *ctx, AttestationCredential *value)
 {
     CHECK_BUFFER_FULL(ctx, 8);
     
@@ -11474,71 +10143,37 @@ decode_attestation_credential(struct kmip *ctx,
     int32 tag_type = 0;
     uint32 length = 0;
     
-    decode_int32_be(ctx, &tag_type);
-    CHECK_TAG_TYPE(
-        ctx,
-        tag_type,
-        KMIP_TAG_CREDENTIAL_VALUE,
-        KMIP_TYPE_STRUCTURE);
+    kmip_decode_int32_be(ctx, &tag_type);
+    CHECK_TAG_TYPE(ctx, tag_type, KMIP_TAG_CREDENTIAL_VALUE, KMIP_TYPE_STRUCTURE);
     
-    decode_int32_be(ctx, &length);
+    kmip_decode_int32_be(ctx, &length);
     CHECK_BUFFER_FULL(ctx, length);
     
-    value->nonce = ctx->calloc_func(
-        ctx->state,
-        1,
-        sizeof(struct nonce));
-    CHECK_NEW_MEMORY(
-        ctx,
-        value->nonce,
-        sizeof(struct nonce),
-        "Nonce structure");
+    value->nonce = ctx->calloc_func(ctx->state, 1, sizeof(Nonce));
+    CHECK_NEW_MEMORY(ctx, value->nonce, sizeof(Nonce), "Nonce structure");
     
-    result = decode_nonce(ctx, value->nonce);
+    result = kmip_decode_nonce(ctx, value->nonce);
     CHECK_RESULT(ctx, result);
     
-    result = decode_enum(
-        ctx,
-        KMIP_TAG_ATTESTATION_TYPE,
-        &value->attestation_type);
+    result = kmip_decode_enum(ctx, KMIP_TAG_ATTESTATION_TYPE, &value->attestation_type);
     CHECK_RESULT(ctx, result);
     CHECK_ENUM(ctx, KMIP_TAG_ATTESTATION_TYPE, value->attestation_type);
     
-    if(is_tag_next(ctx, KMIP_TAG_ATTESTATION_MEASUREMENT))
+    if(kmip_is_tag_next(ctx, KMIP_TAG_ATTESTATION_MEASUREMENT))
     {
-        value->attestation_measurement = ctx->calloc_func(
-            ctx->state,
-            1,
-            sizeof(struct byte_string));
-        CHECK_NEW_MEMORY(
-            ctx,
-            value->attestation_measurement,
-            sizeof(struct byte_string),
-            "AttestationMeasurement byte string");
+        value->attestation_measurement = ctx->calloc_func(ctx->state, 1, sizeof(ByteString));
+        CHECK_NEW_MEMORY(ctx, value->attestation_measurement, sizeof(ByteString), "AttestationMeasurement byte string");
         
-        result = decode_byte_string(
-            ctx,
-            KMIP_TAG_ATTESTATION_MEASUREMENT,
-            value->attestation_measurement);
+        result = kmip_decode_byte_string(ctx, KMIP_TAG_ATTESTATION_MEASUREMENT, value->attestation_measurement);
         CHECK_RESULT(ctx, result);
     }
     
-    if(is_tag_next(ctx, KMIP_TAG_ATTESTATION_ASSERTION))
+    if(kmip_is_tag_next(ctx, KMIP_TAG_ATTESTATION_ASSERTION))
     {
-        value->attestation_assertion = ctx->calloc_func(
-            ctx->state,
-            1,
-            sizeof(struct byte_string));
-        CHECK_NEW_MEMORY(
-            ctx,
-            value->attestation_assertion,
-            sizeof(struct byte_string),
-            "AttestationAssertion byte string");
+        value->attestation_assertion = ctx->calloc_func(ctx->state, 1, sizeof(ByteString));
+        CHECK_NEW_MEMORY(ctx, value->attestation_assertion, sizeof(ByteString), "AttestationAssertion byte string");
         
-        result = decode_byte_string(
-            ctx,
-            KMIP_TAG_ATTESTATION_ASSERTION,
-            value->attestation_assertion);
+        result = kmip_decode_byte_string(ctx, KMIP_TAG_ATTESTATION_ASSERTION, value->attestation_assertion);
         CHECK_RESULT(ctx, result);
     }
     
@@ -11546,57 +10181,28 @@ decode_attestation_credential(struct kmip *ctx,
 }
 
 int
-decode_credential_value(struct kmip *ctx, 
-                        enum credential_type type, 
-                        void **value)
+kmip_decode_credential_value(KMIP *ctx, enum credential_type type, void **value)
 {
     int result = 0;
     
     switch(type)
     {
         case KMIP_CRED_USERNAME_AND_PASSWORD:
-        *value = ctx->calloc_func(
-            ctx->state,
-            1,
-            sizeof(struct username_password_credential));
-        CHECK_NEW_MEMORY(
-            ctx,
-            *value,
-            sizeof(struct username_password_credential),
-            "UsernamePasswordCredential structure");
-        result = decode_username_password_credential(
-            ctx, 
-            (struct username_password_credential *)*value);
+        *value = ctx->calloc_func(ctx->state, 1, sizeof(UsernamePasswordCredential));
+        CHECK_NEW_MEMORY(ctx, *value, sizeof(UsernamePasswordCredential), "UsernamePasswordCredential structure");
+        result = kmip_decode_username_password_credential(ctx, (UsernamePasswordCredential *)*value);
         break;
         
         case KMIP_CRED_DEVICE:
-        *value = ctx->calloc_func(
-            ctx->state,
-            1,
-            sizeof(struct device_credential));
-        CHECK_NEW_MEMORY(
-            ctx,
-            *value,
-            sizeof(struct device_credential),
-            "DeviceCredential structure");
-        result = decode_device_credential(
-            ctx,
-            (struct device_credential *)*value);
+        *value = ctx->calloc_func(ctx->state, 1, sizeof(DeviceCredential));
+        CHECK_NEW_MEMORY(ctx, *value, sizeof(DeviceCredential), "DeviceCredential structure");
+        result = kmip_decode_device_credential(ctx, (DeviceCredential *)*value);
         break;
         
         case KMIP_CRED_ATTESTATION:
-        *value = ctx->calloc_func(
-            ctx->state,
-            1,
-            sizeof(struct attestation_credential));
-        CHECK_NEW_MEMORY(
-            ctx,
-            *value,
-            sizeof(struct attestation_credential),
-            "AttestationCredential structure");
-        result = decode_attestation_credential(
-            ctx,
-            (struct attestation_credential*)*value);
+        *value = ctx->calloc_func(ctx->state, 1, sizeof(AttestationCredential));
+        CHECK_NEW_MEMORY(ctx, *value, sizeof(AttestationCredential), "AttestationCredential structure");
+        result = kmip_decode_attestation_credential(ctx, (AttestationCredential*)*value);
         break;
         
         default:
@@ -11610,7 +10216,7 @@ decode_credential_value(struct kmip *ctx,
 }
 
 int
-decode_credential(struct kmip *ctx, struct credential *value)
+kmip_decode_credential(KMIP *ctx, Credential *value)
 {
     CHECK_BUFFER_FULL(ctx, 8);
     
@@ -11618,34 +10224,24 @@ decode_credential(struct kmip *ctx, struct credential *value)
     int32 tag_type = 0;
     uint32 length = 0;
     
-    decode_int32_be(ctx, &tag_type);
-    CHECK_TAG_TYPE(
-        ctx,
-        tag_type,
-        KMIP_TAG_CREDENTIAL,
-        KMIP_TYPE_STRUCTURE);
+    kmip_decode_int32_be(ctx, &tag_type);
+    CHECK_TAG_TYPE(ctx, tag_type, KMIP_TAG_CREDENTIAL, KMIP_TYPE_STRUCTURE);
     
-    decode_int32_be(ctx, &length);
+    kmip_decode_int32_be(ctx, &length);
     CHECK_BUFFER_FULL(ctx, length);
     
-    result = decode_enum(
-        ctx,
-        KMIP_TAG_CREDENTIAL_TYPE,
-        &value->credential_type);
+    result = kmip_decode_enum(ctx, KMIP_TAG_CREDENTIAL_TYPE, &value->credential_type);
     CHECK_RESULT(ctx, result);
     CHECK_ENUM(ctx, KMIP_TAG_CREDENTIAL_TYPE, value->credential_type);
     
-    result = decode_credential_value(
-        ctx,
-        value->credential_type,
-        &value->credential_value);
+    result = kmip_decode_credential_value(ctx, value->credential_type, &value->credential_value);
     CHECK_RESULT(ctx, result);
     
     return(KMIP_OK);
 }
 
 int
-decode_authentication(struct kmip *ctx, struct authentication *value)
+kmip_decode_authentication(KMIP *ctx, Authentication *value)
 {
     CHECK_BUFFER_FULL(ctx, 8);
     
@@ -11653,34 +10249,23 @@ decode_authentication(struct kmip *ctx, struct authentication *value)
     int32 tag_type = 0;
     uint32 length = 0;
     
-    decode_int32_be(ctx, &tag_type);
-    CHECK_TAG_TYPE(
-        ctx,
-        tag_type,
-        KMIP_TAG_AUTHENTICATION,
-        KMIP_TYPE_STRUCTURE);
+    kmip_decode_int32_be(ctx, &tag_type);
+    CHECK_TAG_TYPE(ctx, tag_type, KMIP_TAG_AUTHENTICATION, KMIP_TYPE_STRUCTURE);
     
-    decode_int32_be(ctx, &length);
+    kmip_decode_int32_be(ctx, &length);
     CHECK_BUFFER_FULL(ctx, length);
     
-    value->credential = ctx->calloc_func(
-        ctx->state,
-        1,
-        sizeof(struct credential));
-    CHECK_NEW_MEMORY(
-        ctx,
-        value->credential,
-        sizeof(struct credential),
-        "Credential structure");
+    value->credential = ctx->calloc_func(ctx->state, 1, sizeof(Credential));
+    CHECK_NEW_MEMORY(ctx, value->credential, sizeof(Credential), "Credential structure");
     
-    result = decode_credential(ctx, value->credential);
+    result = kmip_decode_credential(ctx, value->credential);
     CHECK_RESULT(ctx, result);
     
     return(KMIP_OK);
 }
 
 int
-decode_request_header(struct kmip *ctx, struct request_header *value)
+kmip_decode_request_header(KMIP *ctx, RequestHeader *value)
 {
     CHECK_BUFFER_FULL(ctx, 8);
     
@@ -11688,184 +10273,110 @@ decode_request_header(struct kmip *ctx, struct request_header *value)
     int32 tag_type = 0;
     uint32 length = 0;
     
-    decode_int32_be(ctx, &tag_type);
-    CHECK_TAG_TYPE(
-        ctx,
-        tag_type,
-        KMIP_TAG_REQUEST_HEADER,
-        KMIP_TYPE_STRUCTURE);
+    kmip_decode_int32_be(ctx, &tag_type);
+    CHECK_TAG_TYPE(ctx, tag_type, KMIP_TAG_REQUEST_HEADER, KMIP_TYPE_STRUCTURE);
     
-    decode_int32_be(ctx, &length);
+    kmip_decode_int32_be(ctx, &length);
     CHECK_BUFFER_FULL(ctx, length);
     
-    value->protocol_version = ctx->calloc_func(
-        ctx->state,
-        1,
-        sizeof(struct protocol_version));
-    CHECK_NEW_MEMORY(
-        ctx,
-        value->protocol_version,
-        sizeof(struct protocol_version),
-        "ProtocolVersion structure");
+    value->protocol_version = ctx->calloc_func(ctx->state, 1, sizeof(ProtocolVersion));
+    CHECK_NEW_MEMORY(ctx, value->protocol_version, sizeof(ProtocolVersion), "ProtocolVersion structure");
     
-    result = decode_protocol_version(ctx, value->protocol_version);
+    result = kmip_decode_protocol_version(ctx, value->protocol_version);
     CHECK_RESULT(ctx, result);
     
-    if(is_tag_next(ctx, KMIP_TAG_MAXIMUM_RESPONSE_SIZE))
+    if(kmip_is_tag_next(ctx, KMIP_TAG_MAXIMUM_RESPONSE_SIZE))
     {
-        result = decode_integer(
-            ctx,
-            KMIP_TAG_MAXIMUM_RESPONSE_SIZE,
-            &value->maximum_response_size);
+        result = kmip_decode_integer(ctx, KMIP_TAG_MAXIMUM_RESPONSE_SIZE, &value->maximum_response_size);
         CHECK_RESULT(ctx, result);
     }
     
     if(ctx->version >= KMIP_1_4)
     {
-        if(is_tag_next(ctx, KMIP_TAG_CLIENT_CORRELATION_VALUE))
+        if(kmip_is_tag_next(ctx, KMIP_TAG_CLIENT_CORRELATION_VALUE))
         {
-            value->client_correlation_value = ctx->calloc_func(
-                ctx->state,
-                1,
-                sizeof(struct text_string));
-            CHECK_NEW_MEMORY(
-                ctx,
-                value->client_correlation_value,
-                sizeof(struct text_string),
-                "ClientCorrelationValue text string");
+            value->client_correlation_value = ctx->calloc_func(ctx->state, 1, sizeof(TextString));
+            CHECK_NEW_MEMORY(ctx, value->client_correlation_value, sizeof(TextString), "ClientCorrelationValue text string");
             
-            result = decode_text_string(
-                ctx,
-                KMIP_TAG_CLIENT_CORRELATION_VALUE,
-                value->client_correlation_value);
+            result = kmip_decode_text_string(ctx, KMIP_TAG_CLIENT_CORRELATION_VALUE, value->client_correlation_value);
             CHECK_RESULT(ctx, result);
         }
         
-        if(is_tag_next(ctx, KMIP_TAG_SERVER_CORRELATION_VALUE))
+        if(kmip_is_tag_next(ctx, KMIP_TAG_SERVER_CORRELATION_VALUE))
         {
-            value->server_correlation_value = ctx->calloc_func(
-                ctx->state,
-                1,
-                sizeof(struct text_string));
-            CHECK_NEW_MEMORY(
-                ctx,
-                value->server_correlation_value,
-                sizeof(struct text_string),
-                "ServerCorrelationValue text string");
+            value->server_correlation_value = ctx->calloc_func(ctx->state, 1, sizeof(TextString));
+            CHECK_NEW_MEMORY(ctx, value->server_correlation_value, sizeof(TextString), "ServerCorrelationValue text string");
             
-            result = decode_text_string(
-                ctx,
-                KMIP_TAG_SERVER_CORRELATION_VALUE,
-                value->server_correlation_value);
+            result = kmip_decode_text_string(ctx, KMIP_TAG_SERVER_CORRELATION_VALUE, value->server_correlation_value);
             CHECK_RESULT(ctx, result);
         }
     }
     
-    if(is_tag_next(ctx, KMIP_TAG_ASYNCHRONOUS_INDICATOR))
+    if(kmip_is_tag_next(ctx, KMIP_TAG_ASYNCHRONOUS_INDICATOR))
     {
-        result = decode_bool(
-            ctx,
-            KMIP_TAG_ASYNCHRONOUS_INDICATOR,
-            &value->asynchronous_indicator);
+        result = kmip_decode_bool(ctx, KMIP_TAG_ASYNCHRONOUS_INDICATOR, &value->asynchronous_indicator);
         CHECK_RESULT(ctx, result);
     }
     
     if(ctx->version >= KMIP_1_2)
     {
-        if(is_tag_next(ctx, KMIP_TAG_ATTESTATION_CAPABLE_INDICATOR))
+        if(kmip_is_tag_next(ctx, KMIP_TAG_ATTESTATION_CAPABLE_INDICATOR))
         {
-            result = decode_bool(
-                ctx,
-                KMIP_TAG_ATTESTATION_CAPABLE_INDICATOR,
-                &value->attestation_capable_indicator);
+            result = kmip_decode_bool(ctx, KMIP_TAG_ATTESTATION_CAPABLE_INDICATOR, &value->attestation_capable_indicator);
             CHECK_RESULT(ctx, result);
         }
         
-        value->attestation_type_count = get_num_items_next(
-            ctx, 
-            KMIP_TAG_ATTESTATION_TYPE);
+        value->attestation_type_count = kmip_get_num_items_next(ctx, KMIP_TAG_ATTESTATION_TYPE);
         if(value->attestation_type_count > 0)
         {
-            value->attestation_types = ctx->calloc_func(
-                ctx->state,
-                value->attestation_type_count,
-                sizeof(enum attestation_type));
-            CHECK_NEW_MEMORY(
-                ctx,
-                value->attestation_types,
-                value->attestation_type_count * sizeof(enum attestation_type),
-                "sequence of AttestationType enumerations");
+            value->attestation_types = ctx->calloc_func(ctx->state, value->attestation_type_count, sizeof(enum attestation_type));
+            CHECK_NEW_MEMORY(ctx, value->attestation_types, value->attestation_type_count * sizeof(enum attestation_type), "sequence of AttestationType enumerations");
             
             for(size_t i = 0; i < value->attestation_type_count; i++)
             {
-                result = decode_enum(
-                    ctx,
-                    KMIP_TAG_ATTESTATION_TYPE,
-                    &value->attestation_types[i]);
+                result = kmip_decode_enum(ctx, KMIP_TAG_ATTESTATION_TYPE, &value->attestation_types[i]);
                 CHECK_RESULT(ctx, result);
-                CHECK_ENUM(
-                    ctx,
-                    KMIP_TAG_ATTESTATION_TYPE,
-                    value->attestation_types[i]);
+                CHECK_ENUM(ctx, KMIP_TAG_ATTESTATION_TYPE, value->attestation_types[i]);
             }
         }
     }
     
-    if(is_tag_next(ctx, KMIP_TAG_AUTHENTICATION))
+    if(kmip_is_tag_next(ctx, KMIP_TAG_AUTHENTICATION))
     {
-        value->authentication = ctx->calloc_func(
-            ctx->state,
-            1,
-            sizeof(struct authentication));
-        CHECK_NEW_MEMORY(
-            ctx,
-            value->authentication,
-            sizeof(struct authentication),
-            "Authentication structure");
+        value->authentication = ctx->calloc_func(ctx->state,1, sizeof(Authentication));
+        CHECK_NEW_MEMORY(ctx, value->authentication, sizeof(Authentication), "Authentication structure");
         
-        result = decode_authentication(ctx, value->authentication);
+        result = kmip_decode_authentication(ctx, value->authentication);
         CHECK_RESULT(ctx, result);
     }
     
-    if(is_tag_next(ctx, KMIP_TAG_BATCH_ERROR_CONTINUATION_OPTION))
+    if(kmip_is_tag_next(ctx, KMIP_TAG_BATCH_ERROR_CONTINUATION_OPTION))
     {
-        result = decode_enum(
-            ctx,
-            KMIP_TAG_BATCH_ERROR_CONTINUATION_OPTION,
-            &value->batch_error_continuation_option);
+        result = kmip_decode_enum(ctx, KMIP_TAG_BATCH_ERROR_CONTINUATION_OPTION, &value->batch_error_continuation_option);
         CHECK_RESULT(ctx, result);
-        CHECK_ENUM(
-            ctx,
-            KMIP_TAG_BATCH_ERROR_CONTINUATION_OPTION,
-            value->batch_error_continuation_option);
+        CHECK_ENUM(ctx, KMIP_TAG_BATCH_ERROR_CONTINUATION_OPTION, value->batch_error_continuation_option);
     }
     
-    if(is_tag_next(ctx, KMIP_TAG_BATCH_ORDER_OPTION))
+    if(kmip_is_tag_next(ctx, KMIP_TAG_BATCH_ORDER_OPTION))
     {
-        result = decode_bool(
-            ctx,
-            KMIP_TAG_BATCH_ORDER_OPTION,
-            &value->batch_order_option);
+        result = kmip_decode_bool(ctx, KMIP_TAG_BATCH_ORDER_OPTION, &value->batch_order_option);
         CHECK_RESULT(ctx, result);
     }
     
-    if(is_tag_next(ctx, KMIP_TAG_TIME_STAMP))
+    if(kmip_is_tag_next(ctx, KMIP_TAG_TIME_STAMP))
     {
-        result = decode_date_time(
-            ctx,
-            KMIP_TAG_TIME_STAMP,
-            &value->time_stamp);
+        result = kmip_decode_date_time(ctx, KMIP_TAG_TIME_STAMP, &value->time_stamp);
         CHECK_RESULT(ctx, result);
     }
     
-    result = decode_integer(ctx, KMIP_TAG_BATCH_COUNT, &value->batch_count);
+    result = kmip_decode_integer(ctx, KMIP_TAG_BATCH_COUNT, &value->batch_count);
     CHECK_RESULT(ctx, result);
     
     return(KMIP_OK);
 }
 
 int
-decode_response_header(struct kmip *ctx, struct response_header *value)
+kmip_decode_response_header(KMIP *ctx, ResponseHeader *value)
 {
     CHECK_BUFFER_FULL(ctx, 8);
     
@@ -11873,129 +10384,76 @@ decode_response_header(struct kmip *ctx, struct response_header *value)
     int32 tag_type = 0;
     uint32 length = 0;
     
-    decode_int32_be(ctx, &tag_type);
-    CHECK_TAG_TYPE(
-        ctx,
-        tag_type,
-        KMIP_TAG_RESPONSE_HEADER,
-        KMIP_TYPE_STRUCTURE);
+    kmip_decode_int32_be(ctx, &tag_type);
+    CHECK_TAG_TYPE(ctx, tag_type, KMIP_TAG_RESPONSE_HEADER, KMIP_TYPE_STRUCTURE);
     
-    decode_int32_be(ctx, &length);
+    kmip_decode_int32_be(ctx, &length);
     CHECK_BUFFER_FULL(ctx, length);
     
-    value->protocol_version = ctx->calloc_func(
-        ctx->state,
-        1,
-        sizeof(struct protocol_version));
-    CHECK_NEW_MEMORY(
-        ctx,
-        value->protocol_version,
-        sizeof(struct protocol_version),
-        "ProtocolVersion structure");
+    value->protocol_version = ctx->calloc_func(ctx->state, 1, sizeof(ProtocolVersion));
+    CHECK_NEW_MEMORY(ctx, value->protocol_version, sizeof(ProtocolVersion), "ProtocolVersion structure");
     
-    result = decode_protocol_version(ctx, value->protocol_version);
+    result = kmip_decode_protocol_version(ctx, value->protocol_version);
     CHECK_RESULT(ctx, result);
     
-    result = decode_date_time(ctx, KMIP_TAG_TIME_STAMP, &value->time_stamp);
+    result = kmip_decode_date_time(ctx, KMIP_TAG_TIME_STAMP, &value->time_stamp);
     CHECK_RESULT(ctx, result);
     
     if(ctx->version >= KMIP_1_2)
     {
-        if(is_tag_next(ctx, KMIP_TAG_NONCE))
+        if(kmip_is_tag_next(ctx, KMIP_TAG_NONCE))
         {
-            value->nonce = ctx->calloc_func(
-                ctx->state,
-                1,
-                sizeof(struct nonce));
-            CHECK_NEW_MEMORY(
-                ctx,
-                value->nonce,
-                sizeof(struct nonce),
-                "Nonce structure");
+            value->nonce = ctx->calloc_func(ctx->state, 1, sizeof(Nonce));
+            CHECK_NEW_MEMORY(ctx, value->nonce, sizeof(Nonce), "Nonce structure");
             
-            result = decode_nonce(ctx, value->nonce);
+            result = kmip_decode_nonce(ctx, value->nonce);
             CHECK_RESULT(ctx, result);
         }
         
-        value->attestation_type_count = get_num_items_next(
-            ctx, 
-            KMIP_TAG_ATTESTATION_TYPE);
+        value->attestation_type_count = kmip_get_num_items_next(ctx, KMIP_TAG_ATTESTATION_TYPE);
         if(value->attestation_type_count > 0)
         {
-            value->attestation_types = ctx->calloc_func(
-                ctx->state,
-                value->attestation_type_count,
-                sizeof(enum attestation_type));
-            CHECK_NEW_MEMORY(
-                ctx,
-                value->attestation_types,
-                value->attestation_type_count * sizeof(enum attestation_type),
-                "sequence of AttestationType enumerations");
+            value->attestation_types = ctx->calloc_func(ctx->state, value->attestation_type_count, sizeof(enum attestation_type));
+            CHECK_NEW_MEMORY(ctx, value->attestation_types, value->attestation_type_count * sizeof(enum attestation_type), "sequence of AttestationType enumerations");
             
             for(size_t i = 0; i < value->attestation_type_count; i++)
             {
-                result = decode_enum(
-                    ctx,
-                    KMIP_TAG_ATTESTATION_TYPE,
-                    &value->attestation_types[i]);
+                result = kmip_decode_enum(ctx, KMIP_TAG_ATTESTATION_TYPE, &value->attestation_types[i]);
                 CHECK_RESULT(ctx, result);
-                CHECK_ENUM(
-                    ctx,
-                    KMIP_TAG_ATTESTATION_TYPE,
-                    value->attestation_types[i]);
+                CHECK_ENUM(ctx, KMIP_TAG_ATTESTATION_TYPE, value->attestation_types[i]);
             }
         }
     }
     
     if(ctx->version >= KMIP_1_4)
     {
-        if(is_tag_next(ctx, KMIP_TAG_CLIENT_CORRELATION_VALUE))
+        if(kmip_is_tag_next(ctx, KMIP_TAG_CLIENT_CORRELATION_VALUE))
         {
-            value->client_correlation_value = ctx->calloc_func(
-                ctx->state,
-                1,
-                sizeof(struct text_string));
-            CHECK_NEW_MEMORY(
-                ctx,
-                value->client_correlation_value,
-                sizeof(struct text_string),
-                "ClientCorrelationValue text string");
+            value->client_correlation_value = ctx->calloc_func(ctx->state, 1, sizeof(TextString));
+            CHECK_NEW_MEMORY(ctx, value->client_correlation_value, sizeof(TextString), "ClientCorrelationValue text string");
             
-            result = decode_text_string(
-                ctx,
-                KMIP_TAG_CLIENT_CORRELATION_VALUE,
-                value->client_correlation_value);
+            result = kmip_decode_text_string(ctx, KMIP_TAG_CLIENT_CORRELATION_VALUE, value->client_correlation_value);
             CHECK_RESULT(ctx, result);
         }
         
-        if(is_tag_next(ctx, KMIP_TAG_SERVER_CORRELATION_VALUE))
+        if(kmip_is_tag_next(ctx, KMIP_TAG_SERVER_CORRELATION_VALUE))
         {
-            value->server_correlation_value = ctx->calloc_func(
-                ctx->state,
-                1,
-                sizeof(struct text_string));
-            CHECK_NEW_MEMORY(
-                ctx,
-                value->server_correlation_value,
-                sizeof(struct text_string),
-                "ServerCorrelationValue text string");
+            value->server_correlation_value = ctx->calloc_func(ctx->state, 1, sizeof(TextString));
+            CHECK_NEW_MEMORY(ctx, value->server_correlation_value, sizeof(TextString), "ServerCorrelationValue text string");
             
-            result = decode_text_string(
-                ctx,
-                KMIP_TAG_SERVER_CORRELATION_VALUE,
-                value->server_correlation_value);
+            result = kmip_decode_text_string(ctx, KMIP_TAG_SERVER_CORRELATION_VALUE, value->server_correlation_value);
             CHECK_RESULT(ctx, result);
         }
     }
     
-    result = decode_integer(ctx, KMIP_TAG_BATCH_COUNT, &value->batch_count);
+    result = kmip_decode_integer(ctx, KMIP_TAG_BATCH_COUNT, &value->batch_count);
     CHECK_RESULT(ctx, result);
     
     return(KMIP_OK);
 }
 
 int
-decode_request_message(struct kmip *ctx, struct request_message *value)
+kmip_decode_request_message(KMIP *ctx, RequestMessage *value)
 {
     CHECK_BUFFER_FULL(ctx, 8);
     
@@ -12003,45 +10461,27 @@ decode_request_message(struct kmip *ctx, struct request_message *value)
     int32 tag_type = 0;
     uint32 length = 0;
     
-    decode_int32_be(ctx, &tag_type);
-    CHECK_TAG_TYPE(
-        ctx,
-        tag_type,
-        KMIP_TAG_REQUEST_MESSAGE,
-        KMIP_TYPE_STRUCTURE);
+    kmip_decode_int32_be(ctx, &tag_type);
+    CHECK_TAG_TYPE(ctx, tag_type, KMIP_TAG_REQUEST_MESSAGE, KMIP_TYPE_STRUCTURE);
     
-    decode_int32_be(ctx, &length);
+    kmip_decode_int32_be(ctx, &length);
     CHECK_BUFFER_FULL(ctx, length);
     
-    value->request_header = ctx->calloc_func(
-        ctx->state,
-        1,
-        sizeof(struct request_header));
-    CHECK_NEW_MEMORY(
-        ctx,
-        value->request_header,
-        sizeof(struct request_header),
-        "RequestHeader structure");
-    init_request_header(value->request_header);
-    result = decode_request_header(ctx, value->request_header);
+    value->request_header = ctx->calloc_func(ctx->state, 1, sizeof(RequestHeader));
+    CHECK_NEW_MEMORY(ctx, value->request_header, sizeof(RequestHeader), "RequestHeader structure");
+    kmip_init_request_header(value->request_header);
+    result = kmip_decode_request_header(ctx, value->request_header);
     CHECK_RESULT(ctx, result);
     
-    value->batch_count = get_num_items_next(ctx, KMIP_TAG_BATCH_ITEM);
+    value->batch_count = kmip_get_num_items_next(ctx, KMIP_TAG_BATCH_ITEM);
     if(value->batch_count > 0)
     {
-        value->batch_items = ctx->calloc_func(
-            ctx->state,
-            value->batch_count,
-            sizeof(struct request_batch_item));
-        CHECK_NEW_MEMORY(
-            ctx,
-            value->batch_items,
-            value->batch_count * sizeof(struct request_batch_item),
-            "sequence of RequestBatchItem structures");
+        value->batch_items = ctx->calloc_func(ctx->state, value->batch_count, sizeof(RequestBatchItem));
+        CHECK_NEW_MEMORY(ctx, value->batch_items, value->batch_count * sizeof(RequestBatchItem), "sequence of RequestBatchItem structures");
         
         for(size_t i = 0; i < value->batch_count; i++)
         {
-            result = decode_request_batch_item(ctx, &value->batch_items[i]);
+            result = kmip_decode_request_batch_item(ctx, &value->batch_items[i]);
             CHECK_RESULT(ctx, result);
         }
     }
@@ -12050,7 +10490,7 @@ decode_request_message(struct kmip *ctx, struct request_message *value)
 }
 
 int
-decode_response_message(struct kmip *ctx, struct response_message *value)
+kmip_decode_response_message(KMIP *ctx, ResponseMessage *value)
 {
     CHECK_BUFFER_FULL(ctx, 8);
     
@@ -12058,47 +10498,27 @@ decode_response_message(struct kmip *ctx, struct response_message *value)
     int32 tag_type = 0;
     uint32 length = 0;
     
-    decode_int32_be(ctx, &tag_type);
-    CHECK_TAG_TYPE(
-        ctx,
-        tag_type,
-        KMIP_TAG_RESPONSE_MESSAGE,
-        KMIP_TYPE_STRUCTURE);
+    kmip_decode_int32_be(ctx, &tag_type);
+    CHECK_TAG_TYPE(ctx, tag_type, KMIP_TAG_RESPONSE_MESSAGE, KMIP_TYPE_STRUCTURE);
     
-    decode_int32_be(ctx, &length);
+    kmip_decode_int32_be(ctx, &length);
     CHECK_BUFFER_FULL(ctx, length);
     
-    value->response_header = ctx->calloc_func(
-        ctx->state,
-        1,
-        sizeof(struct response_header));
-    CHECK_NEW_MEMORY(
-        ctx,
-        value->response_header,
-        sizeof(struct response_header),
-        "ResponseHeader structure");
+    value->response_header = ctx->calloc_func(ctx->state, 1, sizeof(ResponseHeader));
+    CHECK_NEW_MEMORY(ctx, value->response_header, sizeof(ResponseHeader), "ResponseHeader structure");
     
-    result = decode_response_header(ctx, value->response_header);
+    result = kmip_decode_response_header(ctx, value->response_header);
     CHECK_RESULT(ctx, result);
     
-    value->batch_count = get_num_items_next(ctx, KMIP_TAG_BATCH_ITEM);
+    value->batch_count = kmip_get_num_items_next(ctx, KMIP_TAG_BATCH_ITEM);
     if(value->batch_count > 0)
     {
-        value->batch_items = ctx->calloc_func(
-            ctx->state,
-            value->batch_count,
-            sizeof(struct response_batch_item));
-        CHECK_NEW_MEMORY(
-            ctx,
-            value->batch_items,
-            value->batch_count * sizeof(struct response_batch_item),
-            "sequence of ResponseBatchItem structures");
+        value->batch_items = ctx->calloc_func(ctx->state, value->batch_count, sizeof(ResponseBatchItem));
+        CHECK_NEW_MEMORY(ctx, value->batch_items, value->batch_count * sizeof(ResponseBatchItem), "sequence of ResponseBatchItem structures");
         
         for(size_t i = 0; i < value->batch_count; i++)
         {
-            result = decode_response_batch_item(
-                ctx,
-                &value->batch_items[i]);
+            result = kmip_decode_response_batch_item(ctx, &value->batch_items[i]);
             CHECK_RESULT(ctx, result);
         }
     }

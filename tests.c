@@ -49,7 +49,7 @@ report_encoding_test_result(struct kmip *ctx, const uint8 *expected,
         {
             printf("- context buffer is full\n");
         }
-        print_stack_trace(ctx);
+        kmip_print_stack_trace(ctx);
         return(1);
     }
 }
@@ -79,7 +79,7 @@ report_decoding_test_result(struct kmip *ctx, int comparison, int result,
         {
             printf("- context buffer is underfull\n");
         }
-        print_stack_trace(ctx);
+        kmip_print_stack_trace(ctx);
         return(1);
     }
 }
@@ -104,14 +104,14 @@ test_buffer_full_and_resize(void)
     pv.major = 1;
     pv.minor = 0;
     
-    int result = encode_protocol_version(&ctx, &pv);
+    int result = kmip_encode_protocol_version(&ctx, &pv);
     
     if(result == KMIP_ERROR_BUFFER_FULL)
     {
         kmip_reset(&ctx);
         kmip_set_buffer(&ctx, large_enough, ARRAY_LENGTH(large_enough));
         
-        result = encode_protocol_version(&ctx, &pv);
+        result = kmip_encode_protocol_version(&ctx, &pv);
         result = report_encoding_test_result(
             &ctx,
             expected,
@@ -145,7 +145,7 @@ test_is_tag_next(void)
     uint8 *before = ctx.index;
     int result = 0;
     
-    if(is_tag_next(&ctx, KMIP_TAG_ATTRIBUTE) == KMIP_FALSE)
+    if(kmip_is_tag_next(&ctx, KMIP_TAG_ATTRIBUTE) == KMIP_FALSE)
     {
         printf("FAIL - %s\n", __func__);
         printf("- expected tag is not next\n");
@@ -205,7 +205,7 @@ test_get_num_items_next(void)
     int result = 0;
     int count = 0;
     
-    count = get_num_items_next(&ctx, KMIP_TAG_ATTRIBUTE);
+    count = kmip_get_num_items_next(&ctx, KMIP_TAG_ATTRIBUTE);
     if(count != 3)
     {
         printf("FAIL - %s\n", __func__);
@@ -263,7 +263,7 @@ test_get_num_items_next_with_partial_item(void)
     int result = 0;
     int count = 0;
     
-    count = get_num_items_next(&ctx, KMIP_TAG_ATTRIBUTE);
+    count = kmip_get_num_items_next(&ctx, KMIP_TAG_ATTRIBUTE);
     if(count != 2)
     {
         printf("FAIL - %s\n", __func__);
@@ -314,7 +314,7 @@ test_get_num_items_next_with_mismatch_item(void)
     int result = 0;
     int count = 0;
     
-    count = get_num_items_next(&ctx, KMIP_TAG_ATTRIBUTE);
+    count = kmip_get_num_items_next(&ctx, KMIP_TAG_ATTRIBUTE);
     if(count != 1)
     {
         printf("FAIL - %s\n", __func__);
@@ -365,7 +365,7 @@ test_get_num_items_next_with_no_matches(void)
     int result = 0;
     int count = 0;
     
-    count = get_num_items_next(&ctx, KMIP_TAG_ATTRIBUTE);
+    count = kmip_get_num_items_next(&ctx, KMIP_TAG_ATTRIBUTE);
     if(count != 0)
     {
         printf("FAIL - %s\n", __func__);
@@ -424,7 +424,7 @@ test_get_num_items_next_with_non_structures(void)
     int result = 0;
     int count = 0;
     
-    count = get_num_items_next(&ctx, KMIP_TAG_UNIQUE_IDENTIFIER);
+    count = kmip_get_num_items_next(&ctx, KMIP_TAG_UNIQUE_IDENTIFIER);
     if(count != 3)
     {
         printf("FAIL - %s\n", __func__);
@@ -462,7 +462,7 @@ test_decode_int8_be(void)
     
     int8 value = 0;
     
-    int result = decode_int8_be(&ctx, &value);
+    int result = kmip_decode_int8_be(&ctx, &value);
     result = report_decoding_test_result(
         &ctx,
         value == 0x42, 
@@ -483,7 +483,7 @@ test_decode_int32_be(void)
     int32 expected = 0x11223344;
     int32 observed = 0;
     
-    int result = decode_int32_be(&ctx, &observed);
+    int result = kmip_decode_int32_be(&ctx, &observed);
     result = report_decoding_test_result(
         &ctx,
         observed == expected,
@@ -506,7 +506,7 @@ test_decode_int64_be(void)
     int64 expected = 0x01B69B4BA5749200;
     int64 observed = 0;
     
-    int result = decode_int64_be(&ctx, &observed);
+    int result = kmip_decode_int64_be(&ctx, &observed);
     result = report_decoding_test_result(
         &ctx,
         observed == expected,
@@ -528,7 +528,7 @@ test_encode_integer(void)
     struct kmip ctx = {0};
     kmip_init(&ctx, observed, ARRAY_LENGTH(observed), KMIP_1_0);
     
-    int result = encode_integer(&ctx, KMIP_TAG_DEFAULT, 8);
+    int result = kmip_encode_integer(&ctx, KMIP_TAG_DEFAULT, 8);
     result = report_encoding_test_result(
         &ctx,
         expected,
@@ -553,7 +553,7 @@ test_decode_integer(void)
     int32 expected = 8;
     int32 observed = 0;
     
-    int result = decode_integer(&ctx, KMIP_TAG_DEFAULT, &observed);
+    int result = kmip_decode_integer(&ctx, KMIP_TAG_DEFAULT, &observed);
     result = report_decoding_test_result(
         &ctx,
         observed == expected,
@@ -575,7 +575,7 @@ test_encode_long(void)
     struct kmip ctx = {0};
     kmip_init(&ctx, observed, ARRAY_LENGTH(observed), KMIP_1_0);
     
-    int result = encode_long(&ctx, KMIP_TAG_DEFAULT, 123456789000000000);
+    int result = kmip_encode_long(&ctx, KMIP_TAG_DEFAULT, 123456789000000000);
     result = report_encoding_test_result(
         &ctx,
         expected,
@@ -600,7 +600,7 @@ test_decode_long(void)
     int64 expected = 0x01B69B4BA5749200;
     int64 observed = 0;
     
-    int result = decode_long(&ctx, KMIP_TAG_DEFAULT, &observed);
+    int result = kmip_decode_long(&ctx, KMIP_TAG_DEFAULT, &observed);
     result = report_decoding_test_result(
         &ctx,
         observed == expected,
@@ -622,7 +622,7 @@ test_encode_enum(void)
     struct kmip ctx = {0};
     kmip_init(&ctx, observed, ARRAY_LENGTH(observed), KMIP_1_0);
     
-    int result = encode_enum(&ctx, KMIP_TAG_DEFAULT, KMIP_CRYPTOALG_AES);
+    int result = kmip_encode_enum(&ctx, KMIP_TAG_DEFAULT, KMIP_CRYPTOALG_AES);
     result = report_encoding_test_result(
         &ctx,
         expected,
@@ -647,7 +647,7 @@ test_decode_enum(void)
     enum cryptographic_algorithm expected = KMIP_CRYPTOALG_AES;
     enum cryptographic_algorithm observed = 0;
     
-    int result = decode_enum(&ctx, KMIP_TAG_DEFAULT, &observed);
+    int result = kmip_decode_enum(&ctx, KMIP_TAG_DEFAULT, &observed);
     result = report_decoding_test_result(
         &ctx,
         observed == expected,
@@ -669,7 +669,7 @@ test_encode_bool(void)
     struct kmip ctx = {0};
     kmip_init(&ctx, observed, ARRAY_LENGTH(observed), KMIP_1_0);
     
-    int result = encode_bool(&ctx, KMIP_TAG_DEFAULT, KMIP_TRUE);
+    int result = kmip_encode_bool(&ctx, KMIP_TAG_DEFAULT, KMIP_TRUE);
     result = report_encoding_test_result(
         &ctx,
         expected,
@@ -694,7 +694,7 @@ test_decode_bool(void)
     bool32 expected = KMIP_TRUE;
     bool32 observed = 0;
     
-    int result = decode_bool(&ctx, KMIP_TAG_DEFAULT, &observed);
+    int result = kmip_decode_bool(&ctx, KMIP_TAG_DEFAULT, &observed);
     result = report_decoding_test_result(
         &ctx,
         observed == expected,
@@ -721,7 +721,7 @@ test_encode_text_string(void)
     example.value = "Hello World";
     example.size = 11;
     
-    int result = encode_text_string(&ctx, KMIP_TAG_DEFAULT, &example);
+    int result = kmip_encode_text_string(&ctx, KMIP_TAG_DEFAULT, &example);
     result = report_encoding_test_result(
         &ctx,
         expected,
@@ -749,13 +749,13 @@ test_decode_text_string(void)
     expected.size = 11;
     struct text_string observed = {0};
     
-    int result = decode_text_string(&ctx, KMIP_TAG_DEFAULT, &observed);
+    int result = kmip_decode_text_string(&ctx, KMIP_TAG_DEFAULT, &observed);
     result = report_decoding_test_result(
         &ctx,
-        compare_text_string(&expected, &observed),
+        kmip_compare_text_string(&expected, &observed),
         result,
         __func__);
-    free_text_string(&ctx, &observed);
+    kmip_free_text_string(&ctx, &observed);
     kmip_destroy(&ctx);
     return(result);
 }
@@ -777,7 +777,7 @@ test_encode_byte_string(void)
     example.value = str;
     example.size = 3;
     
-    int result = encode_byte_string(&ctx, KMIP_TAG_DEFAULT, &example);
+    int result = kmip_encode_byte_string(&ctx, KMIP_TAG_DEFAULT, &example);
     result = report_encoding_test_result(
         &ctx,
         expected,
@@ -806,13 +806,13 @@ test_decode_byte_string(void)
     expected.size = 3;
     struct byte_string observed = {0};
     
-    int result = decode_byte_string(&ctx, KMIP_TAG_DEFAULT, &observed);
+    int result = kmip_decode_byte_string(&ctx, KMIP_TAG_DEFAULT, &observed);
     result = report_decoding_test_result(
         &ctx,
-        compare_byte_string(&expected, &observed),
+        kmip_compare_byte_string(&expected, &observed),
         result,
         __func__);
-    free_byte_string(&ctx, &observed);
+    kmip_free_byte_string(&ctx, &observed);
     kmip_destroy(&ctx);
     return(result);
 }
@@ -829,7 +829,7 @@ test_encode_date_time(void)
     struct kmip ctx = {0};
     kmip_init(&ctx, observed, ARRAY_LENGTH(observed), KMIP_1_0);
     
-    int result = encode_date_time(&ctx, KMIP_TAG_DEFAULT, 1205495800);
+    int result = kmip_encode_date_time(&ctx, KMIP_TAG_DEFAULT, 1205495800);
     result = report_encoding_test_result(
         &ctx,
         expected,
@@ -854,7 +854,7 @@ test_decode_date_time(void)
     uint64 expected = 1205495800;
     uint64 observed = 0;
     
-    int result = decode_date_time(&ctx, KMIP_TAG_DEFAULT, &observed);
+    int result = kmip_decode_date_time(&ctx, KMIP_TAG_DEFAULT, &observed);
     result = report_decoding_test_result(
         &ctx,
         observed == expected,
@@ -876,7 +876,7 @@ test_encode_interval(void)
     struct kmip ctx = {0};
     kmip_init(&ctx, observed, ARRAY_LENGTH(observed), KMIP_1_0);
     
-    int result = encode_interval(&ctx, KMIP_TAG_DEFAULT, 864000);
+    int result = kmip_encode_interval(&ctx, KMIP_TAG_DEFAULT, 864000);
     result = report_encoding_test_result(
         &ctx,
         expected,
@@ -901,7 +901,7 @@ test_decode_interval(void)
     uint32 expected = 864000;
     uint32 observed = 0;
     
-    int result = decode_interval(&ctx, KMIP_TAG_DEFAULT, &observed);
+    int result = kmip_decode_interval(&ctx, KMIP_TAG_DEFAULT, &observed);
     result = report_decoding_test_result(
         &ctx,
         observed == expected,
@@ -935,7 +935,7 @@ test_encode_name(void)
     n.value = &value;
     n.type = KMIP_NAME_UNINTERPRETED_TEXT_STRING;
     
-    int result = encode_name(&ctx, &n);
+    int result = kmip_encode_name(&ctx, &n);
     result = report_encoding_test_result(
         &ctx,
         expected,
@@ -970,13 +970,13 @@ test_decode_name(void)
     expected.type = KMIP_NAME_UNINTERPRETED_TEXT_STRING;
     struct name observed = {0};
     
-    int result = decode_name(&ctx, &observed);
+    int result = kmip_decode_name(&ctx, &observed);
     result = report_decoding_test_result(
         &ctx,
-        compare_name(&expected, &observed),
+        kmip_compare_name(&expected, &observed),
         result,
         __func__);
-    free_name(&ctx, &observed);
+    kmip_free_name(&ctx, &observed);
     kmip_destroy(&ctx);
     return(result);
 }
@@ -1007,12 +1007,12 @@ test_encode_attribute_unique_identifier(void)
     uuid.size = 36;
     
     struct attribute attr = {0};
-    init_attribute(&attr);
+    kmip_init_attribute(&attr);
     
     attr.type = KMIP_ATTR_UNIQUE_IDENTIFIER;
     attr.value = &uuid;
     
-    int result = encode_attribute(&ctx, &attr);
+    int result = kmip_encode_attribute(&ctx, &attr);
     result = report_encoding_test_result(
         &ctx,
         expected,
@@ -1048,19 +1048,19 @@ test_decode_attribute_unique_identifier(void)
     uuid.size = 36;
     
     struct attribute expected = {0};
-    init_attribute(&expected);
+    kmip_init_attribute(&expected);
     expected.type = KMIP_ATTR_UNIQUE_IDENTIFIER;
     expected.value = &uuid;
     struct attribute observed = {0};
-    init_attribute(&observed);
+    kmip_init_attribute(&observed);
     
-    int result = decode_attribute(&ctx, &observed);
+    int result = kmip_decode_attribute(&ctx, &observed);
     result = report_decoding_test_result(
         &ctx,
-        compare_attribute(&expected, &observed),
+        kmip_compare_attribute(&expected, &observed),
         result,
         __func__);
-    free_attribute(&ctx, &observed);
+    kmip_free_attribute(&ctx, &observed);
     kmip_destroy(&ctx);
     return(result);
 }
@@ -1093,12 +1093,12 @@ test_encode_attribute_name(void)
     n.type = KMIP_NAME_UNINTERPRETED_TEXT_STRING;
     
     struct attribute attr = {0};
-    init_attribute(&attr);
+    kmip_init_attribute(&attr);
     
     attr.type = KMIP_ATTR_NAME;
     attr.value = &n;
     
-    int result = encode_attribute(&ctx, &attr);
+    int result = kmip_encode_attribute(&ctx, &attr);
     result = report_encoding_test_result(
         &ctx,
         expected,
@@ -1136,19 +1136,19 @@ test_decode_attribute_name(void)
     n.type = KMIP_NAME_UNINTERPRETED_TEXT_STRING;
     
     struct attribute expected = {0};
-    init_attribute(&expected);
+    kmip_init_attribute(&expected);
     expected.type = KMIP_ATTR_NAME;
     expected.value = &n;
     struct attribute observed = {0};
-    init_attribute(&observed);
+    kmip_init_attribute(&observed);
     
-    int result = decode_attribute(&ctx, &observed);
+    int result = kmip_decode_attribute(&ctx, &observed);
     result = report_decoding_test_result(
         &ctx,
-        compare_attribute(&expected, &observed),
+        kmip_compare_attribute(&expected, &observed),
         result,
         __func__);
-    free_attribute(&ctx, &observed);
+    kmip_free_attribute(&ctx, &observed);
     kmip_destroy(&ctx);
     return(result);
 }
@@ -1171,12 +1171,12 @@ test_encode_attribute_object_type(void)
     
     enum object_type t = KMIP_OBJTYPE_SYMMETRIC_KEY;
     struct attribute attr = {0};
-    init_attribute(&attr);
+    kmip_init_attribute(&attr);
     
     attr.type = KMIP_ATTR_OBJECT_TYPE;
     attr.value = &t;
     
-    int result = encode_attribute(&ctx, &attr);
+    int result = kmip_encode_attribute(&ctx, &attr);
     result = report_encoding_test_result(
         &ctx,
         expected,
@@ -1204,19 +1204,19 @@ test_decode_attribute_object_type(void)
     
     enum object_type t = KMIP_OBJTYPE_SYMMETRIC_KEY;
     struct attribute expected = {0};
-    init_attribute(&expected);
+    kmip_init_attribute(&expected);
     expected.type = KMIP_ATTR_OBJECT_TYPE;
     expected.value = &t;
     struct attribute observed = {0};
-    init_attribute(&observed);
+    kmip_init_attribute(&observed);
     
-    int result = decode_attribute(&ctx, &observed);
+    int result = kmip_decode_attribute(&ctx, &observed);
     result = report_decoding_test_result(
         &ctx,
-        compare_attribute(&expected, &observed),
+        kmip_compare_attribute(&expected, &observed),
         result,
         __func__);
-    free_attribute(&ctx, &observed);
+    kmip_free_attribute(&ctx, &observed);
     kmip_destroy(&ctx);
     return(result);
 }
@@ -1240,12 +1240,12 @@ test_encode_attribute_cryptographic_algorithm(void)
     
     enum cryptographic_algorithm a = KMIP_CRYPTOALG_AES;
     struct attribute attr = {0};
-    init_attribute(&attr);
+    kmip_init_attribute(&attr);
     
     attr.type = KMIP_ATTR_CRYPTOGRAPHIC_ALGORITHM;
     attr.value = &a;
     
-    int result = encode_attribute(&ctx, &attr);
+    int result = kmip_encode_attribute(&ctx, &attr);
     result = report_encoding_test_result(
         &ctx,
         expected,
@@ -1274,19 +1274,19 @@ test_decode_attribute_cryptographic_algorithm(void)
     
     enum cryptographic_algorithm a = KMIP_CRYPTOALG_AES;
     struct attribute expected = {0};
-    init_attribute(&expected);
+    kmip_init_attribute(&expected);
     expected.type = KMIP_ATTR_CRYPTOGRAPHIC_ALGORITHM;
     expected.value = &a;
     struct attribute observed = {0};
-    init_attribute(&observed);
+    kmip_init_attribute(&observed);
     
-    int result = decode_attribute(&ctx, &observed);
+    int result = kmip_decode_attribute(&ctx, &observed);
     result = report_decoding_test_result(
         &ctx,
-        compare_attribute(&expected, &observed),
+        kmip_compare_attribute(&expected, &observed),
         result,
         __func__);
-    free_attribute(&ctx, &observed);
+    kmip_free_attribute(&ctx, &observed);
     kmip_destroy(&ctx);
     return(result);
 }
@@ -1310,12 +1310,12 @@ test_encode_attribute_cryptographic_length(void)
     
     int32 length = 128;
     struct attribute attr = {0};
-    init_attribute(&attr);
+    kmip_init_attribute(&attr);
     
     attr.type = KMIP_ATTR_CRYPTOGRAPHIC_LENGTH;
     attr.value = &length;
     
-    int result = encode_attribute(&ctx, &attr);
+    int result = kmip_encode_attribute(&ctx, &attr);
     result = report_encoding_test_result(
         &ctx,
         expected,
@@ -1344,19 +1344,19 @@ test_decode_attribute_cryptographic_length(void)
     
     int32 length = 128;
     struct attribute expected = {0};
-    init_attribute(&expected);
+    kmip_init_attribute(&expected);
     expected.type = KMIP_ATTR_CRYPTOGRAPHIC_LENGTH;
     expected.value = &length;
     struct attribute observed = {0};
-    init_attribute(&observed);
+    kmip_init_attribute(&observed);
     
-    int result = decode_attribute(&ctx, &observed);
+    int result = kmip_decode_attribute(&ctx, &observed);
     result = report_decoding_test_result(
         &ctx,
-        compare_attribute(&expected, &observed),
+        kmip_compare_attribute(&expected, &observed),
         result,
         __func__);
-    free_attribute(&ctx, &observed);
+    kmip_free_attribute(&ctx, &observed);
     kmip_destroy(&ctx);
     return(result);
 }
@@ -1383,12 +1383,12 @@ test_encode_attribute_operation_policy_name(void)
     policy.size = 7;
     
     struct attribute attr = {0};
-    init_attribute(&attr);
+    kmip_init_attribute(&attr);
     
     attr.type = KMIP_ATTR_OPERATION_POLICY_NAME;
     attr.value = &policy;
     
-    int result = encode_attribute(&ctx, &attr);
+    int result = kmip_encode_attribute(&ctx, &attr);
     result = report_encoding_test_result(
         &ctx,
         expected,
@@ -1420,19 +1420,19 @@ test_decode_attribute_operation_policy_name(void)
     policy.size = 7;
     
     struct attribute expected = {0};
-    init_attribute(&expected);
+    kmip_init_attribute(&expected);
     expected.type = KMIP_ATTR_OPERATION_POLICY_NAME;
     expected.value = &policy;
     struct attribute observed = {0};
-    init_attribute(&observed);
+    kmip_init_attribute(&observed);
     
-    int result = decode_attribute(&ctx, &observed);
+    int result = kmip_decode_attribute(&ctx, &observed);
     result = report_decoding_test_result(
         &ctx,
-        compare_attribute(&expected, &observed),
+        kmip_compare_attribute(&expected, &observed),
         result,
         __func__);
-    free_attribute(&ctx, &observed);
+    kmip_free_attribute(&ctx, &observed);
     kmip_destroy(&ctx);
     return(result);
 }
@@ -1456,12 +1456,12 @@ test_encode_attribute_cryptographic_usage_mask(void)
     
     int32 mask = KMIP_CRYPTOMASK_ENCRYPT | KMIP_CRYPTOMASK_DECRYPT;
     struct attribute attr = {0};
-    init_attribute(&attr);
+    kmip_init_attribute(&attr);
     
     attr.type = KMIP_ATTR_CRYPTOGRAPHIC_USAGE_MASK;
     attr.value = &mask;
     
-    int result = encode_attribute(&ctx, &attr);
+    int result = kmip_encode_attribute(&ctx, &attr);
     result = report_encoding_test_result(
         &ctx,
         expected,
@@ -1490,19 +1490,19 @@ test_decode_attribute_cryptographic_usage_mask(void)
     
     int32 mask = KMIP_CRYPTOMASK_ENCRYPT | KMIP_CRYPTOMASK_DECRYPT;
     struct attribute expected = {0};
-    init_attribute(&expected);
+    kmip_init_attribute(&expected);
     expected.type = KMIP_ATTR_CRYPTOGRAPHIC_USAGE_MASK;
     expected.value = &mask;
     struct attribute observed = {0};
-    init_attribute(&observed);
+    kmip_init_attribute(&observed);
     
-    int result = decode_attribute(&ctx, &observed);
+    int result = kmip_decode_attribute(&ctx, &observed);
     result = report_decoding_test_result(
         &ctx,
-        compare_attribute(&expected, &observed),
+        kmip_compare_attribute(&expected, &observed),
         result,
         __func__);
-    free_attribute(&ctx, &observed);
+    kmip_free_attribute(&ctx, &observed);
     kmip_destroy(&ctx);
     return(result);
 }
@@ -1524,12 +1524,12 @@ test_encode_attribute_state(void)
     
     enum state s = KMIP_STATE_PRE_ACTIVE;
     struct attribute attr = {0};
-    init_attribute(&attr);
+    kmip_init_attribute(&attr);
     
     attr.type = KMIP_ATTR_STATE;
     attr.value = &s;
     
-    int result = encode_attribute(&ctx, &attr);
+    int result = kmip_encode_attribute(&ctx, &attr);
     result = report_encoding_test_result(
         &ctx,
         expected,
@@ -1556,19 +1556,19 @@ test_decode_attribute_state(void)
     
     enum state s = KMIP_STATE_PRE_ACTIVE;
     struct attribute expected = {0};
-    init_attribute(&expected);
+    kmip_init_attribute(&expected);
     expected.type = KMIP_ATTR_STATE;
     expected.value = &s;
     struct attribute observed = {0};
-    init_attribute(&observed);
+    kmip_init_attribute(&observed);
     
-    int result = decode_attribute(&ctx, &observed);
+    int result = kmip_decode_attribute(&ctx, &observed);
     result = report_decoding_test_result(
         &ctx,
-        compare_attribute(&expected, &observed),
+        kmip_compare_attribute(&expected, &observed),
         result,
         __func__);
-    free_attribute(&ctx, &observed);
+    kmip_free_attribute(&ctx, &observed);
     kmip_destroy(&ctx);
     return(result);
 }
@@ -1592,7 +1592,7 @@ test_encode_protocol_version(void)
     pv.major = 1;
     pv.minor = 0;
     
-    int result = encode_protocol_version(&ctx, &pv);
+    int result = kmip_encode_protocol_version(&ctx, &pv);
     result = report_encoding_test_result(
         &ctx,
         expected,
@@ -1622,10 +1622,10 @@ test_decode_protocol_version(void)
     expected.minor = 0;
     struct protocol_version observed = {0};
     
-    int result = decode_protocol_version(&ctx, &observed);
+    int result = kmip_decode_protocol_version(&ctx, &observed);
     result = report_decoding_test_result(
         &ctx,
-        compare_protocol_version(&expected, &observed),
+        kmip_compare_protocol_version(&expected, &observed),
         result,
         __func__);
     kmip_destroy(&ctx);
@@ -1657,7 +1657,7 @@ test_encode_cryptographic_parameters(void)
     cp.hashing_algorithm = KMIP_HASH_SHA1;
     cp.key_role_type = KMIP_ROLE_KEK;
     
-    int result = encode_cryptographic_parameters(&ctx, &cp);
+    int result = kmip_encode_cryptographic_parameters(&ctx, &cp);
     result = report_encoding_test_result(
         &ctx,
         expected,
@@ -1687,21 +1687,21 @@ test_decode_cryptographic_parameters(void)
     kmip_init(&ctx, encoding, ARRAY_LENGTH(encoding), KMIP_1_0);
     
     struct cryptographic_parameters expected = {0};
-    init_cryptographic_parameters(&expected);
+    kmip_init_cryptographic_parameters(&expected);
     expected.block_cipher_mode = KMIP_BLOCK_CBC;
     expected.padding_method = KMIP_PAD_PKCS5;
     expected.hashing_algorithm = KMIP_HASH_SHA1;
     expected.key_role_type = KMIP_ROLE_KEK;
     struct cryptographic_parameters observed = {0};
-    init_cryptographic_parameters(&observed);
+    kmip_init_cryptographic_parameters(&observed);
     
-    int result = decode_cryptographic_parameters(&ctx, &observed);
+    int result = kmip_decode_cryptographic_parameters(&ctx, &observed);
     result = report_decoding_test_result(
         &ctx,
-        compare_cryptographic_parameters(&expected, &observed),
+        kmip_compare_cryptographic_parameters(&expected, &observed),
         result,
         __func__);
-    free_cryptographic_parameters(&ctx, &observed);
+    kmip_free_cryptographic_parameters(&ctx, &observed);
     kmip_destroy(&ctx);
     return(result);
 }
@@ -1737,7 +1737,7 @@ test_encode_encryption_key_information(void)
     eki.unique_identifier = &uuid;
     eki.cryptographic_parameters = &cp;
     
-    int result = encode_encryption_key_information(&ctx, &eki);
+    int result = kmip_encode_encryption_key_information(&ctx, &eki);
     result = report_encoding_test_result(
         &ctx,
         expected,
@@ -1772,7 +1772,7 @@ test_decode_encryption_key_information(void)
     uuid.size = 36;
     
     struct cryptographic_parameters cp = {0};
-    init_cryptographic_parameters(&cp);
+    kmip_init_cryptographic_parameters(&cp);
     
     cp.block_cipher_mode = KMIP_BLOCK_NIST_KEY_WRAP;
     
@@ -1782,13 +1782,13 @@ test_decode_encryption_key_information(void)
     
     struct encryption_key_information observed = {0};
     
-    int result = decode_encryption_key_information(&ctx, &observed);
+    int result = kmip_decode_encryption_key_information(&ctx, &observed);
     result = report_decoding_test_result(
         &ctx,
-        compare_encryption_key_information(&expected, &observed),
+        kmip_compare_encryption_key_information(&expected, &observed),
         result,
         __func__);
-    free_encryption_key_information(&ctx, &observed);
+    kmip_free_encryption_key_information(&ctx, &observed);
     kmip_destroy(&ctx);
     return(result);
 }
@@ -1824,7 +1824,7 @@ test_encode_mac_signature_key_information(void)
     mski.unique_identifier = &uuid;
     mski.cryptographic_parameters = &cp;
     
-    int result = encode_mac_signature_key_information(&ctx, &mski);
+    int result = kmip_encode_mac_signature_key_information(&ctx, &mski);
     result = report_encoding_test_result(
         &ctx,
         expected,
@@ -1859,7 +1859,7 @@ test_decode_mac_signature_key_information(void)
     uuid.size = 36;
 
     struct cryptographic_parameters cp = {0};
-    init_cryptographic_parameters(&cp);
+    kmip_init_cryptographic_parameters(&cp);
     
     cp.block_cipher_mode = KMIP_BLOCK_NIST_KEY_WRAP;
 
@@ -1869,13 +1869,13 @@ test_decode_mac_signature_key_information(void)
     
     struct mac_signature_key_information observed = {0};
     
-    int result = decode_mac_signature_key_information(&ctx, &observed);
+    int result = kmip_decode_mac_signature_key_information(&ctx, &observed);
     result = report_decoding_test_result(
         &ctx,
-        compare_mac_signature_key_information(&expected, &observed),
+        kmip_compare_mac_signature_key_information(&expected, &observed),
         result,
         __func__);
-    free_mac_signature_key_information(&ctx, &observed);
+    kmip_free_mac_signature_key_information(&ctx, &observed);
     kmip_destroy(&ctx);
     return(result);
 }
@@ -1918,7 +1918,7 @@ test_encode_key_wrapping_data(void)
     kwd.wrapping_method = KMIP_WRAP_ENCRYPT;
     kwd.encryption_key_info = &eki;
     
-    int result = encode_key_wrapping_data(&ctx, &kwd);
+    int result = kmip_encode_key_wrapping_data(&ctx, &kwd);
     result = report_encoding_test_result(
         &ctx,
         expected,
@@ -1956,7 +1956,7 @@ test_decode_key_wrapping_data(void)
     uuid.size = 36;
     
     struct cryptographic_parameters cp = {0};
-    init_cryptographic_parameters(&cp);
+    kmip_init_cryptographic_parameters(&cp);
     
     cp.block_cipher_mode = KMIP_BLOCK_NIST_KEY_WRAP;
     
@@ -1970,13 +1970,13 @@ test_decode_key_wrapping_data(void)
     
     struct key_wrapping_data observed = {0};
     
-    int result = decode_key_wrapping_data(&ctx, &observed);
+    int result = kmip_decode_key_wrapping_data(&ctx, &observed);
     result = report_decoding_test_result(
         &ctx,
-        compare_key_wrapping_data(&expected, &observed),
+        kmip_compare_key_wrapping_data(&expected, &observed),
         result,
         __func__);
-    free_key_wrapping_data(&ctx, &observed);
+    kmip_free_key_wrapping_data(&ctx, &observed);
     kmip_destroy(&ctx);
     return(result);
 }
@@ -2002,7 +2002,7 @@ test_encode_key_material_byte_string(void)
     key.value = value;
     key.size = ARRAY_LENGTH(value);
     
-    int result = encode_key_material(&ctx, KMIP_KEYFORMAT_RAW, &key);
+    int result = kmip_encode_key_material(&ctx, KMIP_KEYFORMAT_RAW, &key);
     result = report_encoding_test_result(
         &ctx,
         expected,
@@ -2036,18 +2036,18 @@ test_decode_key_material_byte_string(void)
     struct byte_string *expected_ptr = &expected;
     struct byte_string *observed_ptr = NULL;
     
-    int result = decode_key_material(
+    int result = kmip_decode_key_material(
         &ctx,
         KMIP_KEYFORMAT_RAW,
         (void**)&observed_ptr);
     result = report_decoding_test_result(
         &ctx,
-        compare_key_material(KMIP_KEYFORMAT_RAW,
-                             (void**)&expected_ptr,
-                             (void**)&observed_ptr),
+        kmip_compare_key_material(KMIP_KEYFORMAT_RAW,
+                                  (void**)&expected_ptr,
+                                  (void**)&observed_ptr),
         result,
         __func__);
-    free_key_material(&ctx, KMIP_KEYFORMAT_RAW, (void**)&observed_ptr);
+    kmip_free_key_material(&ctx, KMIP_KEYFORMAT_RAW, (void**)&observed_ptr);
     kmip_destroy(&ctx);
     return(result);
 }
@@ -2080,7 +2080,7 @@ test_encode_key_material_transparent_symmetric_key(void)
     struct transparent_symmetric_key tsk = {0};
     tsk.key = &key;
     
-    int result = encode_key_material(
+    int result = kmip_encode_key_material(
         &ctx,
         KMIP_KEYFORMAT_TRANS_SYMMETRIC_KEY,
         &tsk);
@@ -2124,18 +2124,18 @@ test_decode_key_material_transparent_symmetric_key(void)
     struct transparent_symmetric_key *expected_ptr = &expected;
     struct transparent_symmetric_key *observed_ptr = NULL;
     
-    int result = decode_key_material(
+    int result = kmip_decode_key_material(
         &ctx,
         KMIP_KEYFORMAT_TRANS_SYMMETRIC_KEY,
         (void**)&observed_ptr);
     result = report_decoding_test_result(
         &ctx,
-        compare_key_material(KMIP_KEYFORMAT_TRANS_SYMMETRIC_KEY,
-                             (void**)&expected_ptr,
-                             (void**)&observed_ptr),
+        kmip_compare_key_material(KMIP_KEYFORMAT_TRANS_SYMMETRIC_KEY,
+                                  (void**)&expected_ptr,
+                                  (void**)&observed_ptr),
         result,
         __func__);
-    free_key_material(
+    kmip_free_key_material(
         &ctx,
         KMIP_KEYFORMAT_TRANS_SYMMETRIC_KEY,
         (void**)&observed_ptr);
@@ -2168,7 +2168,7 @@ test_encode_key_value(void)
     struct key_value kv = {0};
     kv.key_material = &key;
     
-    int result = encode_key_value(
+    int result = kmip_encode_key_value(
         &ctx,
         KMIP_KEYFORMAT_RAW,
         &kv);
@@ -2207,16 +2207,16 @@ test_decode_key_value(void)
     expected.key_material = &key;
     struct key_value observed = {0};
     
-    int result = decode_key_value(
+    int result = kmip_decode_key_value(
         &ctx,
         KMIP_KEYFORMAT_RAW,
         &observed);
     result = report_decoding_test_result(
         &ctx,
-        compare_key_value(KMIP_KEYFORMAT_RAW, &expected, &observed),
+        kmip_compare_key_value(KMIP_KEYFORMAT_RAW, &expected, &observed),
         result,
         __func__);
-    free_key_value(&ctx, KMIP_KEYFORMAT_RAW, &observed);
+    kmip_free_key_value(&ctx, KMIP_KEYFORMAT_RAW, &observed);
     kmip_destroy(&ctx);
     return(result);
 }
@@ -2260,7 +2260,7 @@ test_encode_key_value_with_attributes(void)
     struct attribute attributes[2] = {0};
     for(int i = 0; i < 2; i++)
     {
-        init_attribute(&attributes[i]);
+        kmip_init_attribute(&attributes[i]);
     }
     
     enum cryptographic_algorithm ca = KMIP_CRYPTOALG_AES;
@@ -2275,7 +2275,7 @@ test_encode_key_value_with_attributes(void)
     kv.attributes = attributes;
     kv.attribute_count = ARRAY_LENGTH(attributes);
     
-    int result = encode_key_value(
+    int result = kmip_encode_key_value(
         &ctx,
         KMIP_KEYFORMAT_RAW,
         &kv);
@@ -2327,7 +2327,7 @@ test_decode_key_value_with_attributes(void)
     struct attribute attributes[2] = {0};
     for(size_t i = 0; i < 2; i++)
     {
-        init_attribute(&attributes[i]);
+        kmip_init_attribute(&attributes[i]);
     }
     
     enum cryptographic_algorithm ca = KMIP_CRYPTOALG_AES;
@@ -2343,16 +2343,16 @@ test_decode_key_value_with_attributes(void)
     expected.attribute_count = ARRAY_LENGTH(attributes);
     struct key_value observed = {0};
     
-    int result = decode_key_value(
+    int result = kmip_decode_key_value(
         &ctx,
         KMIP_KEYFORMAT_RAW,
         &observed);
     result = report_decoding_test_result(
         &ctx,
-        compare_key_value(KMIP_KEYFORMAT_RAW, &expected, &observed),
+        kmip_compare_key_value(KMIP_KEYFORMAT_RAW, &expected, &observed),
         result,
         __func__);
-    free_key_value(&ctx, KMIP_KEYFORMAT_RAW, &observed);
+    kmip_free_key_value(&ctx, KMIP_KEYFORMAT_RAW, &observed);
     kmip_destroy(&ctx);
     return(result);
 }
@@ -2422,7 +2422,7 @@ test_encode_key_block_key_value_byte_string(void)
     kb.cryptographic_length = 128;
     kb.key_wrapping_data = &kwd;
     
-    int result = encode_key_block(&ctx, &kb);
+    int result = kmip_encode_key_block(&ctx, &kb);
     result = report_encoding_test_result(
         &ctx,
         expected,
@@ -2480,7 +2480,7 @@ test_decode_key_block_key_value_byte_string(void)
     uuid.size = 36;
     
     struct cryptographic_parameters cp = {0};
-    init_cryptographic_parameters(&cp);
+    kmip_init_cryptographic_parameters(&cp);
     
     cp.block_cipher_mode = KMIP_BLOCK_NIST_KEY_WRAP;
     
@@ -2493,7 +2493,7 @@ test_decode_key_block_key_value_byte_string(void)
     kwd.encryption_key_info = &eki;
     
     struct key_block expected = {0};
-    init_key_block(&expected);
+    kmip_init_key_block(&expected);
     
     expected.key_format_type = KMIP_KEYFORMAT_RAW;
     expected.key_value = &key;
@@ -2503,15 +2503,15 @@ test_decode_key_block_key_value_byte_string(void)
     expected.key_wrapping_data = &kwd;
     
     struct key_block observed = {0};
-    init_key_block(&observed);
+    kmip_init_key_block(&observed);
     
-    int result = decode_key_block(&ctx, &observed);
+    int result = kmip_decode_key_block(&ctx, &observed);
     result = report_decoding_test_result(
         &ctx,
-        compare_key_block(&expected, &observed),
+        kmip_compare_key_block(&expected, &observed),
         result,
         __func__);
-    free_key_block(&ctx, &observed);
+    kmip_free_key_block(&ctx, &observed);
     kmip_destroy(&ctx);
     return(result);
 }
@@ -2554,7 +2554,7 @@ test_encode_key_block_key_value_structure(void)
     kb.cryptographic_algorithm = KMIP_CRYPTOALG_AES;
     kb.cryptographic_length = 128;
     
-    int result = encode_key_block(&ctx, &kb);
+    int result = kmip_encode_key_block(&ctx, &kb);
     result = report_encoding_test_result(
         &ctx,
         expected,
@@ -2597,7 +2597,7 @@ test_decode_key_block_key_value_structure(void)
     kv.key_material = &key;
     
     struct key_block expected = {0};
-    init_key_block(&expected);
+    kmip_init_key_block(&expected);
     
     expected.key_format_type = KMIP_KEYFORMAT_RAW;
     expected.key_value = &kv;
@@ -2606,15 +2606,15 @@ test_decode_key_block_key_value_structure(void)
     expected.cryptographic_length = 128;
     
     struct key_block observed = {0};
-    init_key_block(&observed);
+    kmip_init_key_block(&observed);
     
-    int result = decode_key_block(&ctx, &observed);
+    int result = kmip_decode_key_block(&ctx, &observed);
     result = report_decoding_test_result(
         &ctx,
-        compare_key_block(&expected, &observed),
+        kmip_compare_key_block(&expected, &observed),
         result,
         __func__);
-    free_key_block(&ctx, &observed);
+    kmip_free_key_block(&ctx, &observed);
     kmip_destroy(&ctx);
     return(result);
 }
@@ -2661,7 +2661,7 @@ test_encode_symmetric_key(void)
     struct symmetric_key sk = {0};
     sk.key_block = &kb;
     
-    int result = encode_symmetric_key(&ctx, &sk);
+    int result = kmip_encode_symmetric_key(&ctx, &sk);
     result = report_encoding_test_result(
         &ctx,
         expected,
@@ -2716,13 +2716,13 @@ test_decode_symmetric_key(void)
     
     struct symmetric_key observed = {0};
     
-    int result = decode_symmetric_key(&ctx, &observed);
+    int result = kmip_decode_symmetric_key(&ctx, &observed);
     result = report_decoding_test_result(
         &ctx,
-        compare_symmetric_key(&expected, &observed),
+        kmip_compare_symmetric_key(&expected, &observed),
         result,
         __func__);
-    free_symmetric_key(&ctx, &observed);
+    kmip_free_symmetric_key(&ctx, &observed);
     kmip_destroy(&ctx);
     return(result);
 }
@@ -2807,7 +2807,7 @@ test_encode_public_key(void)
     struct public_key pk = {0};
     pk.key_block = &kb;
     
-    int result = encode_public_key(&ctx, &pk);
+    int result = kmip_encode_public_key(&ctx, &pk);
     result = report_encoding_test_result(
         &ctx,
         expected,
@@ -2900,13 +2900,13 @@ test_decode_public_key(void)
     
     struct public_key observed = {0};
     
-    int result = decode_public_key(&ctx, &observed);
+    int result = kmip_decode_public_key(&ctx, &observed);
     result = report_decoding_test_result(
         &ctx,
-        compare_public_key(&expected, &observed),
+        kmip_compare_public_key(&expected, &observed),
         result,
         __func__);
-    free_public_key(&ctx, &observed);
+    kmip_free_public_key(&ctx, &observed);
     kmip_destroy(&ctx);
     return(result);
 }
@@ -3249,7 +3249,7 @@ test_encode_private_key(void)
     struct private_key pk = {0};
     pk.key_block = &kb;
     
-    int result = encode_private_key(&ctx, &pk);
+    int result = kmip_encode_private_key(&ctx, &pk);
     result = report_encoding_test_result(
         &ctx,
         expected,
@@ -3600,13 +3600,13 @@ test_decode_private_key(void)
     
     struct private_key observed = {0};
     
-    int result = decode_private_key(&ctx, &observed);
+    int result = kmip_decode_private_key(&ctx, &observed);
     result = report_decoding_test_result(
         &ctx,
-        compare_private_key(&expected, &observed),
+        kmip_compare_private_key(&expected, &observed),
         result,
         __func__);
-    free_private_key(&ctx, &observed);
+    kmip_free_private_key(&ctx, &observed);
     kmip_destroy(&ctx);
     return(result);
 }
@@ -3659,7 +3659,7 @@ test_encode_key_wrapping_specification(void)
     kws.attribute_names = &attribute_name;
     kws.attribute_name_count = 1;
     
-    int result = encode_key_wrapping_specification(&ctx, &kws);
+    int result = kmip_encode_key_wrapping_specification(&ctx, &kws);
     result = report_encoding_test_result(
         &ctx,
         expected,
@@ -3701,7 +3701,7 @@ test_decode_key_wrapping_specification(void)
     uuid.size = 36;
     
     struct cryptographic_parameters cp = {0};
-    init_cryptographic_parameters(&cp);
+    kmip_init_cryptographic_parameters(&cp);
     
     cp.block_cipher_mode = KMIP_BLOCK_NIST_KEY_WRAP;
     
@@ -3721,13 +3721,13 @@ test_decode_key_wrapping_specification(void)
     
     struct key_wrapping_specification observed = {0};
     
-    int result = decode_key_wrapping_specification(&ctx, &observed);
+    int result = kmip_decode_key_wrapping_specification(&ctx, &observed);
     result = report_decoding_test_result(
         &ctx,
-        compare_key_wrapping_specification(&expected, &observed),
+        kmip_compare_key_wrapping_specification(&expected, &observed),
         result,
         __func__);
-    free_key_wrapping_specification(&ctx, &observed);
+    kmip_free_key_wrapping_specification(&ctx, &observed);
     kmip_destroy(&ctx);
     return(result);
 }
@@ -3770,7 +3770,7 @@ test_encode_create_request_payload(void)
     struct attribute a[3] = {0};
     for(int i = 0; i < 3; i++)
     {
-        init_attribute(&a[i]);
+        kmip_init_attribute(&a[i]);
     }
     
     enum cryptographic_algorithm algorithm = KMIP_CRYPTOALG_AES;
@@ -3793,7 +3793,7 @@ test_encode_create_request_payload(void)
     crp.object_type = KMIP_OBJTYPE_SYMMETRIC_KEY;
     crp.template_attribute = &ta;
     
-    int result = encode_create_request_payload(&ctx, &crp);
+    int result = kmip_encode_create_request_payload(&ctx, &crp);
     result = report_encoding_test_result(
         &ctx,
         expected,
@@ -3841,7 +3841,7 @@ test_decode_create_request_payload(void)
     struct attribute a[3] = {0};
     for(int i = 0; i < 3; i++)
     {
-        init_attribute(&a[i]);
+        kmip_init_attribute(&a[i]);
     }
     
     enum cryptographic_algorithm algorithm = KMIP_CRYPTOALG_AES;
@@ -3866,13 +3866,13 @@ test_decode_create_request_payload(void)
     
     struct create_request_payload observed = {0};
     
-    int result = decode_create_request_payload(&ctx, &observed);
+    int result = kmip_decode_create_request_payload(&ctx, &observed);
     result = report_decoding_test_result(
         &ctx,
-        compare_create_request_payload(&expected, &observed),
+        kmip_compare_create_request_payload(&expected, &observed),
         result,
         __func__);
-    free_create_request_payload(&ctx, &observed);
+    kmip_free_create_request_payload(&ctx, &observed);
     kmip_destroy(&ctx);
     return(result);
 }
@@ -3904,7 +3904,7 @@ test_encode_create_response_payload(void)
     crp.object_type = KMIP_OBJTYPE_SYMMETRIC_KEY;
     crp.unique_identifier = &uuid;
     
-    int result = encode_create_response_payload(&ctx, &crp);
+    int result = kmip_encode_create_response_payload(&ctx, &crp);
     result = report_encoding_test_result(
         &ctx,
         expected,
@@ -3943,13 +3943,13 @@ test_decode_create_response_payload(void)
     
     struct create_response_payload observed = {0};
     
-    int result = decode_create_response_payload(&ctx, &observed);
+    int result = kmip_decode_create_response_payload(&ctx, &observed);
     result = report_decoding_test_result(
         &ctx,
-        compare_create_response_payload(&expected, &observed),
+        kmip_compare_create_response_payload(&expected, &observed),
         result,
         __func__);
-    free_create_response_payload(&ctx, &observed);
+    kmip_free_create_response_payload(&ctx, &observed);
     kmip_destroy(&ctx);
     return(result);
 }
@@ -3986,7 +3986,7 @@ test_encode_create_response_payload_with_template_attribute(void)
     uuid.size = 36;
     
     struct attribute a = {0};
-    init_attribute(&a);
+    kmip_init_attribute(&a);
     
     enum cryptographic_algorithm algorithm = KMIP_CRYPTOALG_AES;
     a.type = KMIP_ATTR_CRYPTOGRAPHIC_ALGORITHM;
@@ -4001,7 +4001,7 @@ test_encode_create_response_payload_with_template_attribute(void)
     crp.unique_identifier = &uuid;
     crp.template_attribute = &ta;
     
-    int result = encode_create_response_payload(&ctx, &crp);
+    int result = kmip_encode_create_response_payload(&ctx, &crp);
     result = report_encoding_test_result(
         &ctx,
         expected,
@@ -4043,7 +4043,7 @@ test_decode_create_response_payload_with_template_attribute(void)
     uuid.size = 36;
     
     struct attribute a = {0};
-    init_attribute(&a);
+    kmip_init_attribute(&a);
     
     enum cryptographic_algorithm algorithm = KMIP_CRYPTOALG_AES;
     a.type = KMIP_ATTR_CRYPTOGRAPHIC_ALGORITHM;
@@ -4060,13 +4060,13 @@ test_decode_create_response_payload_with_template_attribute(void)
     
     struct create_response_payload observed = {0};
     
-    int result = decode_create_response_payload(&ctx, &observed);
+    int result = kmip_decode_create_response_payload(&ctx, &observed);
     result = report_decoding_test_result(
         &ctx,
-        compare_create_response_payload(&expected, &observed),
+        kmip_compare_create_response_payload(&expected, &observed),
         result,
         __func__);
-    free_create_response_payload(&ctx, &observed);
+    kmip_free_create_response_payload(&ctx, &observed);
     kmip_destroy(&ctx);
     return(result);
 }
@@ -4095,7 +4095,7 @@ test_encode_get_request_payload(void)
     struct get_request_payload grp = {0};
     grp.unique_identifier = &uuid;
     
-    int result = encode_get_request_payload(&ctx, &grp);
+    int result = kmip_encode_get_request_payload(&ctx, &grp);
     result = report_encoding_test_result(
         &ctx,
         expected,
@@ -4131,13 +4131,13 @@ test_decode_get_request_payload(void)
     
     struct get_request_payload observed = {0};
     
-    int result = decode_get_request_payload(&ctx, &observed);
+    int result = kmip_decode_get_request_payload(&ctx, &observed);
     result = report_decoding_test_result(
         &ctx,
-        compare_get_request_payload(&expected, &observed),
+        kmip_compare_get_request_payload(&expected, &observed),
         result,
         __func__);
-    free_get_request_payload(&ctx, &observed);
+    kmip_free_get_request_payload(&ctx, &observed);
     kmip_destroy(&ctx);
     return(result);
 }
@@ -4172,7 +4172,7 @@ test_encode_get_request_payload_with_format_compression(void)
     grp.key_format_type = KMIP_KEYFORMAT_PKCS1;
     grp.key_compression_type = KMIP_KEYCOMP_EC_PUB_UNCOMPRESSED;
     
-    int result = encode_get_request_payload(&ctx, &grp);
+    int result = kmip_encode_get_request_payload(&ctx, &grp);
     result = report_encoding_test_result(
         &ctx,
         expected,
@@ -4235,7 +4235,7 @@ test_encode_get_request_payload_with_wrapping_spec(void)
     grp.unique_identifier = &uuid;
     grp.key_wrapping_spec = &kws;
     
-    int result = encode_get_request_payload(&ctx, &grp);
+    int result = kmip_encode_get_request_payload(&ctx, &grp);
     result = report_encoding_test_result(
         &ctx,
         expected,
@@ -4308,7 +4308,7 @@ test_encode_get_response_payload(void)
     grp.unique_identifier = &uuid;
     grp.object = &key;
     
-    int result = encode_get_response_payload(&ctx, &grp);
+    int result = kmip_encode_get_response_payload(&ctx, &grp);
     result = report_encoding_test_result(
         &ctx,
         expected,
@@ -4383,13 +4383,13 @@ test_decode_get_response_payload(void)
     
     struct get_response_payload observed = {0};
     
-    int result = decode_get_response_payload(&ctx, &observed);
+    int result = kmip_decode_get_response_payload(&ctx, &observed);
     result = report_decoding_test_result(
         &ctx,
-        compare_get_response_payload(&expected, &observed),
+        kmip_compare_get_response_payload(&expected, &observed),
         result,
         __func__);
-    free_get_response_payload(&ctx, &observed);
+    kmip_free_get_response_payload(&ctx, &observed);
     kmip_destroy(&ctx);
     return(result);
 }
@@ -4418,7 +4418,7 @@ test_encode_destroy_request_payload(void)
     struct destroy_request_payload drp = {0};
     drp.unique_identifier = &uuid;
     
-    int result = encode_destroy_request_payload(&ctx, &drp);
+    int result = kmip_encode_destroy_request_payload(&ctx, &drp);
     result = report_encoding_test_result(
         &ctx,
         expected,
@@ -4454,13 +4454,13 @@ test_decode_destroy_request_payload(void)
     
     struct destroy_request_payload observed = {0};
     
-    int result = decode_destroy_request_payload(&ctx, &observed);
+    int result = kmip_decode_destroy_request_payload(&ctx, &observed);
     result = report_decoding_test_result(
         &ctx,
-        compare_destroy_request_payload(&expected, &observed),
+        kmip_compare_destroy_request_payload(&expected, &observed),
         result,
         __func__);
-    free_destroy_request_payload(&ctx, &observed);
+    kmip_free_destroy_request_payload(&ctx, &observed);
     kmip_destroy(&ctx);
     return(result);
 }
@@ -4489,7 +4489,7 @@ test_encode_destroy_response_payload(void)
     struct destroy_response_payload drp = {0};
     drp.unique_identifier = &uuid;
     
-    int result = encode_destroy_response_payload(&ctx, &drp);
+    int result = kmip_encode_destroy_response_payload(&ctx, &drp);
     result = report_encoding_test_result(
         &ctx,
         expected,
@@ -4525,13 +4525,13 @@ test_decode_destroy_response_payload(void)
     
     struct destroy_response_payload observed = {0};
     
-    int result = decode_destroy_response_payload(&ctx, &observed);
+    int result = kmip_decode_destroy_response_payload(&ctx, &observed);
     result = report_decoding_test_result(
         &ctx,
-        compare_destroy_response_payload(&expected, &observed),
+        kmip_compare_destroy_response_payload(&expected, &observed),
         result,
         __func__);
-    free_destroy_response_payload(&ctx, &observed);
+    kmip_free_destroy_response_payload(&ctx, &observed);
     kmip_destroy(&ctx);
     return(result);
 }
@@ -4563,7 +4563,7 @@ test_encode_username_password_credential(void)
     upc.username = &username;
     upc.password = &password;
     
-    int result = encode_username_password_credential(&ctx, &upc);
+    int result = kmip_encode_username_password_credential(&ctx, &upc);
     result = report_encoding_test_result(
         &ctx,
         expected,
@@ -4602,13 +4602,13 @@ test_decode_username_password_credential(void)
     
     struct username_password_credential observed = {0};
     
-    int result = decode_username_password_credential(&ctx, &observed);
+    int result = kmip_decode_username_password_credential(&ctx, &observed);
     result = report_decoding_test_result(
         &ctx,
-        compare_username_password_credential(&expected, &observed),
+        kmip_compare_username_password_credential(&expected, &observed),
         result,
         __func__);
-    free_username_password_credential(&ctx, &observed);
+    kmip_free_username_password_credential(&ctx, &observed);
     kmip_destroy(&ctx);
     return(result);
 }
@@ -4646,7 +4646,7 @@ test_encode_credential_username_password_credential(void)
     c.credential_type = KMIP_CRED_USERNAME_AND_PASSWORD;
     c.credential_value = &upc;
     
-    int result = encode_credential(&ctx, &c);
+    int result = kmip_encode_credential(&ctx, &c);
     result = report_encoding_test_result(
         &ctx,
         expected,
@@ -4691,13 +4691,13 @@ test_decode_credential_username_password_credential(void)
 
     struct credential observed = {0};
     
-    int result = decode_credential(&ctx, &observed);
+    int result = kmip_decode_credential(&ctx, &observed);
     result = report_decoding_test_result(
         &ctx,
-        compare_credential(&expected, &observed),
+        kmip_compare_credential(&expected, &observed),
         result,
         __func__);
-    free_credential(&ctx, &observed);
+    kmip_free_credential(&ctx, &observed);
     kmip_destroy(&ctx);
     return(result);
 }
@@ -4740,7 +4740,7 @@ test_encode_authentication_username_password_credential(void)
     struct authentication a = {0};
     a.credential = &c;
     
-    int result = encode_authentication(&ctx, &a);
+    int result = kmip_encode_authentication(&ctx, &a);
     result = report_encoding_test_result(
         &ctx,
         expected,
@@ -4790,13 +4790,13 @@ test_decode_authentication_username_password_credential(void)
     
     struct authentication observed = {0};
     
-    int result = decode_authentication(&ctx, &observed);
+    int result = kmip_decode_authentication(&ctx, &observed);
     result = report_decoding_test_result(
         &ctx,
-        compare_authentication(&expected, &observed),
+        kmip_compare_authentication(&expected, &observed),
         result,
         __func__);
-    free_authentication(&ctx, &observed);
+    kmip_free_authentication(&ctx, &observed);
     kmip_destroy(&ctx);
     return(result);
 }
@@ -4855,7 +4855,7 @@ test_encode_request_header(void)
     a.credential = &c;
     
     struct request_header rh = {0};
-    init_request_header(&rh);
+    kmip_init_request_header(&rh);
     
     rh.protocol_version = &pv;
     rh.authentication = &a;
@@ -4863,7 +4863,7 @@ test_encode_request_header(void)
     rh.batch_order_option = KMIP_TRUE;
     rh.batch_count = 2;
     
-    int result = encode_request_header(&ctx, &rh);
+    int result = kmip_encode_request_header(&ctx, &rh);
     result = report_encoding_test_result(
         &ctx,
         expected,
@@ -4927,7 +4927,7 @@ test_decode_request_header(void)
     a.credential = &c;
     
     struct request_header expected = {0};
-    init_request_header(&expected);
+    kmip_init_request_header(&expected);
     
     expected.protocol_version = &pv;
     expected.authentication = &a;
@@ -4936,15 +4936,15 @@ test_decode_request_header(void)
     expected.batch_count = 2;
     
     struct request_header observed = {0};
-    init_request_header(&observed);
+    kmip_init_request_header(&observed);
     
-    int result = decode_request_header(&ctx, &observed);
+    int result = kmip_decode_request_header(&ctx, &observed);
     result = report_decoding_test_result(
         &ctx,
-        compare_request_header(&expected, &observed),
+        kmip_compare_request_header(&expected, &observed),
         result,
         __func__);
-    free_request_header(&ctx, &observed);
+    kmip_free_request_header(&ctx, &observed);
     kmip_destroy(&ctx);
     return(result);
 }
@@ -4974,13 +4974,13 @@ test_encode_response_header(void)
     pv.minor = 0;
     
     struct response_header rh = {0};
-    init_response_header(&rh);
+    kmip_init_response_header(&rh);
     
     rh.protocol_version = &pv;
     rh.time_stamp = 1335514341;
     rh.batch_count = 1;
     
-    int result = encode_response_header(&ctx, &rh);
+    int result = kmip_encode_response_header(&ctx, &rh);
     result = report_encoding_test_result(
         &ctx,
         expected,
@@ -5015,22 +5015,22 @@ test_decode_response_header(void)
     pv.minor = 0;
     
     struct response_header expected = {0};
-    init_response_header(&expected);
+    kmip_init_response_header(&expected);
     
     expected.protocol_version = &pv;
     expected.time_stamp = 1335514341;
     expected.batch_count = 1;
     
     struct response_header observed = {0};
-    init_response_header(&observed);
+    kmip_init_response_header(&observed);
     
-    int result = decode_response_header(&ctx, &observed);
+    int result = kmip_decode_response_header(&ctx, &observed);
     result = report_decoding_test_result(
         &ctx,
-        compare_response_header(&expected, &observed),
+        kmip_compare_response_header(&expected, &observed),
         result,
         __func__);
-    free_response_header(&ctx, &observed);
+    kmip_free_response_header(&ctx, &observed);
     kmip_destroy(&ctx);
     return(result);
 }
@@ -5066,7 +5066,7 @@ test_encode_request_batch_item_get_payload(void)
     rbi.operation = KMIP_OP_GET;
     rbi.request_payload = &grp;
     
-    int result = encode_request_batch_item(&ctx, &rbi);
+    int result = kmip_encode_request_batch_item(&ctx, &rbi);
     result = report_encoding_test_result(
         &ctx,
         expected,
@@ -5109,13 +5109,13 @@ test_decode_request_batch_item_get_payload(void)
     
     struct request_batch_item observed = {0};
     
-    int result = decode_request_batch_item(&ctx, &observed);
+    int result = kmip_decode_request_batch_item(&ctx, &observed);
     result = report_decoding_test_result(
         &ctx,
-        compare_request_batch_item(&expected, &observed),
+        kmip_compare_request_batch_item(&expected, &observed),
         result,
         __func__);
-    free_request_batch_item(&ctx, &observed);
+    kmip_free_request_batch_item(&ctx, &observed);
     kmip_destroy(&ctx);
     return(result);
 }
@@ -5193,7 +5193,7 @@ test_encode_response_batch_item_get_payload(void)
     rbi.result_status = KMIP_STATUS_SUCCESS;
     rbi.response_payload = &grp;
     
-    int result = encode_response_batch_item(&ctx, &rbi);
+    int result = kmip_encode_response_batch_item(&ctx, &rbi);
     result = report_encoding_test_result(
         &ctx,
         expected,
@@ -5279,13 +5279,13 @@ test_decode_response_batch_item_get_payload(void)
     
     struct response_batch_item observed = {0};
     
-    int result = decode_response_batch_item(&ctx, &observed);
+    int result = kmip_decode_response_batch_item(&ctx, &observed);
     result = report_decoding_test_result(
         &ctx,
-        compare_response_batch_item(&expected, &observed),
+        kmip_compare_response_batch_item(&expected, &observed),
         result,
         __func__);
-    free_response_batch_item(&ctx, &observed);
+    kmip_free_response_batch_item(&ctx, &observed);
     kmip_destroy(&ctx);
     return(result);
 }
@@ -5324,7 +5324,7 @@ test_encode_request_message_get(void)
     pv.minor = 0;
     
     struct request_header rh = {0};
-    init_request_header(&rh);
+    kmip_init_request_header(&rh);
     
     rh.protocol_version = &pv;
     rh.batch_count = 1;
@@ -5345,7 +5345,7 @@ test_encode_request_message_get(void)
     rm.batch_items = &rbi;
     rm.batch_count = 1;
     
-    int result = encode_request_message(&ctx, &rm);
+    int result = kmip_encode_request_message(&ctx, &rm);
     result = report_encoding_test_result(
         &ctx,
         expected,
@@ -5389,7 +5389,7 @@ test_decode_request_message_get(void)
     pv.minor = 0;
     
     struct request_header rh = {0};
-    init_request_header(&rh);
+    kmip_init_request_header(&rh);
     
     rh.protocol_version = &pv;
     rh.batch_count = 1;
@@ -5412,13 +5412,13 @@ test_decode_request_message_get(void)
     
     struct request_message observed = {0};
     
-    int result = decode_request_message(&ctx, &observed);
+    int result = kmip_decode_request_message(&ctx, &observed);
     result = report_decoding_test_result(
         &ctx,
-        compare_request_message(&expected, &observed),
+        kmip_compare_request_message(&expected, &observed),
         result,
         __func__);
-    free_request_message(&ctx, &observed);
+    kmip_free_request_message(&ctx, &observed);
     kmip_destroy(&ctx);
     return(result);
 }
@@ -5476,7 +5476,7 @@ test_encode_response_message_get(void)
     pv.minor = 0;
     
     struct response_header rh = {0};
-    init_response_header(&rh);
+    kmip_init_response_header(&rh);
     
     rh.protocol_version = &pv;
     rh.time_stamp = 1335514343;
@@ -5523,7 +5523,7 @@ test_encode_response_message_get(void)
     rm.batch_items = &rbi;
     rm.batch_count = 1;
     
-    int result = encode_response_message(&ctx, &rm);
+    int result = kmip_encode_response_message(&ctx, &rm);
     result = report_encoding_test_result(
         &ctx,
         expected,
@@ -5586,7 +5586,7 @@ test_decode_response_message_get(void)
     pv.minor = 0;
     
     struct response_header rh = {0};
-    init_response_header(&rh);
+    kmip_init_response_header(&rh);
     
     rh.protocol_version = &pv;
     rh.time_stamp = 1335514343;
@@ -5636,13 +5636,13 @@ test_decode_response_message_get(void)
     
     struct response_message observed = {0};
     
-    int result = decode_response_message(&ctx, &observed);
+    int result = kmip_decode_response_message(&ctx, &observed);
     result = report_decoding_test_result(
         &ctx,
-        compare_response_message(&expected, &observed),
+        kmip_compare_response_message(&expected, &observed),
         result,
         __func__);
-    free_response_message(&ctx, &observed);
+    kmip_free_response_message(&ctx, &observed);
     kmip_destroy(&ctx);
     return(result);
 }
@@ -5704,7 +5704,7 @@ test_encode_template_attribute(void)
     struct attribute a[4] = {0};
     for(int i = 0; i < 4; i++)
     {
-        init_attribute(&a[i]);
+        kmip_init_attribute(&a[i]);
     }
     
     enum cryptographic_algorithm algorithm = KMIP_CRYPTOALG_AES;
@@ -5735,7 +5735,7 @@ test_encode_template_attribute(void)
     ta.attributes = a;
     ta.attribute_count = ARRAY_LENGTH(a);
     
-    int result = encode_template_attribute(&ctx, &ta);
+    int result = kmip_encode_template_attribute(&ctx, &ta);
     result = report_encoding_test_result(
         &ctx,
         expected,
@@ -5802,7 +5802,7 @@ test_decode_template_attribute(void)
     struct attribute a[4] = {0};
     for(int i = 0; i < 4; i++)
     {
-        init_attribute(&a[i]);
+        kmip_init_attribute(&a[i]);
     }
     
     enum cryptographic_algorithm algorithm = KMIP_CRYPTOALG_AES;
@@ -5834,13 +5834,13 @@ test_decode_template_attribute(void)
     expected.attribute_count = ARRAY_LENGTH(a);
     struct template_attribute observed = {0};
     
-    int result = decode_template_attribute(&ctx, &observed);
+    int result = kmip_decode_template_attribute(&ctx, &observed);
     result = report_decoding_test_result(
         &ctx,
-        compare_template_attribute(&expected, &observed),
+        kmip_compare_template_attribute(&expected, &observed),
         result,
         __func__);
-    free_template_attribute(&ctx, &observed);
+    kmip_free_template_attribute(&ctx, &observed);
     kmip_destroy(&ctx);
     return(result);
 }
@@ -5909,7 +5909,7 @@ test_encode_device_credential(void)
     dc.machine_identifier = &mac;
     dc.media_identifier = &med;
     
-    int result = encode_device_credential(&ctx, &dc);
+    int result = kmip_encode_device_credential(&ctx, &dc);
     result = report_encoding_test_result(
         &ctx,
         expected,
@@ -5981,13 +5981,13 @@ test_decode_device_credential(void)
     
     struct device_credential observed = {0};
     
-    int result = decode_device_credential(&ctx, &observed);
+    int result = kmip_decode_device_credential(&ctx, &observed);
     result = report_decoding_test_result(
         &ctx,
-        compare_device_credential(&expected, &observed),
+        kmip_compare_device_credential(&expected, &observed),
         result,
         __func__);
-    free_device_credential(&ctx, &observed);
+    kmip_free_device_credential(&ctx, &observed);
     kmip_destroy(&ctx);
     return(result);
 }
@@ -6033,7 +6033,7 @@ test_encode_key_wrapping_data_with_encoding_option(void)
     kwd.encryption_key_info = &eki;
     kwd.encoding_option = KMIP_ENCODE_NO_ENCODING;
     
-    int result = encode_key_wrapping_data(&ctx, &kwd);
+    int result = kmip_encode_key_wrapping_data(&ctx, &kwd);
     result = report_encoding_test_result(
         &ctx,
         expected,
@@ -6073,7 +6073,7 @@ test_decode_key_wrapping_data_with_encoding_option(void)
     uuid.size = 36;
     
     struct cryptographic_parameters cp = {0};
-    init_cryptographic_parameters(&cp);
+    kmip_init_cryptographic_parameters(&cp);
     cp.block_cipher_mode = KMIP_BLOCK_NIST_KEY_WRAP;
     
     struct encryption_key_information eki = {0};
@@ -6087,13 +6087,13 @@ test_decode_key_wrapping_data_with_encoding_option(void)
     
     struct key_wrapping_data observed = {0};
     
-    int result = decode_key_wrapping_data(&ctx, &observed);
+    int result = kmip_decode_key_wrapping_data(&ctx, &observed);
     result = report_decoding_test_result(
         &ctx,
-        compare_key_wrapping_data(&expected, &observed),
+        kmip_compare_key_wrapping_data(&expected, &observed),
         result,
         __func__);
-    free_key_wrapping_data(&ctx, &observed);
+    kmip_free_key_wrapping_data(&ctx, &observed);
     kmip_destroy(&ctx);
     return(result);
 }
@@ -6139,7 +6139,7 @@ test_encode_key_wrapping_specification_with_encoding_option(void)
     kws.encryption_key_info = &eki;
     kws.encoding_option = KMIP_ENCODE_NO_ENCODING;
     
-    int result = encode_key_wrapping_specification(&ctx, &kws);
+    int result = kmip_encode_key_wrapping_specification(&ctx, &kws);
     result = report_encoding_test_result(
         &ctx,
         expected,
@@ -6183,7 +6183,7 @@ test_encode_nonce(void)
     n.nonce_id = &ni;
     n.nonce_value = &nv;
     
-    int result = encode_nonce(&ctx, &n);
+    int result = kmip_encode_nonce(&ctx, &n);
     result = report_encoding_test_result(
         &ctx,
         expected,
@@ -6224,13 +6224,13 @@ test_decode_nonce(void)
     
     struct nonce observed = {0};
     
-    int result = decode_nonce(&ctx, &observed);
+    int result = kmip_decode_nonce(&ctx, &observed);
     result = report_decoding_test_result(
         &ctx,
-        compare_nonce(&expected, &observed),
+        kmip_compare_nonce(&expected, &observed),
         result,
         __func__);
-    free_nonce(&ctx, &observed);
+    kmip_free_nonce(&ctx, &observed);
     kmip_destroy(&ctx);
     return(result);
 }
@@ -6297,7 +6297,7 @@ test_encode_attestation_credential(void)
     ac.attestation_measurement = &am;
     ac.attestation_assertion = &aa;
     
-    int result = encode_attestation_credential(&ctx, &ac);
+    int result = kmip_encode_attestation_credential(&ctx, &ac);
     result = report_encoding_test_result(
         &ctx,
         expected,
@@ -6371,13 +6371,13 @@ test_decode_attestation_credential(void)
     
     struct attestation_credential observed = {0};
     
-    int result = decode_attestation_credential(&ctx, &observed);
+    int result = kmip_decode_attestation_credential(&ctx, &observed);
     result = report_decoding_test_result(
         &ctx,
-        compare_attestation_credential(&expected, &observed),
+        kmip_compare_attestation_credential(&expected, &observed),
         result,
         __func__);
-    free_attestation_credential(&ctx, &observed);
+    kmip_free_attestation_credential(&ctx, &observed);
     kmip_destroy(&ctx);
     return(result);
 }
@@ -6447,7 +6447,7 @@ test_encode_request_header_with_attestation_details(void)
     };
     
     struct request_header rh = {0};
-    init_request_header(&rh);
+    kmip_init_request_header(&rh);
     
     rh.protocol_version = &pv;
     rh.attestation_capable_indicator = KMIP_TRUE;
@@ -6458,7 +6458,7 @@ test_encode_request_header_with_attestation_details(void)
     rh.batch_order_option = KMIP_TRUE;
     rh.batch_count = 2;
     
-    int result = encode_request_header(&ctx, &rh);
+    int result = kmip_encode_request_header(&ctx, &rh);
     result = report_encoding_test_result(
         &ctx,
         expected,
@@ -6522,7 +6522,7 @@ test_encode_response_header_with_attestation_details(void)
     };
     
     struct response_header rh = {0};
-    init_response_header(&rh);
+    kmip_init_response_header(&rh);
     
     rh.protocol_version = &pv;
     rh.time_stamp = 1335514341;
@@ -6531,7 +6531,7 @@ test_encode_response_header_with_attestation_details(void)
     rh.attestation_type_count = ARRAY_LENGTH(types);
     rh.batch_count = 1;
     
-    int result = encode_response_header(&ctx, &rh);
+    int result = kmip_encode_response_header(&ctx, &rh);
     result = report_encoding_test_result(
         &ctx,
         expected,
@@ -6594,7 +6594,7 @@ test_decode_response_header_with_attestation_details(void)
     };
     
     struct response_header expected = {0};
-    init_response_header(&expected);
+    kmip_init_response_header(&expected);
     
     expected.protocol_version = &pv;
     expected.time_stamp = 1335514341;
@@ -6604,15 +6604,15 @@ test_decode_response_header_with_attestation_details(void)
     expected.batch_count = 1;
     
     struct response_header observed = {0};
-    init_response_header(&observed);
+    kmip_init_response_header(&observed);
     
-    int result = decode_response_header(&ctx, &observed);
+    int result = kmip_decode_response_header(&ctx, &observed);
     result = report_decoding_test_result(
         &ctx,
-        compare_response_header(&expected, &observed),
+        kmip_compare_response_header(&expected, &observed),
         result,
         __func__);
-    free_response_header(&ctx, &observed);
+    kmip_free_response_header(&ctx, &observed);
     kmip_destroy(&ctx);
     return(result);
 }
@@ -6670,7 +6670,7 @@ test_encode_cryptographic_parameters_with_digital_signature_fields(void)
     cp.counter_length = 256;
     cp.initial_counter_value = 0;
     
-    int result = encode_cryptographic_parameters(&ctx, &cp);
+    int result = kmip_encode_cryptographic_parameters(&ctx, &cp);
     result = report_encoding_test_result(
         &ctx,
         expected,
@@ -6718,7 +6718,7 @@ test_decode_cryptographic_parameters_with_digital_signature_fields(void)
     kmip_init(&ctx, encoding, ARRAY_LENGTH(encoding), KMIP_1_2);
     
     struct cryptographic_parameters expected = {0};
-    init_cryptographic_parameters(&expected);
+    kmip_init_cryptographic_parameters(&expected);
     expected.block_cipher_mode = KMIP_BLOCK_CBC;
     expected.padding_method = KMIP_PAD_PKCS5;
     expected.hashing_algorithm = KMIP_HASH_SHA1;
@@ -6735,15 +6735,15 @@ test_decode_cryptographic_parameters_with_digital_signature_fields(void)
     expected.initial_counter_value = 0;
     
     struct cryptographic_parameters observed = {0};
-    init_cryptographic_parameters(&observed);
+    kmip_init_cryptographic_parameters(&observed);
     
-    int result = decode_cryptographic_parameters(&ctx, &observed);
+    int result = kmip_decode_cryptographic_parameters(&ctx, &observed);
     result = report_decoding_test_result(
         &ctx,
-        compare_cryptographic_parameters(&expected, &observed),
+        kmip_compare_cryptographic_parameters(&expected, &observed),
         result,
         __func__);
-    free_cryptographic_parameters(&ctx, &observed);
+    kmip_free_cryptographic_parameters(&ctx, &observed);
     kmip_destroy(&ctx);
     return(result);
 }
@@ -6832,7 +6832,7 @@ test_encode_cryptographic_parameters_with_mask_fields(void)
     cp.p_source = &ps;
     cp.trailer_field = 1;
     
-    int result = encode_cryptographic_parameters(&ctx, &cp);
+    int result = kmip_encode_cryptographic_parameters(&ctx, &cp);
     result = report_encoding_test_result(
         &ctx,
         expected,
@@ -6901,7 +6901,7 @@ test_decode_cryptographic_parameters_with_mask_fields(void)
     ps.size = ARRAY_LENGTH(value);
     
     struct cryptographic_parameters expected = {0};
-    init_cryptographic_parameters(&expected);
+    kmip_init_cryptographic_parameters(&expected);
     
     expected.block_cipher_mode = KMIP_BLOCK_CBC;
     expected.padding_method = KMIP_PAD_PKCS5;
@@ -6925,15 +6925,15 @@ test_decode_cryptographic_parameters_with_mask_fields(void)
     expected.trailer_field = 1;
     
     struct cryptographic_parameters observed = {0};
-    init_cryptographic_parameters(&observed);
+    kmip_init_cryptographic_parameters(&observed);
     
-    int result = decode_cryptographic_parameters(&ctx, &observed);
+    int result = kmip_decode_cryptographic_parameters(&ctx, &observed);
     result = report_decoding_test_result(
         &ctx,
-        compare_cryptographic_parameters(&expected, &observed),
+        kmip_compare_cryptographic_parameters(&expected, &observed),
         result,
         __func__);
-    free_cryptographic_parameters(&ctx, &observed);
+    kmip_free_cryptographic_parameters(&ctx, &observed);
     kmip_destroy(&ctx);
     return(result);
 }
@@ -6972,7 +6972,7 @@ test_encode_get_request_payload_with_wrap_type(void)
     
     grp.key_wrap_type = KMIP_WRAPTYPE_NOT_WRAPPED;
     
-    int result = encode_get_request_payload(&ctx, &grp);
+    int result = kmip_encode_get_request_payload(&ctx, &grp);
     result = report_encoding_test_result(
         &ctx,
         expected,
@@ -7064,7 +7064,7 @@ test_encode_request_header_with_correlation_values(void)
     scv.size = 8;
     
     struct request_header rh = {0};
-    init_request_header(&rh);
+    kmip_init_request_header(&rh);
     
     rh.protocol_version = &pv;
     rh.maximum_response_size = 4096;
@@ -7080,7 +7080,7 @@ test_encode_request_header_with_correlation_values(void)
     rh.client_correlation_value = &ccv;
     rh.server_correlation_value = &scv;
     
-    int result = encode_request_header(&ctx, &rh);
+    int result = kmip_encode_request_header(&ctx, &rh);
     result = report_encoding_test_result(
         &ctx,
         expected,
@@ -7156,7 +7156,7 @@ test_encode_response_header_with_correlation_values(void)
     scv.size = 8;
     
     struct response_header rh = {0};
-    init_response_header(&rh);
+    kmip_init_response_header(&rh);
     
     rh.protocol_version = &pv;
     rh.time_stamp = 1335514341;
@@ -7168,7 +7168,7 @@ test_encode_response_header_with_correlation_values(void)
     rh.client_correlation_value = &ccv;
     rh.server_correlation_value = &scv;
     
-    int result = encode_response_header(&ctx, &rh);
+    int result = kmip_encode_response_header(&ctx, &rh);
     result = report_encoding_test_result(
         &ctx,
         expected,
@@ -7243,7 +7243,7 @@ test_decode_response_header_with_correlation_values(void)
     scv.size = 8;
     
     struct response_header expected = {0};
-    init_response_header(&expected);
+    kmip_init_response_header(&expected);
     
     expected.protocol_version = &pv;
     expected.time_stamp = 1335514341;
@@ -7256,15 +7256,15 @@ test_decode_response_header_with_correlation_values(void)
     expected.server_correlation_value = &scv;
     
     struct response_header observed = {0};
-    init_response_header(&observed);
+    kmip_init_response_header(&observed);
     
-    int result = decode_response_header(&ctx, &observed);
+    int result = kmip_decode_response_header(&ctx, &observed);
     result = report_decoding_test_result(
         &ctx,
-        compare_response_header(&expected, &observed),
+        kmip_compare_response_header(&expected, &observed),
         result,
         __func__);
-    free_response_header(&ctx, &observed);
+    kmip_free_response_header(&ctx, &observed);
     kmip_destroy(&ctx);
     return(result);
 }
@@ -7330,7 +7330,7 @@ test_kmip_1_1_test_suite_3_1_1_0_a(void)
     pv.minor = 1;
     
     struct request_header rh = {0};
-    init_request_header(&rh);
+    kmip_init_request_header(&rh);
     
     rh.protocol_version = &pv;
     rh.batch_count = 1;
@@ -7338,7 +7338,7 @@ test_kmip_1_1_test_suite_3_1_1_0_a(void)
     struct attribute a[3] = {0};
     for(int i = 0; i < 3; i++)
     {
-        init_attribute(&a[i]);
+        kmip_init_attribute(&a[i]);
     }
     
     enum cryptographic_algorithm algorithm = KMIP_CRYPTOALG_AES;
@@ -7370,7 +7370,7 @@ test_kmip_1_1_test_suite_3_1_1_0_a(void)
     rm.batch_items = &rbi;
     rm.batch_count = 1;
     
-    int result = encode_request_message(&ctx, &rm);
+    int result = kmip_encode_request_message(&ctx, &rm);
     result = report_encoding_test_result(
         &ctx,
         expected,
@@ -7422,7 +7422,7 @@ test_kmip_1_1_test_suite_3_1_1_0_b(void)
     pv.minor = 1;
     
     struct response_header rh = {0};
-    init_response_header(&rh);
+    kmip_init_response_header(&rh);
     
     rh.protocol_version = &pv;
     rh.time_stamp = 1335514341;
@@ -7446,7 +7446,7 @@ test_kmip_1_1_test_suite_3_1_1_0_b(void)
     rm.batch_items = &rbi;
     rm.batch_count = 1;
     
-    int result = encode_response_message(&ctx, &rm);
+    int result = kmip_encode_response_message(&ctx, &rm);
     result = report_encoding_test_result(
         &ctx,
         expected,
@@ -7492,7 +7492,7 @@ test_kmip_1_1_test_suite_3_1_1_1_a(void)
     pv.minor = 1;
     
     struct request_header rh = {0};
-    init_request_header(&rh);
+    kmip_init_request_header(&rh);
     
     rh.protocol_version = &pv;
     rh.batch_count = 1;
@@ -7513,7 +7513,7 @@ test_kmip_1_1_test_suite_3_1_1_1_a(void)
     rm.batch_items = &rbi;
     rm.batch_count = 1;
     
-    int result = encode_request_message(&ctx, &rm);
+    int result = kmip_encode_request_message(&ctx, &rm);
     result = report_encoding_test_result(
         &ctx,
         expected,
@@ -7563,7 +7563,7 @@ test_kmip_1_1_test_suite_3_1_1_1_b(void)
     pv.minor = 1;
     
     struct response_header rh = {0};
-    init_response_header(&rh);
+    kmip_init_response_header(&rh);
     
     rh.protocol_version = &pv;
     rh.time_stamp = 1335514341;
@@ -7586,7 +7586,7 @@ test_kmip_1_1_test_suite_3_1_1_1_b(void)
     rm.batch_items = &rbi;
     rm.batch_count = 1;
     
-    int result = encode_response_message(&ctx, &rm);
+    int result = kmip_encode_response_message(&ctx, &rm);
     result = report_encoding_test_result(
         &ctx,
         expected,
@@ -7632,7 +7632,7 @@ test_kmip_1_1_test_suite_3_1_3_2_a(void)
     pv.minor = 1;
     
     struct request_header rh = {0};
-    init_request_header(&rh);
+    kmip_init_request_header(&rh);
     
     rh.protocol_version = &pv;
     rh.batch_count = 1;
@@ -7653,7 +7653,7 @@ test_kmip_1_1_test_suite_3_1_3_2_a(void)
     rm.batch_items = &rbi;
     rm.batch_count = 1;
     
-    int result = encode_request_message(&ctx, &rm);
+    int result = kmip_encode_request_message(&ctx, &rm);
     result = report_encoding_test_result(
         &ctx,
         expected,
@@ -7717,7 +7717,7 @@ test_kmip_1_1_test_suite_3_1_3_2_b(void)
     pv.minor = 1;
     
     struct response_header rh = {0};
-    init_response_header(&rh);
+    kmip_init_response_header(&rh);
     
     rh.protocol_version = &pv;
     rh.time_stamp = 1335514343;
@@ -7764,7 +7764,7 @@ test_kmip_1_1_test_suite_3_1_3_2_b(void)
     rm.batch_items = &rbi;
     rm.batch_count = 1;
     
-    int result = encode_response_message(&ctx, &rm);
+    int result = kmip_encode_response_message(&ctx, &rm);
     result = report_encoding_test_result(
         &ctx,
         expected,

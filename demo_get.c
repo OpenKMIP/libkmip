@@ -111,7 +111,7 @@ use_high_level_api(int argc, char **argv)
     {
         printf("The KMIP operation was executed with no errors.\n");
         printf("Result: ");
-        print_result_status_enum(result);
+        kmip_print_result_status_enum(result);
         printf(" (%d)\n\n", result);
         
         if(result == KMIP_STATUS_SUCCESS)
@@ -119,7 +119,7 @@ use_high_level_api(int argc, char **argv)
             printf("Symmetric Key ID: %s\n", argv[1]);
             printf("Symmetric Key Size: %d bits\n", key_size * 8);
             printf("Symmetric Key:");
-            print_buffer(key, key_size);
+            kmip_print_buffer(key, key_size);
             printf("\n");
         }
     }
@@ -221,17 +221,17 @@ use_mid_level_api(int argc, char **argv)
         printf("An error occurred while creating the symmetric key.");
         printf("Error Code: %d\n", result);
         printf("Error Name: ");
-        print_error_string(result);
+        kmip_print_error_string(result);
         printf("\n");
         printf("Context Error: %s\n", kmip_context.error_message);
         printf("Stack trace:\n");
-        print_stack_trace(&kmip_context);
+        kmip_print_stack_trace(&kmip_context);
     }
     else if(result >= 0)
     {
         printf("The KMIP operation was executed with no errors.\n");
         printf("Result: ");
-        print_result_status_enum(result);
+        kmip_print_result_status_enum(result);
         printf(" (%d)\n\n", result);
         
         if(result == KMIP_STATUS_SUCCESS)
@@ -239,7 +239,7 @@ use_mid_level_api(int argc, char **argv)
             printf("Symmetric Key ID: %s\n", argv[1]);
             printf("Symmetric Key Size: %d bits\n", key_size * 8);
             printf("Symmetric Key:");
-            print_buffer(key, key_size);
+            kmip_print_buffer(key, key_size);
             printf("\n");
         }
     }
