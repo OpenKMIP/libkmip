@@ -16,24 +16,83 @@
 
 #include <openssl/ssl.h>
 #include <stdio.h>
+#include <string.h>
 #include <time.h>
 
 #include "kmip.h"
 #include "kmip_bio.h"
 #include "kmip_memset.h"
 
-int
-use_low_level_api(void)
+void
+print_help(const char *app)
 {
+    printf("Usage: %s [flag value | flag] ...\n\n", app);
+    printf("Flags:\n");
+    printf("-a addr : the IP address of the KMIP server\n");
+    printf("-c path : path to client certificate file\n");
+    printf("-h      : print this help info\n");
+    printf("-k path : path to client key file\n");
+    printf("-p port : the port number of the KMIP server\n");
+    printf("-r path : path to CA certificate file\n");
+}
+
+int
+parse_arguments(int argc, char **argv,
+                char **server_address, char **server_port,
+                char **client_certificate, char **client_key, char **ca_certificate,
+                int *print_usage)
+{
+    for(int i = 1; i < argc; i++)
+    {
+        if(strncmp(argv[i], "-a", 2) == 0)
+        {
+            *server_address = argv[++i];
+        }
+        else if(strncmp(argv[i], "-c", 2) == 0)
+        {
+            *client_certificate = argv[++i];
+        }
+        else if(strncmp(argv[i], "-h", 2) == 0)
+        {
+            *print_usage = 1;
+        }
+        else if(strncmp(argv[i], "-k", 2) == 0)
+        {
+            *client_key = argv[++i];
+        }
+        else if(strncmp(argv[i], "-p", 2) == 0)
+        {
+            *server_port = argv[++i];
+        }
+        else if(strncmp(argv[i], "-r", 2) == 0)
+        {
+            *ca_certificate = argv[++i];
+        }
+        else
+        {
+            printf("Invalid option: '%s'\n", argv[i]);
+            print_help(argv[0]);
+            return(-1);
+        }
+    }
+    
+    return(0);
+}
+
+int
+use_low_level_api(const char *server_address,
+                  const char *server_port,
+                  const char *client_certificate,
+                  const char *client_key,
+                  const char *ca_certificate)
+{
+    /* Set up the TLS connection to the KMIP server. */
     SSL_CTX *ctx = NULL;
     SSL *ssl = NULL;
     OPENSSL_init_ssl(0, NULL);
     ctx = SSL_CTX_new(TLS_client_method());
     
-    char *client_certificate = "/etc/pykmip/certs/slugs/client_certificate_john_doe.pem";
-    char *client_key = "/etc/pykmip/certs/slugs/client_key_john_doe.pem";
-    char *ca_certificate = "/etc/pykmip/certs/slugs/root_certificate.pem";
-    
+    printf("\n");
     printf("Loading the client certificate: %s\n", client_certificate);
     int result = SSL_CTX_use_certificate_file(
         ctx,
@@ -81,12 +140,12 @@ use_low_level_api(void)
     
     BIO_get_ssl(bio, &ssl);
     SSL_set_mode(ssl, SSL_MODE_AUTO_RETRY);
-    BIO_set_conn_hostname(bio, "127.0.0.1");
-    BIO_set_conn_port(bio, "5696");
+    BIO_set_conn_hostname(bio, server_address);
+    BIO_set_conn_port(bio, server_port);
     result = BIO_do_connect(bio);
     if(result != 1)
     {
-        printf("BIO_do_connect failed (%d)\n", result);
+        printf("BIO_do_connect failed (error: %d)\n", result);
         BIO_free_all(bio);
         SSL_CTX_free(ctx);
         return(result);
@@ -216,6 +275,7 @@ use_low_level_api(void)
     BIO_free_all(bio);
     SSL_CTX_free(ctx);
     
+    printf("\n");
     if(result < 0)
     {
         printf("An error occurred while creating the symmetric key.");
@@ -301,7 +361,31 @@ use_low_level_api(void)
 }
 
 int
-main(void)
+main(int argc, char **argv)
 {
-    use_low_level_api();
+    char *server_address = NULL;
+    char *server_port = NULL;
+    char *client_certificate = NULL;
+    char *client_key = NULL;
+    char *ca_certificate = NULL;
+    int help = 0;
+    
+    int error = parse_arguments(argc, argv,
+                                &server_address, &server_port,
+                                &client_certificate, &client_key, &ca_certificate,
+                                &help);
+    if(error)
+    {
+        return(error);
+    }
+    if(help)
+    {
+        print_help(argv[0]);
+        return(0);
+    }
+    
+    use_low_level_api(server_address, server_port,
+                      client_certificate, client_key, ca_certificate);
+    
+    return(0);
 }

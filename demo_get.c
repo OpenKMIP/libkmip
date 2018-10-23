@@ -16,53 +16,112 @@
 
 #include <openssl/ssl.h>
 #include <stdio.h>
+#include <string.h>
 #include <time.h>
 
 #include "kmip.h"
 #include "kmip_bio.h"
 #include "kmip_memset.h"
 
-int
-use_mid_level_api(int argc, char **argv)
+void
+print_help(const char *app)
 {
-    if(argc != 2)
+    printf("Usage: %s [flag value | flag] ...\n\n", app);
+    printf("Flags:\n");
+    printf("-a addr : the IP address of the KMIP server\n");
+    printf("-c path : path to client certificate file\n");
+    printf("-h      : print this help info\n");
+    printf("-i id   : the ID of the symmetric key to retrieve\n");
+    printf("-k path : path to client key file\n");
+    printf("-p port : the port number of the KMIP server\n");
+    printf("-r path : path to CA certificate file\n");
+}
+
+int
+parse_arguments(int argc, char **argv,
+                char **server_address, char **server_port,
+                char **client_certificate, char **client_key, char **ca_certificate, char **id,
+                int *print_usage)
+{
+    for(int i = 1; i < argc; i++)
     {
-        printf("\nUsage: %s <id>\n\n", argv[0]);
-        return(-1);
+        if(strncmp(argv[i], "-a", 2) == 0)
+        {
+            *server_address = argv[++i];
+        }
+        else if(strncmp(argv[i], "-c", 2) == 0)
+        {
+            *client_certificate = argv[++i];
+        }
+        else if(strncmp(argv[i], "-h", 2) == 0)
+        {
+            *print_usage = 1;
+        }
+        else if(strncmp(argv[i], "-i", 2) == 0)
+        {
+            *id = argv[++i];
+        }
+        else if(strncmp(argv[i], "-k", 2) == 0)
+        {
+            *client_key = argv[++i];
+        }
+        else if(strncmp(argv[i], "-p", 2) == 0)
+        {
+            *server_port = argv[++i];
+        }
+        else if(strncmp(argv[i], "-r", 2) == 0)
+        {
+            *ca_certificate = argv[++i];
+        }
+        else
+        {
+            printf("Invalid option: '%s'\n", argv[i]);
+            print_help(argv[0]);
+            return(-1);
+        }
     }
     
+    return(0);
+}
+
+int
+use_mid_level_api(const char *server_address,
+                  const char *server_port,
+                  const char *client_certificate,
+                  const char *client_key,
+                  const char *ca_certificate,
+                  char *id)
+{
+    /* Set up the TLS connection to the KMIP server. */
     SSL_CTX *ctx = NULL;
     SSL *ssl = NULL;
     OPENSSL_init_ssl(0, NULL);
     ctx = SSL_CTX_new(TLS_client_method());
     
-    int result = SSL_CTX_use_certificate_file(
-        ctx,
-        "/etc/pykmip/certs/slugs/client_certificate_john_doe.pem",
-        SSL_FILETYPE_PEM);
+    printf("\n");
+    printf("Loading the client certificate: %s\n", client_certificate);
+    int result = SSL_CTX_use_certificate_file(ctx, client_certificate, SSL_FILETYPE_PEM);
     if(result != 1)
     {
-        printf("Loading the client certificate failed (%d)\n", result);
+        printf("Loading the client certificate failed (error: %d)\n", result);
         SSL_CTX_free(ctx);
         return(result);
     }
-    result = SSL_CTX_use_PrivateKey_file(
-        ctx,
-        "/etc/pykmip/certs/slugs/client_key_john_doe.pem",
-        SSL_FILETYPE_PEM);
+    
+    printf("Loading the client key: %s\n", client_key);
+    result = SSL_CTX_use_PrivateKey_file(ctx, client_key, SSL_FILETYPE_PEM);
     if(result != 1)
     {
-        printf("Loading the client key failed (%d)\n", result);
+        printf("Loading the client key failed (error: %d)\n", result);
         SSL_CTX_free(ctx);
         return(result);
     }
-    result = SSL_CTX_load_verify_locations(
-        ctx, 
-        "/etc/pykmip/certs/slugs/root_certificate.pem",
-        NULL);
+    
+    printf("Loading the CA certificate: %s\n", ca_certificate);
+    result = SSL_CTX_load_verify_locations(ctx, ca_certificate, NULL);
     if(result != 1)
     {
-        printf("Loading the CA file failed (%d)\n", result);
+        printf("Loading the CA file failed (error: %d)\n", result);
         SSL_CTX_free(ctx);
         return(result);
     }
@@ -78,13 +137,13 @@ use_mid_level_api(int argc, char **argv)
     
     BIO_get_ssl(bio, &ssl);
     SSL_set_mode(ssl, SSL_MODE_AUTO_RETRY);
-    BIO_set_conn_hostname(bio, "127.0.0.1");
-    BIO_set_conn_port(bio, "5696");
+    BIO_set_conn_hostname(bio, server_address);
+    BIO_set_conn_port(bio, server_port);
     result = BIO_do_connect(bio);
     
     if(result != 1)
     {
-        printf("BIO_do_connect failed (%d)\n", result);
+        printf("BIO_do_connect failed (error: %d)\n", result);
         BIO_free_all(bio);
         SSL_CTX_free(ctx);
         return(result);
@@ -92,19 +151,22 @@ use_mid_level_api(int argc, char **argv)
     
     char *key = NULL;
     int key_size = 0;
-    size_t id_size = kmip_strnlen_s(argv[1], 50);
+    size_t id_size = kmip_strnlen_s(id, 50);
     
+    /* Set up the KMIP context and send the request message. */
     KMIP kmip_context = {0};
     kmip_init(&kmip_context, NULL, 0, KMIP_1_0);
     
     result = kmip_bio_get_symmetric_key_with_context(
         &kmip_context, bio,
-        argv[1], id_size,
+        id, id_size,
         &key, &key_size);
     
     BIO_free_all(bio);
     SSL_CTX_free(ctx);
     
+    /* Handle the response results. */
+    printf("\n");
     if(result < 0)
     {
         printf("An error occurred while creating the symmetric key.");
@@ -121,11 +183,11 @@ use_mid_level_api(int argc, char **argv)
         printf("The KMIP operation was executed with no errors.\n");
         printf("Result: ");
         kmip_print_result_status_enum(result);
-        printf(" (%d)\n\n", result);
+        printf(" (%d)\n", result);
         
         if(result == KMIP_STATUS_SUCCESS)
         {
-            printf("Symmetric Key ID: %s\n", argv[1]);
+            printf("Symmetric Key ID: %s\n", id);
             printf("Symmetric Key Size: %d bits\n", key_size * 8);
             printf("Symmetric Key:");
             kmip_print_buffer(key, key_size);
@@ -139,6 +201,7 @@ use_mid_level_api(int argc, char **argv)
         kmip_free(NULL, key);
     }
     
+    /* Clean up the KMIP context and return the results. */
     kmip_destroy(&kmip_context);
     return(result);
 }
@@ -146,5 +209,31 @@ use_mid_level_api(int argc, char **argv)
 int
 main(int argc, char **argv)
 {
-    use_mid_level_api(argc, argv);
+    char *server_address = NULL;
+    char *server_port = NULL;
+    char *client_certificate = NULL;
+    char *client_key = NULL;
+    char *ca_certificate = NULL;
+    char *id = NULL;
+    int help = 0;
+    
+    int error = parse_arguments(
+        argc, argv,
+        &server_address, &server_port,
+        &client_certificate, &client_key, &ca_certificate, &id,
+        &help);
+    if(error)
+    {
+        return(error);
+    }
+    if(help)
+    {
+        print_help(argv[0]);
+        return(0);
+    }
+    
+    int result = use_mid_level_api(server_address, server_port,
+                                   client_certificate, client_key, ca_certificate,
+                                   id);
+    return(result);
 }
