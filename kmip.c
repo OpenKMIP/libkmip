@@ -608,7 +608,7 @@ kmip_check_enum_value(enum kmip_version version, enum tag t, int value)
             case KMIP_KEYFORMAT_TRANS_ECDH_PUBLIC_KEY:
             case KMIP_KEYFORMAT_TRANS_ECMQV_PRIVATE_KEY:
             case KMIP_KEYFORMAT_TRANS_ECMQV_PUBLIC_KEY:
-            /* TODO (peter-hamilton) What should happen if version >= 1.3? */
+            /* TODO (ph) What should happen if version >= 1.3? */
             return(KMIP_OK);
             break;
             
@@ -896,7 +896,6 @@ kmip_check_enum_value(enum kmip_version version, enum tag t, int value)
         break;
         
         case KMIP_TAG_TAG:
-        /* TODO (ph) Fill this in. */
         return(KMIP_OK);
         break;
         
@@ -954,6 +953,11 @@ Context Utilities
 void
 kmip_clear_errors(KMIP *ctx)
 {
+    if(ctx == NULL)
+    {
+        return;
+    }
+    
     for(size_t i = 0; i < ARRAY_LENGTH(ctx->errors); i++)
     {
         ctx->errors[i] = (ErrorFrame){0};
@@ -970,6 +974,11 @@ kmip_clear_errors(KMIP *ctx)
 void
 kmip_init(KMIP *ctx, uint8 *buffer, size_t buffer_size, enum kmip_version v)
 {
+    if(ctx == NULL)
+    {
+        return;
+    }
+    
     ctx->buffer = buffer;
     ctx->index = ctx->buffer;
     ctx->size = buffer_size;
@@ -1006,6 +1015,11 @@ kmip_init(KMIP *ctx, uint8 *buffer, size_t buffer_size, enum kmip_version v)
 void
 kmip_init_error_message(KMIP *ctx)
 {
+    if(ctx == NULL)
+    {
+        return;
+    }
+    
     if(ctx->error_message == NULL)
     {
         ctx->error_message = ctx->calloc_func(ctx->state, ctx->error_message_size, sizeof(char));
@@ -1014,7 +1028,12 @@ kmip_init_error_message(KMIP *ctx)
 
 int
 kmip_add_credential(KMIP *ctx, Credential *cred)
-{   
+{
+    if(ctx == NULL || cred == NULL)
+    {
+        return(KMIP_UNSET);
+    }
+    
     LinkedListItem *item = ctx->calloc_func(ctx->state, 1, sizeof(LinkedListItem));
     if(item != NULL)
     {
@@ -1028,7 +1047,12 @@ kmip_add_credential(KMIP *ctx, Credential *cred)
 
 void
 kmip_remove_credentials(KMIP *ctx)
-{   
+{
+    if(ctx == NULL)
+    {
+        return;
+    }
+    
     LinkedListItem *item = kmip_linked_list_pop(ctx->credential_list);
     while(item != NULL)
     {
@@ -1042,6 +1066,11 @@ kmip_remove_credentials(KMIP *ctx)
 void
 kmip_reset(KMIP *ctx)
 {
+    if(ctx == NULL)
+    {
+        return;
+    }
+    
     if(ctx->buffer != NULL)
     {
         kmip_memset(ctx->buffer, 0, ctx->size);
@@ -1054,6 +1083,11 @@ kmip_reset(KMIP *ctx)
 void
 kmip_rewind(KMIP *ctx)
 {
+    if(ctx == NULL)
+    {
+        return;
+    }
+    
     ctx->index = ctx->buffer;
     
     kmip_clear_errors(ctx);
@@ -1062,6 +1096,11 @@ kmip_rewind(KMIP *ctx)
 void
 kmip_set_buffer(KMIP *ctx, void *buffer, size_t buffer_size)
 {
+    if(ctx == NULL)
+    {
+        return;
+    }
+    
     /* TODO (ph) Add own_buffer if buffer == NULL? */
     ctx->buffer = (uint8 *)buffer;
     ctx->index = ctx->buffer;
@@ -1071,6 +1110,11 @@ kmip_set_buffer(KMIP *ctx, void *buffer, size_t buffer_size)
 void
 kmip_destroy(KMIP *ctx)
 {
+    if(ctx == NULL)
+    {
+        return;
+    }
+    
     kmip_reset(ctx);
     kmip_set_buffer(ctx, NULL, 0);
 
@@ -1086,9 +1130,13 @@ kmip_destroy(KMIP *ctx)
 }
 
 void
-kmip_push_error_frame(KMIP *ctx, const char *function, 
-                      const int line)
+kmip_push_error_frame(KMIP *ctx, const char *function, const int line)
 {
+    if(ctx == NULL)
+    {
+        return;
+    }
+    
     for(size_t i = 0; i < 20; i++)
     {
         ErrorFrame *frame = &ctx->errors[i];
@@ -1105,6 +1153,11 @@ kmip_push_error_frame(KMIP *ctx, const char *function,
 void
 kmip_set_enum_error_message(KMIP *ctx, enum tag t, int value, int result)
 {
+    if(ctx == NULL)
+    {
+        return;
+    }
+    
     switch(result)
     {
         /* TODO (ph) Update error message for KMIP version 2.0+ */
@@ -1123,6 +1176,11 @@ kmip_set_enum_error_message(KMIP *ctx, enum tag t, int value, int result)
 void
 kmip_set_alloc_error_message(KMIP *ctx, size_t size, const char *type)
 {
+    if(ctx == NULL)
+    {
+        return;
+    }
+    
     kmip_init_error_message(ctx);
     snprintf(ctx->error_message, ctx->error_message_size, "Could not allocate %zd bytes for a %s", size, type);
 }
@@ -1130,6 +1188,11 @@ kmip_set_alloc_error_message(KMIP *ctx, size_t size, const char *type)
 void
 kmip_set_error_message(KMIP *ctx, const char *message)
 {
+    if(ctx == NULL)
+    {
+        return;
+    }
+    
     kmip_init_error_message(ctx);
     snprintf(ctx->error_message, ctx->error_message_size, "%s", message);
 }
@@ -1137,6 +1200,11 @@ kmip_set_error_message(KMIP *ctx, const char *message)
 int
 kmip_is_tag_next(const KMIP *ctx, enum tag t)
 {
+    if(ctx == NULL)
+    {
+        return(KMIP_FALSE);
+    }
+    
     uint8 *index = ctx->index;
     
     if((ctx->size - (index - ctx->buffer)) < 3)
@@ -1161,6 +1229,11 @@ kmip_is_tag_next(const KMIP *ctx, enum tag t)
 int
 kmip_is_tag_type_next(const KMIP *ctx, enum tag t, enum type s)
 {
+    if(ctx == NULL)
+    {
+        return(KMIP_FALSE);
+    }
+    
     uint8 *index = ctx->index;
     
     if((ctx->size - (index - ctx->buffer)) < 4)
@@ -1186,6 +1259,11 @@ kmip_is_tag_type_next(const KMIP *ctx, enum tag t, enum type s)
 int
 kmip_get_num_items_next(KMIP *ctx, enum tag t)
 {
+    if(ctx == NULL)
+    {
+        return(0);
+    }
+    
     int count = 0;
     
     uint8 *index = ctx->index;
@@ -1231,6 +1309,11 @@ Initialization Functions
 void
 kmip_init_protocol_version(ProtocolVersion *value, enum kmip_version kmip_version)
 {
+    if(value == NULL)
+    {
+        return;
+    }
+    
     switch(kmip_version)
     {
         case KMIP_1_4:
@@ -1264,6 +1347,11 @@ kmip_init_protocol_version(ProtocolVersion *value, enum kmip_version kmip_versio
 void
 kmip_init_attribute(Attribute *value)
 {
+    if(value == NULL)
+    {
+        return;
+    }
+    
     value->type = 0;
     value->index = KMIP_UNSET;
     value->value = NULL;
@@ -1272,6 +1360,11 @@ kmip_init_attribute(Attribute *value)
 void
 kmip_init_cryptographic_parameters(CryptographicParameters *value)
 {
+    if(value == NULL)
+    {
+        return;
+    }
+    
     value->block_cipher_mode = 0;
     value->padding_method = 0;
     value->hashing_algorithm = 0;
@@ -1297,6 +1390,11 @@ kmip_init_cryptographic_parameters(CryptographicParameters *value)
 void
 kmip_init_key_block(KeyBlock *value)
 {
+    if(value == NULL)
+    {
+        return;
+    }
+    
     value->key_format_type = 0;
     value->key_compression_type = 0;
     value->key_value = NULL;
@@ -1309,6 +1407,11 @@ kmip_init_key_block(KeyBlock *value)
 void
 kmip_init_request_header(RequestHeader *value)
 {
+    if(value == NULL)
+    {
+        return;
+    }
+    
     value->protocol_version = NULL;
     value->maximum_response_size = KMIP_UNSET;
     value->asynchronous_indicator = KMIP_UNSET;
@@ -1329,6 +1432,11 @@ kmip_init_request_header(RequestHeader *value)
 void
 kmip_init_response_header(ResponseHeader *value)
 {
+    if(value == NULL)
+    {
+        return;
+    }
+    
     value->protocol_version = NULL;
     value->time_stamp = 0;
     value->batch_count = KMIP_UNSET;
@@ -1348,6 +1456,11 @@ Printing Functions
 void
 kmip_print_buffer(void *buffer, int size)
 {
+    if(buffer == NULL)
+    {
+        return;
+    }
+    
     uint8 *index = (uint8 *)buffer;
     for(int i = 0; i < size; i++)
     {
@@ -1362,6 +1475,11 @@ kmip_print_buffer(void *buffer, int size)
 void
 kmip_print_stack_trace(KMIP *ctx)
 {
+    if(ctx == NULL)
+    {
+        return;
+    }
+    
     ErrorFrame *index = ctx->frame_index;
     do
     {
@@ -3424,18 +3542,24 @@ void
 kmip_print_username_password_credential(int indent, UsernamePasswordCredential *value)
 {
     printf("%*sUsername/Password Credential @ %p\n", indent, "", (void *)value);
+    
+    /* TODO (ph) Fill this in. */
 }
 
 void
 kmip_print_device_credential(int indent, DeviceCredential *value)
 {
     printf("%*sDevice Credential @ %p\n", indent, "", (void *)value);
+
+    /* TODO (ph) Fill this in. */
 }
 
 void
 kmip_print_attestation_credential(int indent, AttestationCredential *value)
 {
     printf("%*sAttestation Credential @ %p\n", indent, "", (void *)value);
+
+    /* TODO (ph) Fill this in. */
 }
 
 void
@@ -3684,6 +3808,11 @@ Freeing Functions
 void
 kmip_free_buffer(KMIP *ctx, void *buffer, size_t size)
 {
+    if(ctx == NULL)
+    {
+        return;
+    }
+    
     ctx->memset_func(buffer, 0, size);
     ctx->free_func(ctx->state, buffer);
 }
@@ -3691,6 +3820,11 @@ kmip_free_buffer(KMIP *ctx, void *buffer, size_t size)
 void
 kmip_free_text_string(KMIP *ctx, TextString *value)
 {
+    if(ctx == NULL)
+    {
+        return;
+    }
+    
     if(value != NULL)
     {
         if(value->value != NULL)
