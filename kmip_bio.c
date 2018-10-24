@@ -700,6 +700,19 @@ int kmip_bio_create_symmetric_key_with_context(KMIP *ctx, BIO *bio,
     rm.batch_items = &rbi;
     rm.batch_count = 1;
     
+    /* Add the context credential to the request message if it exists. */
+    /* TODO (ph) Update this to add multiple credentials. */
+    Authentication auth = {0};
+    if(ctx->credential_list != NULL)
+    {
+        LinkedListItem *item = ctx->credential_list->head;
+        if(item != NULL)
+        {
+            auth.credential = (Credential *)item->data;
+            rh.authentication = &auth;
+        }
+    }
+    
     /* Encode the request message. Dynamically resize the encoding buffer */
     /* if it's not big enough. Once encoding succeeds, send the request   */
     /* message.                                                           */
@@ -896,6 +909,19 @@ int kmip_bio_get_symmetric_key_with_context(KMIP *ctx, BIO *bio,
     rm.request_header = &rh;
     rm.batch_items = &rbi;
     rm.batch_count = 1;
+    
+    /* Add the context credential to the request message if it exists. */
+    /* TODO (ph) Update this to add multiple credentials. */
+    Authentication auth = {0};
+    if(ctx->credential_list != NULL)
+    {
+        LinkedListItem *item = ctx->credential_list->head;
+        if(item != NULL)
+        {
+            auth.credential = (Credential *)item->data;
+            rh.authentication = &auth;
+        }
+    }
     
     /* Encode the request message. Dynamically resize the encoding buffer */
     /* if it's not big enough. Once encoding succeeds, send the request   */
@@ -1115,6 +1141,19 @@ int kmip_bio_destroy_symmetric_key_with_context(KMIP *ctx, BIO *bio,
     rm.request_header = &rh;
     rm.batch_items = &rbi;
     rm.batch_count = 1;
+    
+    /* Add the context credential to the request message if it exists. */
+    /* TODO (ph) Update this to add multiple credentials. */
+    Authentication auth = {0};
+    if(ctx->credential_list != NULL)
+    {
+        LinkedListItem *item = ctx->credential_list->head;
+        if(item != NULL)
+        {
+            auth.credential = (Credential *)item->data;
+            rh.authentication = &auth;
+        }
+    }
     
     /* Encode the request message. Dynamically resize the encoding buffer */
     /* if it's not big enough. Once encoding succeeds, send the request   */
