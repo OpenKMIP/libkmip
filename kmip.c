@@ -1569,6 +1569,35 @@ kmip_print_error_string(int value)
 }
 
 void
+kmip_print_attestation_type_enum(enum attestation_type value)
+{
+    if(value == 0)
+    {
+        printf("-");
+        return;
+    }
+    
+    switch(value)
+    {
+        case KMIP_ATTEST_TPM_QUOTE:
+        printf("TPM Quote");
+        break;
+        
+        case KMIP_ATTEST_TCG_INTEGRITY_REPORT:
+        printf("TCG Integrity Report");
+        break;
+        
+        case KMIP_ATTEST_SAML_ASSERTION:
+        printf("SAML Assertion");
+        break;
+        
+        default:
+        printf("Unknown");
+        break;
+    };
+}
+
+void
 kmip_print_batch_error_continuation_option(enum batch_error_continuation_option value)
 {
     if(value == 0)
@@ -3543,7 +3572,11 @@ kmip_print_username_password_credential(int indent, UsernamePasswordCredential *
 {
     printf("%*sUsername/Password Credential @ %p\n", indent, "", (void *)value);
     
-    /* TODO (ph) Fill this in. */
+    if(value != NULL)
+    {
+        kmip_print_text_string(indent + 2, "Username", value->username);
+        kmip_print_text_string(indent + 2, "Password", value->password);
+    }
 }
 
 void
@@ -3551,7 +3584,15 @@ kmip_print_device_credential(int indent, DeviceCredential *value)
 {
     printf("%*sDevice Credential @ %p\n", indent, "", (void *)value);
 
-    /* TODO (ph) Fill this in. */
+    if(value != NULL)
+    {
+        kmip_print_text_string(indent + 2, "Device Serial Number", value->device_serial_number);
+        kmip_print_text_string(indent + 2, "Password", value->password);
+        kmip_print_text_string(indent + 2, "Device Identifier", value->device_identifier);
+        kmip_print_text_string(indent + 2, "Network Identifier", value->network_identifier);
+        kmip_print_text_string(indent + 2, "Machine Identifier", value->machine_identifier);
+        kmip_print_text_string(indent + 2, "Media Identifier", value->media_identifier);
+    }
 }
 
 void
@@ -3559,7 +3600,15 @@ kmip_print_attestation_credential(int indent, AttestationCredential *value)
 {
     printf("%*sAttestation Credential @ %p\n", indent, "", (void *)value);
 
-    /* TODO (ph) Fill this in. */
+    if(value != NULL)
+    {
+        kmip_print_nonce(indent + 2, value->nonce);
+        printf("%*sAttestation Type: ", indent + 2, "");
+        kmip_print_attestation_type_enum(value->attestation_type);
+        printf("\n");
+        kmip_print_byte_string(indent + 2, "Attestation Measurement", value->attestation_measurement);
+        kmip_print_byte_string(indent + 2, "Attestation Assertion", value->attestation_assertion);
+    }
 }
 
 void
