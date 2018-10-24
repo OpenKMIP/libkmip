@@ -35,12 +35,16 @@ print_help(const char *app)
     printf("-k path : path to client key file\n");
     printf("-p port : the port number of the KMIP server\n");
     printf("-r path : path to CA certificate file\n");
+    printf("-s pass : the password for KMIP server authentication\n");
+    printf("-u user : the username for KMIP server authentication\n");
 }
 
 int
 parse_arguments(int argc, char **argv,
                 char **server_address, char **server_port,
-                char **client_certificate, char **client_key, char **ca_certificate, char **id,
+                char **client_certificate, char **client_key, char **ca_certificate,
+                char **username, char **password,
+                char **id,
                 int *print_usage)
 {
     for(int i = 1; i < argc; i++)
@@ -73,6 +77,14 @@ parse_arguments(int argc, char **argv,
         {
             *ca_certificate = argv[++i];
         }
+        else if(strncmp(argv[i], "-s", 2) == 0)
+        {
+            *password = argv[++i];
+        }
+        else if(strncmp(argv[i], "-u", 2) == 0)
+        {
+            *username = argv[++i];
+        }
         else
         {
             printf("Invalid option: '%s'\n", argv[i]);
@@ -85,11 +97,13 @@ parse_arguments(int argc, char **argv,
 }
 
 int
-use_mid_level_api(const char *server_address,
-                  const char *server_port,
-                  const char *client_certificate,
-                  const char *client_key,
-                  const char *ca_certificate,
+use_mid_level_api(char *server_address,
+                  char *server_port,
+                  char *client_certificate,
+                  char *client_key,
+                  char *ca_certificate,
+                  char *username,
+                  char *password,
                   char *id)
 {
     /* Set up the TLS connection to the KMIP server. */
@@ -157,6 +171,33 @@ use_mid_level_api(const char *server_address,
     KMIP kmip_context = {0};
     kmip_init(&kmip_context, NULL, 0, KMIP_1_0);
     
+    TextString u = {0};
+    u.value = username;
+    u.size = kmip_strnlen_s(username, 50);
+    
+    TextString p = {0};
+    p.value = password;
+    p.size = kmip_strnlen_s(password, 50);
+    
+    UsernamePasswordCredential upc = {0};
+    upc.username = &u;
+    upc.password = &p;
+    
+    Credential credential = {0};
+    credential.credential_type = KMIP_CRED_USERNAME_AND_PASSWORD;
+    credential.credential_value = &upc;
+    
+    result = kmip_add_credential(&kmip_context, &credential);
+    
+    if(result != KMIP_OK)
+    {
+        printf("Failed to add credential to the KMIP context.\n");
+        BIO_free_all(bio);
+        SSL_CTX_free(ctx);
+        kmip_destroy(&kmip_context);
+        return(result);
+    }
+    
     result = kmip_bio_get_symmetric_key_with_context(
         &kmip_context, bio,
         id, id_size,
@@ -214,13 +255,17 @@ main(int argc, char **argv)
     char *client_certificate = NULL;
     char *client_key = NULL;
     char *ca_certificate = NULL;
+    char *username = NULL;
+    char *password = NULL;
     char *id = NULL;
     int help = 0;
     
     int error = parse_arguments(
         argc, argv,
         &server_address, &server_port,
-        &client_certificate, &client_key, &ca_certificate, &id,
+        &client_certificate, &client_key, &ca_certificate,
+        &username, &password,
+        &id,
         &help);
     if(error)
     {
@@ -234,6 +279,7 @@ main(int argc, char **argv)
     
     int result = use_mid_level_api(server_address, server_port,
                                    client_certificate, client_key, ca_certificate,
+                                   username, password,
                                    id);
     return(result);
 }
