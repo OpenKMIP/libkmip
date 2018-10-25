@@ -96,6 +96,28 @@ parse_arguments(int argc, char **argv,
     return(0);
 }
 
+void *
+demo_calloc(void *state, size_t num, size_t size)
+{
+    printf("demo_calloc called: state = %p, num = %zu, size = %zu\n", state, num, size);
+    return(calloc(num, size));
+}
+
+void *
+demo_realloc(void *state, void *ptr, size_t size)
+{
+    printf("demo_realloc called: state = %p, ptr = %p, size = %zu\n", state, ptr, size);
+    return(realloc(ptr, size));
+}
+
+void
+demo_free(void *state, void *ptr)
+{
+    printf("demo_free called: state = %p, ptr = %p\n", state, ptr);
+    free(ptr);
+    return;
+}
+
 int
 use_mid_level_api(char *server_address,
                   char *server_port,
@@ -163,12 +185,19 @@ use_mid_level_api(char *server_address,
         return(result);
     }
     
+    printf("\n");
+    
     char *key = NULL;
     int key_size = 0;
     size_t id_size = kmip_strnlen_s(id, 50);
     
     /* Set up the KMIP context and send the request message. */
     KMIP kmip_context = {0};
+    
+    kmip_context.calloc_func = &demo_calloc;
+    kmip_context.realloc_func = &demo_realloc;
+    kmip_context.free_func = &demo_free;
+    
     kmip_init(&kmip_context, NULL, 0, KMIP_1_0);
     
     TextString u = {0};
@@ -235,6 +264,8 @@ use_mid_level_api(char *server_address,
             printf("\n");
         }
     }
+    
+    printf("\n");
     
     if(key != NULL)
     {
