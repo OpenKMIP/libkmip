@@ -972,14 +972,14 @@ kmip_clear_errors(KMIP *ctx)
 }
 
 void
-kmip_init(KMIP *ctx, uint8 *buffer, size_t buffer_size, enum kmip_version v)
+kmip_init(KMIP *ctx, void *buffer, size_t buffer_size, enum kmip_version v)
 {
     if(ctx == NULL)
     {
         return;
     }
     
-    ctx->buffer = buffer;
+    ctx->buffer = (uint8 *)buffer;
     ctx->index = ctx->buffer;
     ctx->size = buffer_size;
     ctx->version = v;

@@ -29,8 +29,13 @@ OpenSSH BIO API
 
 int kmip_bio_create_symmetric_key(BIO *bio,
                                   TemplateAttribute *template_attribute,
-                                  char **id, size_t *id_size)
+                                  char **id, int *id_size)
 {
+    if(bio == NULL || template_attribute == NULL || id == NULL || id_size == NULL)
+    {
+        return(KMIP_ARG_INVALID);
+    }
+    
     /* Set up the KMIP context and the initial encoding buffer. */
     KMIP ctx = {0};
     kmip_init(&ctx, NULL, 0, KMIP_1_0);
@@ -213,7 +218,7 @@ int kmip_bio_create_symmetric_key(BIO *bio,
         1,
         unique_identifier->size + 1);
     *id_size = unique_identifier->size;
-    for(size_t i = 0; i < *id_size; i++)
+    for(int i = 0; i < *id_size; i++)
     {
         result_id[i] = unique_identifier->value[i];
     }
@@ -230,8 +235,13 @@ int kmip_bio_create_symmetric_key(BIO *bio,
     return(result);
 }
 
-int kmip_bio_destroy_symmetric_key(BIO *bio, char *uuid, size_t uuid_size)
+int kmip_bio_destroy_symmetric_key(BIO *bio, char *uuid, int uuid_size)
 {
+    if(bio == NULL || uuid == NULL || uuid_size <= 0)
+    {
+        return(KMIP_ARG_INVALID);
+    }
+    
     /* Set up the KMIP context and the initial encoding buffer. */
     KMIP ctx = {0};
     kmip_init(&ctx, NULL, 0, KMIP_1_0);
@@ -427,9 +437,14 @@ int kmip_bio_destroy_symmetric_key(BIO *bio, char *uuid, size_t uuid_size)
 }
 
 int kmip_bio_get_symmetric_key(BIO *bio,
-                               char *id, size_t id_size,
-                               char **key, size_t *key_size)
+                               char *id, int id_size,
+                               char **key, int *key_size)
 {
+    if(bio == NULL || id == NULL || id_size <= 0 || key == NULL || key_size == NULL)
+    {
+        return(KMIP_ARG_INVALID);
+    }
+    
     /* Set up the KMIP context and the initial encoding buffer. */
     KMIP ctx = {0};
     kmip_init(&ctx, NULL, 0, KMIP_1_0);
@@ -641,7 +656,7 @@ int kmip_bio_get_symmetric_key(BIO *bio,
     
     char *result_key = ctx.calloc_func(ctx.state, 1, material->size);
     *key_size = material->size;
-    for(size_t i = 0; i < *key_size; i++)
+    for(int i = 0; i < *key_size; i++)
     {
         result_key[i] = material->value[i];
     }
@@ -660,8 +675,13 @@ int kmip_bio_get_symmetric_key(BIO *bio,
 
 int kmip_bio_create_symmetric_key_with_context(KMIP *ctx, BIO *bio,
                                                TemplateAttribute *template_attribute,
-                                               char **id, size_t *id_size)
+                                               char **id, int *id_size)
 {
+    if(ctx == NULL || bio == NULL || template_attribute == NULL || id == NULL || id_size == NULL)
+    {
+        return(KMIP_ARG_INVALID);
+    }
+    
     /* Set up the initial encoding buffer. */
     size_t buffer_blocks = 1;
     size_t buffer_block_size = 1024;
@@ -848,7 +868,7 @@ int kmip_bio_create_symmetric_key_with_context(KMIP *ctx, BIO *bio,
     
     char *result_id = ctx->calloc_func(ctx->state, 1, unique_identifier->size);
     *id_size = unique_identifier->size;
-    for(size_t i = 0; i < *id_size; i++)
+    for(int i = 0; i < *id_size; i++)
     {
         result_id[i] = unique_identifier->value[i];
     }
@@ -864,9 +884,14 @@ int kmip_bio_create_symmetric_key_with_context(KMIP *ctx, BIO *bio,
 }
 
 int kmip_bio_get_symmetric_key_with_context(KMIP *ctx, BIO *bio,
-                                            char *uuid, size_t uuid_size,
-                                            char **key, size_t *key_size)
+                                            char *uuid, int uuid_size,
+                                            char **key, int *key_size)
 {
+    if(ctx == NULL || bio == NULL || uuid == NULL || uuid_size <= 0 || key == NULL || key_size == NULL)
+    {
+        return(KMIP_ARG_INVALID);
+    }
+    
     /* Set up the initial encoding buffer. */
     size_t buffer_blocks = 1;
     size_t buffer_block_size = 1024;
@@ -1082,7 +1107,7 @@ int kmip_bio_get_symmetric_key_with_context(KMIP *ctx, BIO *bio,
     
     char *result_key = ctx->calloc_func(ctx->state, 1, material->size);
     *key_size = material->size;
-    for(size_t i = 0; i < *key_size; i++)
+    for(int i = 0; i < *key_size; i++)
     {
         result_key[i] = material->value[i];
     }
@@ -1099,8 +1124,13 @@ int kmip_bio_get_symmetric_key_with_context(KMIP *ctx, BIO *bio,
 }
 
 int kmip_bio_destroy_symmetric_key_with_context(KMIP *ctx, BIO *bio,
-                                                char *uuid, size_t uuid_size)
+                                                char *uuid, int uuid_size)
 {
+    if(ctx == NULL || bio == NULL || uuid == NULL || uuid_size <= 0)
+    {
+        return(KMIP_ARG_INVALID);
+    }
+    
     /* Set up the initial encoding buffer. */
     size_t buffer_blocks = 1;
     size_t buffer_block_size = 1024;
@@ -1296,12 +1326,17 @@ int kmip_bio_destroy_symmetric_key_with_context(KMIP *ctx, BIO *bio,
 }
 
 int kmip_bio_send_request_encoding(KMIP *ctx, BIO *bio,
-                                   char *request, size_t request_size,
-                                   char **response, size_t *response_size)
+                                   char *request, int request_size,
+                                   char **response, int *response_size)
 {
+    if(ctx == NULL || bio == NULL || request == NULL || request_size <= 0 || response == NULL || response_size == NULL)
+    {
+        return(KMIP_ARG_INVALID);
+    }
+    
     /* Send the request message. */
     int sent = BIO_write(bio, request, request_size);
-    if((size_t)sent != request_size)
+    if(sent != request_size)
     {
         return(KMIP_IO_FAILURE);
     }

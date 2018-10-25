@@ -62,6 +62,7 @@ typedef double real64;
 #define KMIP_EXCEED_MAX_MESSAGE_SIZE (-14)
 #define KMIP_MALFORMED_RESPONSE      (-15)
 #define KMIP_OBJECT_MISMATCH         (-16)
+#define KMIP_ARG_INVALID             (-17)
 
 /*
 Enumerations
@@ -613,27 +614,30 @@ typedef struct error_frame
 
 typedef struct kmip
 {
+    /* Encoding buffer */
     uint8 *buffer;
     uint8 *index;
     size_t size;
     
+    /* KMIP message settings */
     enum kmip_version version;
-    
     int max_message_size;
     LinkedList *credential_list;
     
+    /* Error handling information */
     char *error_message;
     size_t error_message_size;
+    /* TODO (ph) Switch the following to a LinkedList. */
     ErrorFrame errors[20];
     size_t error_frame_count;
     struct error_frame *frame_index;
     
+    /* Memory management function pointers */
     void *(*calloc_func)(void *state, size_t num, size_t size);
     void *(*realloc_func)(void *state, void *ptr, size_t size);
     void (*free_func)(void *state, void *ptr);
-    void *state;
-    
     void *(*memset_func)(void *ptr, int value, size_t size);
+    void *state;
 } KMIP;
 
 typedef struct attribute
@@ -1055,7 +1059,7 @@ Context Utilities
 */
 
 void kmip_clear_errors(KMIP *);
-void kmip_init(KMIP *, uint8 *, size_t, enum kmip_version);
+void kmip_init(KMIP *, void *, size_t, enum kmip_version);
 void kmip_init_error_message(KMIP *);
 int kmip_add_credential(KMIP *, Credential *);
 void kmip_remove_credentials(KMIP *);
