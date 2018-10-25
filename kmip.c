@@ -7107,7 +7107,7 @@ kmip_encode_interval(KMIP *ctx, enum tag t, uint32 value)
 int
 kmip_encode_name(KMIP *ctx, const Name *value)
 {
-    /* TODO (peter-hamilton) Check for value == NULL? */
+    /* TODO (ph) Check for value == NULL? */
     
     int result = 0;
     
@@ -7198,10 +7198,10 @@ kmip_encode_attribute_name(KMIP *ctx, enum attribute_type value)
 int
 kmip_encode_attribute(KMIP *ctx, const Attribute *value)
 {
-    /* TODO (peter-hamilton) Check value == NULL? */
-    /* TODO (peter-hamilton) Cehck value->value == NULL? */
+    /* TODO (ph) Check value == NULL? */
+    /* TODO (ph) Cehck value->value == NULL? */
     
-    /* TODO (peter-hamilton) Add CryptographicParameters support? */
+    /* TODO (ph) Add CryptographicParameters support? */
     
     int result = 0;
     
@@ -7640,7 +7640,7 @@ kmip_encode_key_material(KMIP *ctx, enum key_format_type format, const void *val
         CHECK_RESULT(ctx, result);
         break;
         
-        /* TODO (peter-hamilton) The rest require BigInteger support. */
+        /* TODO (ph) The rest require BigInteger support. */
         
         case KMIP_KEYFORMAT_TRANS_DSA_PRIVATE_KEY:
         kmip_push_error_frame(ctx, __func__, __LINE__);

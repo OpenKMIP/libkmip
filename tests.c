@@ -7324,7 +7324,7 @@ test_kmip_1_1_test_suite_3_1_1_0_a(void)
     struct kmip ctx = {0};
     kmip_init(&ctx, observed, ARRAY_LENGTH(observed), KMIP_1_1);
     
-    /* TODO (peter-hamilton) If protocol version omitted, pull from context? */
+    /* TODO (ph) If protocol version omitted, pull from context? */
     struct protocol_version pv = {0};
     pv.major = 1;
     pv.minor = 1;
