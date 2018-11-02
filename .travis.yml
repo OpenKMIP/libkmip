@@ -2,3 +2,5 @@ language: c
 compiler:
   - clang
   - gcc
+script:
+  - make && make install
