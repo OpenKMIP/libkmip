@@ -7730,9 +7730,9 @@ test_kmip_1_1_test_suite_3_1_3_2_b(void)
     uint8 value[24] = {
         0x73, 0x67, 0x57, 0x80, 0x51, 0x01, 0x2A, 0x6D, 
         0x13, 0x4A, 0x85, 0x5E, 0x25, 0xC8, 0xCD, 0x5E, 
-        0x4C, 0xA1, 0x31, 0x45, 0x57, 0x29, 0xD3, 0xC8
+        0x4C, 0xA1, 0x31, 0x45, 0x57, 0x29, 0xD3, 0xFF
     };
-    
+    /*C8*/
     struct byte_string v = {0};
     v.value = value;
     v.size = ARRAY_LENGTH(value);
@@ -7777,7 +7777,7 @@ test_kmip_1_1_test_suite_3_1_3_2_b(void)
 
 /* Test Harness */
 
-void
+int
 run_tests(void)
 {
     int num_tests = 135;
@@ -7952,6 +7952,8 @@ run_tests(void)
     printf("Total tests: %d\n", num_tests);
     printf("       PASS: %d\n", num_tests - num_failures);
     printf("    FAILURE: %d\n", num_failures);
+
+    return(num_failures);
 }
 
 int
@@ -7959,17 +7961,19 @@ main(int argc, char **argv)
 {
     (void)argv;
     
+    int results = 0;
+    
     if(argc == 1)
     {
-        run_tests();
+        results = run_tests();
     }
     else
     {
         while(1)
         {
-            run_tests();
+            results = run_tests();
         }
     }
     
-    return(0);
+    return(results);
 }
