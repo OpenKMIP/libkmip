@@ -9,6 +9,7 @@ BINDIR = $(SRCDIR)/bin
 
 MAJOR    = 0
 MINOR    = 1
+MICRO    = 0
 VERSION  = $(MAJOR).$(MINOR)
 ARCNAME  = libkmip.a
 LINKNAME = libkmip.so
