@@ -43,6 +43,12 @@ parse_arguments(int argc, char **argv,
                 char **id,
                 int *print_usage)
 {
+    if(argc <= 1)
+    {
+        print_help(argv[0]);
+        return(-1);
+    }
+    
     for(int i = 1; i < argc; i++)
     {
         if(strncmp(argv[i], "-a", 2) == 0)
