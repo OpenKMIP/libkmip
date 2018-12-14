@@ -15,6 +15,7 @@
  */
 
 #include <stdio.h>
+#include <string.h>
 #include "kmip.h"
 
 int
@@ -7956,24 +7957,71 @@ run_tests(void)
     return(num_failures);
 }
 
-int
-main(int argc, char **argv)
+void
+print_help(const char *app)
 {
-    (void)argv;
-    
-    int results = 0;
-    
-    if(argc == 1)
+    printf("Usage: %s [flag] ...\n\n", app);
+    printf("Flags:\n");
+    printf("-h : print this help info\n");
+    printf("-i : run the test suite forever\n");
+}
+
+int
+parse_arguments(int argc,
+                char **argv,
+                int *print_usage,
+                int *run_forever)
+{
+    for(int i = 1; i < argc; i++)
     {
-        results = run_tests();
-    }
-    else
-    {
-        while(1)
+        if(strncmp(argv[i], "-h", 2) == 0)
         {
-            results = run_tests();
+            *print_usage = 1;
+        }
+        else if(strncmp(argv[i], "-i", 2) == 0)
+        {
+            *run_forever = 1;
+        }
+        else
+        {
+            printf("Invalid option: '%s'\n", argv[i]);
+            print_help(argv[0]);
+            return(-1);
         }
     }
     
+    return(0);
+}
+
+int
+main(int argc, char **argv)
+{
+    int print_usage = 0;
+    int run_forever = 0;
+    
+    int error = parse_arguments(argc, argv, &print_usage, &run_forever);
+    if(error)
+    {
+        return(error);
+    }
+    if(print_usage)
+    {
+        print_help(argv[0]);
+        return(0);
+    }
+    
+    int results = 0;
+    if(run_forever)
+    {
+        while(1)
+        {
+            run_tests();
+        }
+    }
+    else
+    {
+        results = run_tests();
+    }
+
     return(results);
 }
