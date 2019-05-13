@@ -359,6 +359,16 @@ kmip_check_enum_value(enum kmip_version version, enum tag t, int value)
             else
                 return(KMIP_INVALID_FOR_VERSION);
             break;
+
+            /* KMIP 2.0 */
+            case KMIP_CRED_ONE_TIME_PASSWORD:
+            case KMIP_CRED_HASHED_PASSWORD:
+            case KMIP_CRED_TICKET:
+            if(version >= KMIP_2_0)
+                return(KMIP_OK);
+            else
+                return(KMIP_INVALID_FOR_VERSION);
+            break;
             
             default:
             return(KMIP_ENUM_MISMATCH);
@@ -422,14 +432,37 @@ kmip_check_enum_value(enum kmip_version version, enum tag t, int value)
             case KMIP_CRYPTOALG_HMAC_SHA3_256:
             case KMIP_CRYPTOALG_HMAC_SHA3_384:
             case KMIP_CRYPTOALG_HMAC_SHA3_512:
-            case KMIP_CRYPTOALG_HMAC_SHAKE_128:
-            case KMIP_CRYPTOALG_HMAC_SHAKE_256:
+            case KMIP_CRYPTOALG_SHAKE_128:
+            case KMIP_CRYPTOALG_SHAKE_256:
             if(version >= KMIP_1_4)
                 return(KMIP_OK);
             else
                 return(KMIP_INVALID_FOR_VERSION);
             break;
-            
+
+            /* KMIP 2.0 */
+            case KMIP_CRYPTOALG_ARIA:
+            case KMIP_CRYPTOALG_SEED:
+            case KMIP_CRYPTOALG_SM2:
+            case KMIP_CRYPTOALG_SM3:
+            case KMIP_CRYPTOALG_SM4:
+            case KMIP_CRYPTOALG_GOST_R_34_10_2012:
+            case KMIP_CRYPTOALG_GOST_R_34_11_2012:
+            case KMIP_CRYPTOALG_GOST_R_34_13_2015:
+            case KMIP_CRYPTOALG_GOST_28147_89:
+            case KMIP_CRYPTOALG_XMSS:
+            case KMIP_CRYPTOALG_SPHINCS_256:
+            case KMIP_CRYPTOALG_MCELIECE:
+            case KMIP_CRYPTOALG_MCELIECE_6960119:
+            case KMIP_CRYPTOALG_MCELIECE_8192128:
+            case KMIP_CRYPTOALG_ED25519:
+            case KMIP_CRYPTOALG_ED448:
+            if(version >= KMIP_2_0)
+                return(KMIP_OK);
+            else
+                return(KMIP_INVALID_FOR_VERSION);
+            break;
+
             default:
             return(KMIP_ENUM_MISMATCH);
             break;
@@ -460,6 +493,17 @@ kmip_check_enum_value(enum kmip_version version, enum tag t, int value)
             case KMIP_CRYPTOMASK_TRANSLATE_WRAP:
             case KMIP_CRYPTOMASK_TRANSLATE_UNWRAP:
             return(KMIP_OK);
+            break;
+
+            /* KMIP 2.0 */
+            case KMIP_CRYPTOMASK_AUTHENTICATE:
+            case KMIP_CRYPTOMASK_UNRESTRICTED:
+            case KMIP_CRYPTOMASK_FPE_ENCRYPT:
+            case KMIP_CRYPTOMASK_FPE_DECRYPT:
+            if(version >= KMIP_2_0)
+                return(KMIP_OK);
+            else
+                return(KMIP_INVALID_FOR_VERSION);
             break;
             
             default:
@@ -524,7 +568,7 @@ kmip_check_enum_value(enum kmip_version version, enum tag t, int value)
             break;
         };
         break;
-        
+
         case KMIP_TAG_HASHING_ALGORITHM:
         switch(value)
         {
@@ -622,6 +666,14 @@ kmip_check_enum_value(enum kmip_version version, enum tag t, int value)
             
             case KMIP_KEYFORMAT_PKCS12:
             if(version >= KMIP_1_4)
+                return(KMIP_OK);
+            else
+                return(KMIP_INVALID_FOR_VERSION);
+            break;
+
+            /* KMIP 2.0 */
+            case KMIP_KEYFORMAT_PKCS10:
+            if(version >= KMIP_2_0)
                 return(KMIP_OK);
             else
                 return(KMIP_INVALID_FOR_VERSION);
@@ -755,6 +807,14 @@ kmip_check_enum_value(enum kmip_version version, enum tag t, int value)
                 return(KMIP_INVALID_FOR_VERSION);
             break;
             
+            /* KMIP 2.0 */
+            case KMIP_OBJTYPE_CERTIFICATE_REQUEST:
+            if(version >= KMIP_2_0)
+                return(KMIP_OK);
+            else
+                return(KMIP_INVALID_FOR_VERSION);
+            break;
+
             default:
             return(KMIP_ENUM_MISMATCH);
             break;
@@ -853,6 +913,58 @@ kmip_check_enum_value(enum kmip_version version, enum tag t, int value)
                 return(KMIP_INVALID_FOR_VERSION);
             break;
             
+            /* KMIP 2.0 */
+            case KMIP_REASON_INVALID_TICKET:
+            case KMIP_REASON_USAGE_LIMIT_EXCEEDED:
+            case KMIP_REASON_NUMERIC_RANGE:
+            case KMIP_REASON_INVALID_DATA_TYPE:
+            case KMIP_REASON_READ_ONLY_ATTRIBUTE:
+            case KMIP_REASON_MULTI_VALUED_ATTRIBUTE:
+            case KMIP_REASON_UNSUPPORTED_ATTRIBUTE:
+            case KMIP_REASON_ATTRIBUTE_INSTANCE_NOT_FOUND:
+            case KMIP_REASON_ATTRIBUTE_NOT_FOUND:
+            case KMIP_REASON_ATTRIBUTE_READ_ONLY:
+            case KMIP_REASON_ATTRIBUTE_SINGLE_VALUED:
+            case KMIP_REASON_BAD_CRYPTOGRAPHIC_PARAMETERS:
+            case KMIP_REASON_BAD_PASSWORD:
+            case KMIP_REASON_CODEC_ERROR:
+            case KMIP_REASON_ILLEGAL_OBJECT_TYPE:
+            case KMIP_REASON_INCOMPATIBLE_CRYPTOGRAPHIC_USAGE_MASK:
+            case KMIP_REASON_INTERNAL_SERVER_ERROR:
+            case KMIP_REASON_INVALID_ASYNCHRONOUS_CORRELATION_VALUE:
+            case KMIP_REASON_INVALID_ATTRIBUTE:
+            case KMIP_REASON_INVALID_ATTRIBUTE_VALUE:
+            case KMIP_REASON_INVALID_CORRELATION_VALUE:
+            case KMIP_REASON_INVALID_CSR:
+            case KMIP_REASON_INVALID_OBJECT_TYPE:
+            case KMIP_REASON_KEY_WRAP_TYPE_NOT_SUPPORTED:
+            case KMIP_REASON_MISSING_INITIALIZATION_VECTOR:
+            case KMIP_REASON_NON_UNIQUE_NAME_ATTRIBUTE:
+            case KMIP_REASON_OBJECT_DESTROYED:
+            case KMIP_REASON_OBJECT_NOT_FOUND:
+            case KMIP_REASON_NOT_AUTHORISED:
+            case KMIP_REASON_SERVER_LIMIT_EXCEEDED:
+            case KMIP_REASON_UNKNOWN_ENUMERATION:
+            case KMIP_REASON_UNKNOWN_MESSAGE_EXTENSION:
+            case KMIP_REASON_UNKNOWN_TAG:
+            case KMIP_REASON_UNSUPPORTED_CRYPTOGRAPHIC_PARAMETERS:
+            case KMIP_REASON_UNSUPPORTED_PROTOCOL_VERSION:
+            case KMIP_REASON_WRAPPING_OBJECT_ARCHIVED:
+            case KMIP_REASON_WRAPPING_OBJECT_DESTROYED:
+            case KMIP_REASON_WRAPPING_OBJECT_NOT_FOUND:
+            case KMIP_REASON_WRONG_KEY_LIFECYCLE_STATE:
+            case KMIP_REASON_PROTECTION_STORAGE_UNAVAILABLE:
+            case KMIP_REASON_PKCS11_CODEC_ERROR:
+            case KMIP_REASON_PKCS11_INVALID_FUNCTION:
+            case KMIP_REASON_PKCS11_INVALID_INTERFACE:
+            case KMIP_REASON_PRIVATE_PROTECTION_STORAGE_UNAVAILABLE:
+            case KMIP_REASON_PUBLIC_PROTECTION_STORAGE_UNAVAILABLE:
+            if(version >= KMIP_2_0)
+                return(KMIP_OK);
+            else
+                return(KMIP_INVALID_FOR_VERSION);
+            break;
+
             default:
             return(KMIP_ENUM_MISMATCH);
             break;
@@ -916,6 +1028,14 @@ kmip_check_enum_value(enum kmip_version version, enum tag t, int value)
             return(KMIP_OK);
             break;
             
+            /* KMIP 2.0 */
+            case KMIP_TYPE_DATE_TIME_EXTENDED:
+            if(version >= KMIP_2_0)
+                return(KMIP_OK);
+            else
+                return(KMIP_INVALID_FOR_VERSION);
+            break;
+
             default:
             return(KMIP_ENUM_MISMATCH);
             break;
@@ -1793,6 +1913,186 @@ kmip_print_result_reason_enum(enum result_reason value)
         printf("Object Already Exists");
         break;
         
+        case KMIP_REASON_INVALID_TICKET:
+        printf("Invalid Ticket");
+        break;
+
+        case KMIP_REASON_USAGE_LIMIT_EXCEEDED:
+        printf("Usage Limit Exceeded");
+        break;
+
+        case KMIP_REASON_NUMERIC_RANGE:
+        printf("Numeric Range");
+        break;
+
+        case KMIP_REASON_INVALID_DATA_TYPE:
+        printf("Invalid Data Type");
+        break;
+
+        case KMIP_REASON_READ_ONLY_ATTRIBUTE:
+        printf("Read Only Attribute");
+        break;
+
+        case KMIP_REASON_MULTI_VALUED_ATTRIBUTE:
+        printf("Multi Valued Attribute");
+        break;
+
+        case KMIP_REASON_UNSUPPORTED_ATTRIBUTE:
+        printf("Unsupported Attribute");
+        break;
+
+        case KMIP_REASON_ATTRIBUTE_INSTANCE_NOT_FOUND:
+        printf("Attribute Instance Not Found");
+        break;
+
+        case KMIP_REASON_ATTRIBUTE_NOT_FOUND:
+        printf("Attribute Not Found");
+        break;
+
+        case KMIP_REASON_ATTRIBUTE_READ_ONLY:
+        printf("Attribute Read Only");
+        break;
+
+        case KMIP_REASON_ATTRIBUTE_SINGLE_VALUED:
+        printf("Attribute Single Valued");
+        break;
+
+        case KMIP_REASON_BAD_CRYPTOGRAPHIC_PARAMETERS:
+        printf("Bad Cryptographic Parameters");
+        break;
+
+        case KMIP_REASON_BAD_PASSWORD:
+        printf("Bad Password");
+        break;
+
+        case KMIP_REASON_CODEC_ERROR:
+        printf("Codec Error");
+        break;
+
+        case KMIP_REASON_ILLEGAL_OBJECT_TYPE:
+        printf("Illegal Object Type");
+        break;
+
+        case KMIP_REASON_INCOMPATIBLE_CRYPTOGRAPHIC_USAGE_MASK:
+        printf("Incompatible Cryptographic Usage Mask");
+        break;
+
+        case KMIP_REASON_INTERNAL_SERVER_ERROR:
+        printf("Internal Server Error");
+        break;
+
+        case KMIP_REASON_INVALID_ASYNCHRONOUS_CORRELATION_VALUE:
+        printf("Invalid Asynchronous Correlation Value");
+        break;
+
+        case KMIP_REASON_INVALID_ATTRIBUTE:
+        printf("Invalid Attribute");
+        break;
+
+        case KMIP_REASON_INVALID_ATTRIBUTE_VALUE:
+        printf("Invalid Attribute Value");
+        break;
+
+        case KMIP_REASON_INVALID_CORRELATION_VALUE:
+        printf("Invalid Correlation Value");
+        break;
+
+        case KMIP_REASON_INVALID_CSR:
+        printf("Invalid CSR");
+        break;
+
+        case KMIP_REASON_INVALID_OBJECT_TYPE:
+        printf("Invalid Object Type");
+        break;
+
+        case KMIP_REASON_KEY_WRAP_TYPE_NOT_SUPPORTED:
+        printf("Key Wrap Type Not Supported");
+        break;
+
+        case KMIP_REASON_MISSING_INITIALIZATION_VECTOR:
+        printf("Missing Initialization Vector");
+        break;
+
+        case KMIP_REASON_NON_UNIQUE_NAME_ATTRIBUTE:
+        printf("Non Unique Name Attribute");
+        break;
+
+        case KMIP_REASON_OBJECT_DESTROYED:
+        printf("Object Destroyed");
+        break;
+
+        case KMIP_REASON_OBJECT_NOT_FOUND:
+        printf("Object Not Found");
+        break;
+
+        case KMIP_REASON_NOT_AUTHORISED:
+        printf("Not Authorised");
+        break;
+
+        case KMIP_REASON_SERVER_LIMIT_EXCEEDED:
+        printf("Server Limit Exceeded");
+        break;
+
+        case KMIP_REASON_UNKNOWN_ENUMERATION:
+        printf("Unknown Enumeration");
+        break;
+
+        case KMIP_REASON_UNKNOWN_MESSAGE_EXTENSION:
+        printf("Unknown Message Extension");
+        break;
+
+        case KMIP_REASON_UNKNOWN_TAG:
+        printf("Unknown Tag");
+        break;
+
+        case KMIP_REASON_UNSUPPORTED_CRYPTOGRAPHIC_PARAMETERS:
+        printf("Unsupported Cryptographic Parameters");
+        break;
+
+        case KMIP_REASON_UNSUPPORTED_PROTOCOL_VERSION:
+        printf("Unsupported Protocol Version");
+        break;
+
+        case KMIP_REASON_WRAPPING_OBJECT_ARCHIVED:
+        printf("Wrapping Object Archived");
+        break;
+
+        case KMIP_REASON_WRAPPING_OBJECT_DESTROYED:
+        printf("Wrapping Object Destroyed");
+        break;
+
+        case KMIP_REASON_WRAPPING_OBJECT_NOT_FOUND:
+        printf("Wrapping Object Not Found");
+        break;
+
+        case KMIP_REASON_WRONG_KEY_LIFECYCLE_STATE:
+        printf("Wrong Key Lifecycle State");
+        break;
+
+        case KMIP_REASON_PROTECTION_STORAGE_UNAVAILABLE:
+        printf("Protection Storage Unavailable");
+        break;
+
+        case KMIP_REASON_PKCS11_CODEC_ERROR:
+        printf("PKCS#11 Codec Error");
+        break;
+
+        case KMIP_REASON_PKCS11_INVALID_FUNCTION:
+        printf("PKCS#11 Invalid Function");
+        break;
+
+        case KMIP_REASON_PKCS11_INVALID_INTERFACE:
+        printf("PKCS#11 Invalid Interface");
+        break;
+
+        case KMIP_REASON_PRIVATE_PROTECTION_STORAGE_UNAVAILABLE:
+        printf("Private Protection Storage Unavailable");
+        break;
+
+        case KMIP_REASON_PUBLIC_PROTECTION_STORAGE_UNAVAILABLE:
+        printf("Public Protection Storage Unavailable");
+        break;
+
         default:
         printf("Unknown");
         break;
@@ -1844,6 +2144,10 @@ kmip_print_object_type_enum(enum object_type value)
         
         case KMIP_OBJTYPE_PGP_KEY:
         printf("PGP Key");
+        break;
+
+        case KMIP_OBJTYPE_CERTIFICATE_REQUEST:
+        printf("Certificate Request");
         break;
         
         default:
@@ -1948,9 +2252,13 @@ kmip_print_key_format_type_enum(enum key_format_type value)
         break;
         
         case KMIP_KEYFORMAT_PKCS12:
-        printf("PKCS12");
+        printf("PKCS#12");
         break;
         
+        case KMIP_KEYFORMAT_PKCS10:
+        printf("PKCS#10");
+        break;
+
         default:
         printf("Unknown");
         break;
@@ -2153,12 +2461,76 @@ kmip_print_cryptographic_algorithm_enum(enum cryptographic_algorithm value)
         printf("HMAC SHA3-512");
         break;
         
-        case KMIP_CRYPTOALG_HMAC_SHAKE_128:
-        printf("HMAC SHAKE-128");
+        case KMIP_CRYPTOALG_SHAKE_128:
+        printf("SHAKE-128");
         break;
         
-        case KMIP_CRYPTOALG_HMAC_SHAKE_256:
-        printf("HMAC SHAKE-256");
+        case KMIP_CRYPTOALG_SHAKE_256:
+        printf("SHAKE-256");
+        break;
+        
+        case KMIP_CRYPTOALG_ARIA:
+        printf("ARIA");
+        break;
+
+        case KMIP_CRYPTOALG_SEED:
+        printf("SEED");
+        break;
+
+        case KMIP_CRYPTOALG_SM2:
+        printf("SM2");
+        break;
+
+        case KMIP_CRYPTOALG_SM3:
+        printf("SM3");
+        break;
+
+        case KMIP_CRYPTOALG_SM4:
+        printf("SM4");
+        break;
+
+        case KMIP_CRYPTOALG_GOST_R_34_10_2012:
+        printf("GOST R 34.10-2012");
+        break;
+
+        case KMIP_CRYPTOALG_GOST_R_34_11_2012:
+        printf("GOST R 34.11-2012");
+        break;
+
+        case KMIP_CRYPTOALG_GOST_R_34_13_2015:
+        printf("GOST R 34.13-2015");
+        break;
+
+        case KMIP_CRYPTOALG_GOST_28147_89:
+        printf("GOST 28147-89");
+        break;
+
+        case KMIP_CRYPTOALG_XMSS:
+        printf("XMSS");
+        break;
+
+        case KMIP_CRYPTOALG_SPHINCS_256:
+        printf("SPHINCS-256");
+        break;
+
+        case KMIP_CRYPTOALG_MCELIECE:
+        printf("McEliece");
+        break;
+
+        case KMIP_CRYPTOALG_MCELIECE_6960119:
+        printf("McEliece 6960119");
+        break;
+
+        case KMIP_CRYPTOALG_MCELIECE_8192128:
+        printf("McEliece 8192128");
+        break;
+
+        case KMIP_CRYPTOALG_ED25519:
+        printf("Ed25519");
+        break;
+
+        case KMIP_CRYPTOALG_ED448:
+        printf("Ed448");
         break;
         
         default:
@@ -2849,7 +3221,19 @@ kmip_print_credential_type_enum(enum credential_type value)
         case KMIP_CRED_ATTESTATION:
         printf("Attestation");
         break;
-        
+
+        case KMIP_CRED_ONE_TIME_PASSWORD:
+        printf("One Time Password");
+        break;
+
+        case KMIP_CRED_HASHED_PASSWORD:
+        printf("Hashed Password");
+        break;
+
+        case KMIP_CRED_TICKET:
+        printf("Ticket");
+        break;
+
         default:
         printf("Unknown");
         break;
@@ -2959,6 +3343,26 @@ kmip_print_cryptographic_usage_mask_enums(int indent, int32 value)
     if((value & KMIP_CRYPTOMASK_TRANSLATE_UNWRAP) == KMIP_CRYPTOMASK_TRANSLATE_UNWRAP)
     {
         printf("%*sTranslate Unwrap\n", indent, "");
+    }
+
+    if((value & KMIP_CRYPTOMASK_AUTHENTICATE) == KMIP_CRYPTOMASK_AUTHENTICATE)
+    {
+        printf("%*sAuthenticate\n", indent, "");
+    }
+
+    if((value & KMIP_CRYPTOMASK_UNRESTRICTED) == KMIP_CRYPTOMASK_UNRESTRICTED)
+    {
+        printf("%*sUnrestricted\n", indent, "");
+    }
+
+    if((value & KMIP_CRYPTOMASK_FPE_ENCRYPT) == KMIP_CRYPTOMASK_FPE_ENCRYPT)
+    {
+        printf("%*sFPE Encrypt\n", indent, "");
+    }
+
+    if((value & KMIP_CRYPTOMASK_FPE_DECRYPT) == KMIP_CRYPTOMASK_FPE_DECRYPT)
+    {
+        printf("%*sFPE Decrypt\n", indent, "");
     }
 }
 
