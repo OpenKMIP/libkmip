@@ -128,7 +128,11 @@ enum credential_type
     /* KMIP 1.1 */
     KMIP_CRED_DEVICE                = 0x02,
     /* KMIP 1.2 */
-    KMIP_CRED_ATTESTATION           = 0x03
+    KMIP_CRED_ATTESTATION           = 0x03,
+    /* KMIP 2.0 */
+    KMIP_CRED_ONE_TIME_PASSWORD     = 0x04,
+    KMIP_CRED_HASHED_PASSWORD       = 0x05,
+    KMIP_CRED_TICKET                = 0x06
 };
 
 enum cryptographic_algorithm
@@ -175,8 +179,25 @@ enum cryptographic_algorithm
     KMIP_CRYPTOALG_HMAC_SHA3_256     = 0x24,
     KMIP_CRYPTOALG_HMAC_SHA3_384     = 0x25,
     KMIP_CRYPTOALG_HMAC_SHA3_512     = 0x26,
-    KMIP_CRYPTOALG_HMAC_SHAKE_128    = 0x27,
-    KMIP_CRYPTOALG_HMAC_SHAKE_256    = 0x28
+    KMIP_CRYPTOALG_SHAKE_128         = 0x27,
+    KMIP_CRYPTOALG_SHAKE_256         = 0x28,
+    /* KMIP 2.0 */
+    KMIP_CRYPTOALG_ARIA              = 0x29,
+    KMIP_CRYPTOALG_SEED              = 0x2A,
+    KMIP_CRYPTOALG_SM2               = 0x2B,
+    KMIP_CRYPTOALG_SM3               = 0x2C,
+    KMIP_CRYPTOALG_SM4               = 0x2D,
+    KMIP_CRYPTOALG_GOST_R_34_10_2012 = 0x2E,
+    KMIP_CRYPTOALG_GOST_R_34_11_2012 = 0x2F,
+    KMIP_CRYPTOALG_GOST_R_34_13_2015 = 0x30,
+    KMIP_CRYPTOALG_GOST_28147_89     = 0x31,
+    KMIP_CRYPTOALG_XMSS              = 0x32,
+    KMIP_CRYPTOALG_SPHINCS_256       = 0x33,
+    KMIP_CRYPTOALG_MCELIECE          = 0x34,
+    KMIP_CRYPTOALG_MCELIECE_6960119  = 0x35,
+    KMIP_CRYPTOALG_MCELIECE_8192128  = 0x36,
+    KMIP_CRYPTOALG_ED25519           = 0x37,
+    KMIP_CRYPTOALG_ED448             = 0x38
 };
 
 enum cryptographic_usage_mask
@@ -201,7 +222,12 @@ enum cryptographic_usage_mask
     KMIP_CRYPTOMASK_TRANSLATE_ENCRYPT   = 0x00010000,
     KMIP_CRYPTOMASK_TRANSLATE_DECRYPT   = 0x00020000,
     KMIP_CRYPTOMASK_TRANSLATE_WRAP      = 0x00040000,
-    KMIP_CRYPTOMASK_TRANSLATE_UNWRAP    = 0x00080000
+    KMIP_CRYPTOMASK_TRANSLATE_UNWRAP    = 0x00080000,
+    /* KMIP 2.0 */
+    KMIP_CRYPTOMASK_AUTHENTICATE        = 0x00100000,
+    KMIP_CRYPTOMASK_UNRESTRICTED        = 0x00200000,
+    KMIP_CRYPTOMASK_FPE_ENCRYPT         = 0x00400000,
+    KMIP_CRYPTOMASK_FPE_DECRYPT         = 0x00800000
 };
 
 enum digital_signature_algorithm
@@ -295,7 +321,9 @@ enum key_format_type
     KMIP_KEYFORMAT_TRANS_EC_PRIVATE_KEY    = 0x14,
     KMIP_KEYFORMAT_TRANS_EC_PUBLIC_KEY     = 0x15,
     /* KMIP 1.4 */
-    KMIP_KEYFORMAT_PKCS12                  = 0x16
+    KMIP_KEYFORMAT_PKCS12                  = 0x16,
+    /* KMIP 2.0 */
+    KMIP_KEYFORMAT_PKCS10                  = 0x17
 };
 
 enum key_role_type
@@ -341,7 +369,8 @@ enum kmip_version
     KMIP_1_1 = 1,
     KMIP_1_2 = 2,
     KMIP_1_3 = 3,
-    KMIP_1_4 = 4
+    KMIP_1_4 = 4,
+    KMIP_2_0 = 5
 };
 
 enum mask_generator
@@ -360,16 +389,18 @@ enum name_type
 enum object_type
 {
     /* KMIP 1.0 */
-    KMIP_OBJTYPE_CERTIFICATE   = 0x01,
-    KMIP_OBJTYPE_SYMMETRIC_KEY = 0x02,
-    KMIP_OBJTYPE_PUBLIC_KEY    = 0x03,
-    KMIP_OBJTYPE_PRIVATE_KEY   = 0x04,
-    KMIP_OBJTYPE_SPLIT_KEY     = 0x05,
-    KMIP_OBJTYPE_TEMPLATE      = 0x06, /* Deprecated as of KMIP 1.3 */
-    KMIP_OBJTYPE_SECRET_DATA   = 0x07,
-    KMIP_OBJTYPE_OPAQUE_OBJECT = 0x08,
+    KMIP_OBJTYPE_CERTIFICATE         = 0x01,
+    KMIP_OBJTYPE_SYMMETRIC_KEY       = 0x02,
+    KMIP_OBJTYPE_PUBLIC_KEY          = 0x03,
+    KMIP_OBJTYPE_PRIVATE_KEY         = 0x04,
+    KMIP_OBJTYPE_SPLIT_KEY           = 0x05,
+    KMIP_OBJTYPE_TEMPLATE            = 0x06, /* Deprecated as of KMIP 1.3 */
+    KMIP_OBJTYPE_SECRET_DATA         = 0x07,
+    KMIP_OBJTYPE_OPAQUE_OBJECT       = 0x08,
     /* KMIP 1.2 */
-    KMIP_OBJTYPE_PGP_KEY       = 0x09
+    KMIP_OBJTYPE_PGP_KEY             = 0x09,
+    /* KMIP 2.0 */
+    KMIP_OBJTYPE_CERTIFICATE_REQUEST = 0x0A
 };
 
 enum operation
@@ -398,34 +429,84 @@ enum padding_method
 enum result_reason
 {
     /* KMIP 1.0 */
-    KMIP_REASON_GENERAL_FAILURE                     = 0x0100,
-    KMIP_REASON_ITEM_NOT_FOUND                      = 0x0001,
-    KMIP_REASON_RESPONSE_TOO_LARGE                  = 0x0002,
-    KMIP_REASON_AUTHENTICATION_NOT_SUCCESSFUL       = 0x0003,
-    KMIP_REASON_INVALID_MESSAGE                     = 0x0004,
-    KMIP_REASON_OPERATION_NOT_SUPPORTED             = 0x0005,
-    KMIP_REASON_MISSING_DATA                        = 0x0006,
-    KMIP_REASON_INVALID_FIELD                       = 0x0007,
-    KMIP_REASON_FEATURE_NOT_SUPPORTED               = 0x0008,
-    KMIP_REASON_OPERATION_CANCELED_BY_REQUESTER     = 0x0009,
-    KMIP_REASON_CRYPTOGRAPHIC_FAILURE               = 0x000A,
-    KMIP_REASON_ILLEGAL_OPERATION                   = 0x000B,
-    KMIP_REASON_PERMISSION_DENIED                   = 0x000C,
-    KMIP_REASON_OBJECT_ARCHIVED                     = 0x000D,
-    KMIP_REASON_INDEX_OUT_OF_BOUNDS                 = 0x000E,
-    KMIP_REASON_APPLICATION_NAMESPACE_NOT_SUPPORTED = 0x000F,
-    KMIP_REASON_KEY_FORMAT_TYPE_NOT_SUPPORTED       = 0x0010,
-    KMIP_REASON_KEY_COMPRESSION_TYPE_NOT_SUPPORTED  = 0x0011,
+    KMIP_REASON_GENERAL_FAILURE                       = 0x0100,
+    KMIP_REASON_ITEM_NOT_FOUND                        = 0x0001,
+    KMIP_REASON_RESPONSE_TOO_LARGE                    = 0x0002,
+    KMIP_REASON_AUTHENTICATION_NOT_SUCCESSFUL         = 0x0003,
+    KMIP_REASON_INVALID_MESSAGE                       = 0x0004,
+    KMIP_REASON_OPERATION_NOT_SUPPORTED               = 0x0005,
+    KMIP_REASON_MISSING_DATA                          = 0x0006,
+    KMIP_REASON_INVALID_FIELD                         = 0x0007,
+    KMIP_REASON_FEATURE_NOT_SUPPORTED                 = 0x0008,
+    KMIP_REASON_OPERATION_CANCELED_BY_REQUESTER       = 0x0009,
+    KMIP_REASON_CRYPTOGRAPHIC_FAILURE                 = 0x000A,
+    KMIP_REASON_ILLEGAL_OPERATION                     = 0x000B,
+    KMIP_REASON_PERMISSION_DENIED                     = 0x000C,
+    KMIP_REASON_OBJECT_ARCHIVED                       = 0x000D,
+    KMIP_REASON_INDEX_OUT_OF_BOUNDS                   = 0x000E,
+    KMIP_REASON_APPLICATION_NAMESPACE_NOT_SUPPORTED   = 0x000F,
+    KMIP_REASON_KEY_FORMAT_TYPE_NOT_SUPPORTED         = 0x0010,
+    KMIP_REASON_KEY_COMPRESSION_TYPE_NOT_SUPPORTED    = 0x0011,
     /* KMIP 1.1 */
-    KMIP_REASON_ENCODING_OPTION_FAILURE             = 0x0012,
+    KMIP_REASON_ENCODING_OPTION_FAILURE               = 0x0012,
     /* KMIP 1.2 */
-    KMIP_REASON_KEY_VALUE_NOT_PRESENT               = 0x0013,
-    KMIP_REASON_ATTESTATION_REQUIRED                = 0x0014,
-    KMIP_REASON_ATTESTATION_FAILED                  = 0x0015,
+    KMIP_REASON_KEY_VALUE_NOT_PRESENT                 = 0x0013,
+    KMIP_REASON_ATTESTATION_REQUIRED                  = 0x0014,
+    KMIP_REASON_ATTESTATION_FAILED                    = 0x0015,
     /* KMIP 1.4 */
-    KMIP_REASON_SENSITIVE                           = 0x0016,
-    KMIP_REASON_NOT_EXTRACTABLE                     = 0x0017,
-    KMIP_REASON_OBJECT_ALREADY_EXISTS               = 0x0018
+    KMIP_REASON_SENSITIVE                             = 0x0016,
+    KMIP_REASON_NOT_EXTRACTABLE                       = 0x0017,
+    KMIP_REASON_OBJECT_ALREADY_EXISTS                 = 0x0018,
+    /* KMIP 2.0 */
+    KMIP_REASON_INVALID_TICKET                        = 0x0019,
+    KMIP_REASON_USAGE_LIMIT_EXCEEDED                  = 0x001A,
+    KMIP_REASON_NUMERIC_RANGE                         = 0x001B,
+    KMIP_REASON_INVALID_DATA_TYPE                     = 0x001C,
+    KMIP_REASON_READ_ONLY_ATTRIBUTE                   = 0x001D,
+    KMIP_REASON_MULTI_VALUED_ATTRIBUTE                = 0x001E,
+    KMIP_REASON_UNSUPPORTED_ATTRIBUTE                 = 0x001F,
+    KMIP_REASON_ATTRIBUTE_INSTANCE_NOT_FOUND          = 0x0020,
+    KMIP_REASON_ATTRIBUTE_NOT_FOUND                   = 0x0021,
+    KMIP_REASON_ATTRIBUTE_READ_ONLY                   = 0x0022,
+    KMIP_REASON_ATTRIBUTE_SINGLE_VALUED               = 0x0023,
+    KMIP_REASON_BAD_CRYPTOGRAPHIC_PARAMETERS          = 0x0024,
+    KMIP_REASON_BAD_PASSWORD                          = 0x0025,
+    KMIP_REASON_CODEC_ERROR                           = 0x0026,
+    /* Reserved                                       = 0x0027, */
+    KMIP_REASON_ILLEGAL_OBJECT_TYPE                   = 0x0028,
+    KMIP_REASON_INCOMPATIBLE_CRYPTOGRAPHIC_USAGE_MASK = 0x0029,
+    KMIP_REASON_INTERNAL_SERVER_ERROR                 = 0x002A,
+    KMIP_REASON_INVALID_ASYNCHRONOUS_CORRELATION_VALUE = 0x002B,
+    KMIP_REASON_INVALID_ATTRIBUTE                      = 0x002C,
+    KMIP_REASON_INVALID_ATTRIBUTE_VALUE                = 0x002D,
+    KMIP_REASON_INVALID_CORRELATION_VALUE              = 0x002E,
+    KMIP_REASON_INVALID_CSR                            = 0x002F,
+    KMIP_REASON_INVALID_OBJECT_TYPE                    = 0x0030,
+    /* Reserved                                        = 0x0031, */
+    KMIP_REASON_KEY_WRAP_TYPE_NOT_SUPPORTED            = 0x0032,
+    /* Reserved                                        = 0x0033, */
+    KMIP_REASON_MISSING_INITIALIZATION_VECTOR          = 0x0034,
+    KMIP_REASON_NON_UNIQUE_NAME_ATTRIBUTE              = 0x0035,
+    KMIP_REASON_OBJECT_DESTROYED                       = 0x0036,
+    KMIP_REASON_OBJECT_NOT_FOUND                       = 0x0037,
+    /* Reserved                                        = 0x0038, */
+    KMIP_REASON_NOT_AUTHORISED                         = 0x0039,
+    KMIP_REASON_SERVER_LIMIT_EXCEEDED                  = 0x003A,
+    KMIP_REASON_UNKNOWN_ENUMERATION                    = 0x003B,
+    KMIP_REASON_UNKNOWN_MESSAGE_EXTENSION              = 0x003C,
+    KMIP_REASON_UNKNOWN_TAG                            = 0x003D,
+    KMIP_REASON_UNSUPPORTED_CRYPTOGRAPHIC_PARAMETERS   = 0x003E,
+    KMIP_REASON_UNSUPPORTED_PROTOCOL_VERSION           = 0x003F,
+    KMIP_REASON_WRAPPING_OBJECT_ARCHIVED               = 0x0040,
+    KMIP_REASON_WRAPPING_OBJECT_DESTROYED              = 0x0041,
+    KMIP_REASON_WRAPPING_OBJECT_NOT_FOUND              = 0x0042,
+    KMIP_REASON_WRONG_KEY_LIFECYCLE_STATE              = 0x0043,
+    KMIP_REASON_PROTECTION_STORAGE_UNAVAILABLE         = 0x0044,
+    KMIP_REASON_PKCS11_CODEC_ERROR                     = 0x0045,
+    KMIP_REASON_PKCS11_INVALID_FUNCTION                = 0x0046,
+    KMIP_REASON_PKCS11_INVALID_INTERFACE               = 0x0047,
+    KMIP_REASON_PRIVATE_PROTECTION_STORAGE_UNAVAILABLE = 0x0048,
+    KMIP_REASON_PUBLIC_PROTECTION_STORAGE_UNAVAILABLE  = 0x0049
 };
 
 enum result_status
@@ -554,16 +635,18 @@ enum tag
 enum type
 {
     /* KMIP 1.0 */
-    KMIP_TYPE_STRUCTURE    = 0x01,
-    KMIP_TYPE_INTEGER      = 0x02,
-    KMIP_TYPE_LONG_INTEGER = 0x03,
-    KMIP_TYPE_BIG_INTEGER  = 0x04,
-    KMIP_TYPE_ENUMERATION  = 0x05,
-    KMIP_TYPE_BOOLEAN      = 0x06,
-    KMIP_TYPE_TEXT_STRING  = 0x07,
-    KMIP_TYPE_BYTE_STRING  = 0x08,
-    KMIP_TYPE_DATE_TIME    = 0x09,
-    KMIP_TYPE_INTERVAL     = 0x0A
+    KMIP_TYPE_STRUCTURE          = 0x01,
+    KMIP_TYPE_INTEGER            = 0x02,
+    KMIP_TYPE_LONG_INTEGER       = 0x03,
+    KMIP_TYPE_BIG_INTEGER        = 0x04,
+    KMIP_TYPE_ENUMERATION        = 0x05,
+    KMIP_TYPE_BOOLEAN            = 0x06,
+    KMIP_TYPE_TEXT_STRING        = 0x07,
+    KMIP_TYPE_BYTE_STRING        = 0x08,
+    KMIP_TYPE_DATE_TIME          = 0x09,
+    KMIP_TYPE_INTERVAL           = 0x0A,
+    /* KMIP 2.0 */
+    KMIP_TYPE_DATE_TIME_EXTENDED = 0x0B
 };
 
 enum wrapping_method
