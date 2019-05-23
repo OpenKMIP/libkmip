@@ -48,21 +48,22 @@ typedef double real64;
 #define KMIP_OK                      (0)
 #define KMIP_NOT_IMPLEMENTED         (-1)
 #define KMIP_ERROR_BUFFER_FULL       (-2)
-#define KMIP_ERROR_ATTR_UNSUPPORTED  (-3)
-#define KMIP_TAG_MISMATCH            (-4)
-#define KMIP_TYPE_MISMATCH           (-5)
-#define KMIP_LENGTH_MISMATCH         (-6)
-#define KMIP_PADDING_MISMATCH        (-7)
-#define KMIP_BOOLEAN_MISMATCH        (-8)
-#define KMIP_ENUM_MISMATCH           (-9)
-#define KMIP_ENUM_UNSUPPORTED        (-10)
-#define KMIP_INVALID_FOR_VERSION     (-11)
-#define KMIP_MEMORY_ALLOC_FAILED     (-12)
-#define KMIP_IO_FAILURE              (-13)
-#define KMIP_EXCEED_MAX_MESSAGE_SIZE (-14)
-#define KMIP_MALFORMED_RESPONSE      (-15)
-#define KMIP_OBJECT_MISMATCH         (-16)
-#define KMIP_ARG_INVALID             (-17)
+#define KMIP_ERROR_BUFFER_UNDERFULL  (-3)
+#define KMIP_ERROR_ATTR_UNSUPPORTED  (-4)
+#define KMIP_TAG_MISMATCH            (-5)
+#define KMIP_TYPE_MISMATCH           (-6)
+#define KMIP_LENGTH_MISMATCH         (-7)
+#define KMIP_PADDING_MISMATCH        (-8)
+#define KMIP_BOOLEAN_MISMATCH        (-9)
+#define KMIP_ENUM_MISMATCH           (-10)
+#define KMIP_ENUM_UNSUPPORTED        (-11)
+#define KMIP_INVALID_FOR_VERSION     (-12)
+#define KMIP_MEMORY_ALLOC_FAILED     (-13)
+#define KMIP_IO_FAILURE              (-14)
+#define KMIP_EXCEED_MAX_MESSAGE_SIZE (-15)
+#define KMIP_MALFORMED_RESPONSE      (-16)
+#define KMIP_OBJECT_MISMATCH         (-17)
+#define KMIP_ARG_INVALID             (-18)
 
 /*
 Enumerations
@@ -573,6 +574,7 @@ enum tag
     KMIP_TAG_NAME_VALUE                       = 0x420055,
     KMIP_TAG_OBJECT_TYPE                      = 0x420057,
     KMIP_TAG_OPERATION                        = 0x42005C,
+    KMIP_TAG_OPERATION_POLICY_NAME            = 0x42005D,
     KMIP_TAG_PADDING_METHOD                   = 0x42005F,
     KMIP_TAG_PRIVATE_KEY                      = 0x420064,
     KMIP_TAG_PROTOCOL_VERSION                 = 0x420069,
@@ -629,7 +631,9 @@ enum tag
     KMIP_TAG_P_SOURCE                         = 0x420103,
     KMIP_TAG_TRAILER_FIELD                    = 0x420104,
     KMIP_TAG_CLIENT_CORRELATION_VALUE         = 0x420105,
-    KMIP_TAG_SERVER_CORRELATION_VALUE         = 0x420106
+    KMIP_TAG_SERVER_CORRELATION_VALUE         = 0x420106,
+    /* KMIP 2.0 */
+    KMIP_TAG_ATTRIBUTES                       = 0x420125
 };
 
 enum type
@@ -731,6 +735,11 @@ typedef struct attribute
     int32 index;
     void *value;
 } Attribute;
+
+typedef struct attributes
+{
+    LinkedList *attribute_list;
+} Attributes;
 
 typedef struct name
 {
@@ -1036,6 +1045,16 @@ do                                                      \
     }                                                   \
 } while(0)
 
+#define CHECK_BUFFER_SIZE(A, B, C)                      \
+do                                                      \
+{                                                       \
+    if(((A)->size - ((A)->index - (A)->buffer)) < (B))  \
+    {                                                   \
+        kmip_push_error_frame((A), __func__, __LINE__); \
+        return((C));                                    \
+    }                                                   \
+} while(0)
+
 #define CHECK_RESULT(A, B)                              \
 do                                                      \
 {                                                       \
@@ -1048,19 +1067,19 @@ do                                                      \
 
 #define TAG_TYPE(A, B) (((A) << 8) | (uint8)(B))
 
-#define CHECK_TAG_TYPE(A, B, C, D)                         \
-do                                                         \
-{                                                          \
-    if((int32)((B) >> 8) != (int32)(C))                    \
-    {                                                      \
-        kmip_push_error_frame((A), __func__, __LINE__);    \
-        return(KMIP_TAG_MISMATCH);                         \
-    }                                                      \
-    else if((int32)(((B) << 24) >> 24) != (int32)(D))      \
-    {                                                      \
-        kmip_push_error_frame((A), __func__, __LINE__);    \
-        return(KMIP_TYPE_MISMATCH);                        \
-    }                                                      \
+#define CHECK_TAG_TYPE(A, B, C, D)                      \
+do                                                      \
+{                                                       \
+    if((int32)((B) >> 8) != (int32)(C))                 \
+    {                                                   \
+        kmip_push_error_frame((A), __func__, __LINE__); \
+        return(KMIP_TAG_MISMATCH);                      \
+    }                                                   \
+    else if((int32)(((B) << 24) >> 24) != (int32)(D))   \
+    {                                                   \
+        kmip_push_error_frame((A), __func__, __LINE__); \
+        return(KMIP_TYPE_MISMATCH);                     \
+    }                                                   \
 } while(0)
 
 #define CHECK_LENGTH(A, B, C)                           \
@@ -1116,6 +1135,38 @@ do                                                      \
     }                                                   \
 } while(0)
 
+#define CHECK_ENCODE_ARGS(A, B)   \
+do                                \
+{                                 \
+    if((A) == NULL)               \
+    {                             \
+        return(KMIP_ARG_INVALID); \
+    }                             \
+    if((B) == NULL)               \
+    {                             \
+        return(KMIP_OK);          \
+    }                             \
+} while(0)
+
+#define CHECK_DECODE_ARGS(A, B)    \
+do                                 \
+{                                  \
+    if((A) == NULL || (B) == NULL) \
+    {                              \
+        return(KMIP_ARG_INVALID);  \
+    }                              \
+} while(0)
+
+#define CHECK_KMIP_VERSION(A, B)                        \
+do                                                      \
+{                                                       \
+    if((A)->version < (B))                              \
+    {                                                   \
+        kmip_push_error_frame((A), __func__, __LINE__); \
+        return(KMIP_INVALID_FOR_VERSION);               \
+    }                                                   \
+} while(0)
+
 #define CALCULATE_PADDING(A) ((8 - ((A) % 8)) % 8)
 
 /*
@@ -1163,6 +1214,7 @@ int kmip_is_tag_next(const KMIP *, enum tag);
 int kmip_is_tag_type_next(const KMIP *, enum tag, enum type);
 int kmip_get_num_items_next(KMIP *, enum tag);
 int kmip_peek_tag(KMIP *);
+size_t kmip_get_num_attributes_next(KMIP *);
 
 /*
 Initialization Functions
@@ -1217,6 +1269,7 @@ void kmip_print_mac_signature_key_information(int, MACSignatureKeyInformation *)
 void kmip_print_key_wrapping_data(int, KeyWrappingData *);
 void kmip_print_attribute_value(int, enum attribute_type, void *);
 void kmip_print_attribute(int, Attribute *);
+void kmip_print_attributes(int, Attributes *);
 void kmip_print_key_material(int, enum key_format_type, void *);
 void kmip_print_key_value(int, enum type, enum key_format_type, void *);
 void kmip_print_key_block(int, KeyBlock *);
@@ -1254,6 +1307,7 @@ void kmip_free_text_string(KMIP *, TextString *);
 void kmip_free_byte_string(KMIP *, ByteString *);
 void kmip_free_name(KMIP *, Name *);
 void kmip_free_attribute(KMIP *, Attribute *);
+void kmip_free_attributes(KMIP *, Attributes *);
 void kmip_free_template_attribute(KMIP *, TemplateAttribute *);
 void kmip_free_transparent_symmetric_key(KMIP *, TransparentSymmetricKey *);
 void kmip_free_key_material(KMIP *, enum key_format_type, void **);
@@ -1295,6 +1349,7 @@ int kmip_compare_text_string(const TextString *, const TextString *);
 int kmip_compare_byte_string(const ByteString *, const ByteString *);
 int kmip_compare_name(const Name *, const Name *);
 int kmip_compare_attribute(const Attribute *, const Attribute *);
+int kmip_compare_attributes(const Attributes *, const Attributes *);
 int kmip_compare_template_attribute(const TemplateAttribute *, const TemplateAttribute *);
 int kmip_compare_protocol_version(const ProtocolVersion *, const ProtocolVersion *);
 int kmip_compare_transparent_symmetric_key(const TransparentSymmetricKey *, const TransparentSymmetricKey *);
@@ -1346,7 +1401,10 @@ int kmip_encode_date_time(KMIP *, enum tag, uint64);
 int kmip_encode_interval(KMIP *, enum tag, uint32);
 int kmip_encode_name(KMIP *, const Name *);
 int kmip_encode_attribute_name(KMIP *, enum attribute_type);
+int kmip_encode_attribute_v1(KMIP *, const Attribute *);
+int kmip_encode_attribute_v2(KMIP *, const Attribute *);
 int kmip_encode_attribute(KMIP *, const Attribute *);
+int kmip_encode_attributes(KMIP *, const Attributes *);
 int kmip_encode_template_attribute(KMIP *, const TemplateAttribute *);
 int kmip_encode_protocol_version(KMIP *, const ProtocolVersion *);
 int kmip_encode_cryptographic_parameters(KMIP *, const CryptographicParameters *);
@@ -1398,7 +1456,10 @@ int kmip_decode_date_time(KMIP *, enum tag, uint64 *);
 int kmip_decode_interval(KMIP *, enum tag, uint32 *);
 int kmip_decode_name(KMIP *, Name *);
 int kmip_decode_attribute_name(KMIP *, enum attribute_type *);
+int kmip_decode_attribute_v1(KMIP *, Attribute *);
+int kmip_decode_attribute_v2(KMIP *, Attribute *);
 int kmip_decode_attribute(KMIP *, Attribute *);
+int kmip_decode_attributes(KMIP *, Attributes *);
 int kmip_decode_template_attribute(KMIP *, TemplateAttribute *);
 int kmip_decode_protocol_version(KMIP *, ProtocolVersion *);
 int kmip_decode_transparent_symmetric_key(KMIP *, TransparentSymmetricKey *);

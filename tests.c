@@ -101,6 +101,21 @@ report_decoding_test_result(struct kmip *ctx, int comparison, int result,
 }
 
 int
+report_result(int observed, int expected, const char *function)
+{
+    if(observed == expected)
+    {
+        printf("PASS - %s\n", function);
+        return(0);
+    }
+    else
+    {
+        printf("FAIL - %s\n", function);
+        return(1);
+    }
+}
+
+int
 test_linked_list_push(void)
 {
     LinkedList list = {0};
@@ -667,8 +682,26 @@ test_buffer_bytes_left(void)
 }
 
 int
+test_get_num_attributes_next(void)
+{
+    /* Need to build an encoding with one of each type of support
+       attribute. Verify that this function returns the correct
+       count.
+
+       Need to build an encoding with bad attribute length? Handle
+       weird corner cases?
+    */
+    TEST_FAILED(__func__, __LINE__);
+}
+
+int
 test_peek_tag(void)
 {
+    /* Build an encoding with an arbitrary tag value. Verify that this
+       function reads and returns this tag value without changing the
+       context buffer.
+    */
+
     uint8 underfull_encoding[1] = {0x42};
     uint8 full_encoding[3] = {0x42, 0x00, 0x08};
     uint8 overfull_encoding[5] = {0x42, 0x00, 0x53, 0x01, 0x00};
@@ -716,6 +749,49 @@ test_peek_tag(void)
     kmip_destroy(&ctx);
 
     TEST_PASSED(__func__);
+}
+
+int
+test_print_attributes(void)
+{
+    /* For now this will probably be left as a placeholder for a
+       future test. Ideally the print functions would output to
+       an arbitrary buffer so that we can verify that they are
+       correctly displaying structure content and formatting.
+       Since they currently use printf directly, this may be hard
+       to do in the short term.
+    */
+    TEST_FAILED(__func__, __LINE__);
+}
+
+int
+test_free_attributes(void)
+{
+    /* Build a dynamically allocated Attributes structure. Free it
+       with this function. Verify that all internal pointers and
+       fields are correctly nullified.
+
+       Ideally, hook into the free function managed by the context
+       and use that hook to verify that the correct free calls are
+       made on the internal Attributes structure pointers. This
+       may require more infrastructure work than currently exists.
+    */
+    TEST_FAILED(__func__, __LINE__);
+}
+
+int
+test_compare_attributes(void)
+{
+    /* Build two separate identical Attributes structures. Compare
+       them with this function and confirm they match.
+
+       Build two separate different Attributes structures. Compare
+       them with this function and confirm they do not match. This
+       may require multiple rounds, changing different parts of the
+       underlying Attributes structure. It may make more sense to
+       split this into multiple test functions.
+    */
+    TEST_FAILED(__func__, __LINE__);
 }
 
 int
@@ -5914,6 +5990,146 @@ test_decode_response_message_get(void)
 }
 
 int
+test_encode_attributes(void)
+{
+    /* This encoding matches the following set of values:
+    *  Attributes
+    *      Cryptographic Algorithm - AES
+    *      Cryptographic Length - 128
+    */
+    uint8 expected[40] = {
+        0x42, 0x01, 0x25, 0x01, 0x00, 0x00, 0x00, 0x20,
+        0x42, 0x00, 0x28, 0x05, 0x00, 0x00, 0x00, 0x04,
+        0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x00,
+        0x42, 0x00, 0x2A, 0x02, 0x00, 0x00, 0x00, 0x04,
+        0x00, 0x00, 0x00, 0x80, 0x00, 0x00, 0x00, 0x00
+    };
+    
+    uint8 observed[40] = {0};
+    struct kmip ctx = {0};
+    kmip_init(&ctx, observed, ARRAY_LENGTH(observed), KMIP_2_0);
+
+    LinkedList attribute_list = {0};
+
+    LinkedListItem item_1 = {0};
+    Attribute attr_1 = {0};
+    kmip_init_attribute(&attr_1);
+    enum cryptographic_algorithm algorithm = KMIP_CRYPTOALG_AES;
+    attr_1.type = KMIP_ATTR_CRYPTOGRAPHIC_ALGORITHM;
+    attr_1.value = &algorithm;
+    item_1.data = &attr_1;
+
+    LinkedListItem item_2 = {0};
+    Attribute attr_2 = {0};
+    kmip_init_attribute(&attr_2);
+    int32 length = 128;
+    attr_2.type = KMIP_ATTR_CRYPTOGRAPHIC_LENGTH;
+    attr_2.value = &length;
+    item_2.data = &attr_2;
+
+    kmip_linked_list_enqueue(&attribute_list, &item_1);
+    kmip_linked_list_enqueue(&attribute_list, &item_2);
+
+    Attributes attributes = {0};
+    attributes.attribute_list = &attribute_list;
+
+    int result = kmip_encode_attributes(&ctx, &attributes);
+    result = report_encoding_test_result(&ctx, expected, observed, result, __func__);
+
+    kmip_destroy(&ctx);
+
+    return(result);
+}
+
+int
+test_encode_attributes_with_invalid_kmip_version(void)
+{
+    uint8 observed[40] = {0};
+    struct kmip ctx = {0};
+    kmip_init(&ctx, observed, ARRAY_LENGTH(observed), KMIP_1_4);
+
+    Attributes attributes = {0};
+
+    int result = kmip_encode_attributes(&ctx, &attributes);
+    kmip_destroy(&ctx);
+
+    result = report_result(result, KMIP_INVALID_FOR_VERSION, __func__);
+    return(result);
+}
+
+int
+test_decode_attributes(void)
+{
+    /* This encoding matches the following set of values:
+    *  Attributes
+    *      Cryptographic Algorithm - AES
+    *      Cryptographic Length - 128
+    */
+    uint8 encoding[40] = {
+        0x42, 0x01, 0x25, 0x01, 0x00, 0x00, 0x00, 0x20,
+        0x42, 0x00, 0x28, 0x05, 0x00, 0x00, 0x00, 0x04,
+        0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x00,
+        0x42, 0x00, 0x2A, 0x02, 0x00, 0x00, 0x00, 0x04,
+        0x00, 0x00, 0x00, 0x80, 0x00, 0x00, 0x00, 0x00
+    };
+
+    KMIP ctx = {0};
+    kmip_init(&ctx, encoding, ARRAY_LENGTH(encoding), KMIP_2_0);
+
+    LinkedList attribute_list = {0};
+
+    LinkedListItem item_1 = {0};
+    Attribute attr_1 = {0};
+    kmip_init_attribute(&attr_1);
+    enum cryptographic_algorithm algorithm = KMIP_CRYPTOALG_AES;
+    attr_1.type = KMIP_ATTR_CRYPTOGRAPHIC_ALGORITHM;
+    attr_1.value = &algorithm;
+    item_1.data = &attr_1;
+
+    LinkedListItem item_2 = {0};
+    Attribute attr_2 = {0};
+    kmip_init_attribute(&attr_2);
+    int32 length = 128;
+    attr_2.type = KMIP_ATTR_CRYPTOGRAPHIC_LENGTH;
+    attr_2.value = &length;
+    item_2.data = &attr_2;
+
+    kmip_linked_list_enqueue(&attribute_list, &item_1);
+    kmip_linked_list_enqueue(&attribute_list, &item_2);
+
+    Attributes expected = {0};
+    expected.attribute_list = &attribute_list;
+
+    Attributes observed = {0};
+    int result = kmip_decode_attributes(&ctx, &observed);
+    int comparison = kmip_compare_attributes(&expected, &observed);
+    result = report_decoding_test_result(&ctx, comparison, result, __func__);
+
+    kmip_free_attributes(&ctx, &observed);
+    kmip_destroy(&ctx);
+
+    return(result);
+}
+
+int
+test_decode_attributes_with_invalid_kmip_version(void)
+{
+    uint8 encoding[] = {0};
+
+    KMIP ctx = {0};
+    kmip_init(&ctx, encoding, ARRAY_LENGTH(encoding), KMIP_1_4);
+
+    Attributes observed = {0};
+    int result = kmip_decode_attributes(&ctx, &observed);
+
+    kmip_free_attributes(&ctx, &observed);
+    kmip_destroy(&ctx);
+
+    result = report_result(result, KMIP_INVALID_FOR_VERSION, __func__);
+    return(result);
+}
+
+int
 test_encode_template_attribute(void)
 {
     uint8 expected[288] = {
@@ -8046,7 +8262,7 @@ test_kmip_1_1_test_suite_3_1_3_2_b(void)
 int
 run_tests(void)
 {
-    int num_tests = 140;
+    int num_tests = 144;
     int num_failures = 0;
     
     printf("Tests\n");
@@ -8221,6 +8437,14 @@ run_tests(void)
     num_failures += test_encode_request_header_with_correlation_values();
     num_failures += test_encode_response_header_with_correlation_values();
     
+    printf("\nKMIP 2.0 Feature Tests\n");
+    printf("----------------------\n");
+    num_failures += test_decode_attributes();
+    num_failures += test_decode_attributes_with_invalid_kmip_version();
+
+    num_failures += test_encode_attributes();
+    num_failures += test_encode_attributes_with_invalid_kmip_version();
+
     printf("\nSummary\n");
     printf("================\n");
     printf("Total tests: %d\n", num_tests);
