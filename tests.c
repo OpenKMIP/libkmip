@@ -18,6 +18,23 @@
 #include <string.h>
 #include "kmip.h"
 
+
+
+#define TEST_PASSED(A)          \
+do                              \
+{                               \
+    printf("PASS - %s\n", (A)); \
+    return(0);                  \
+} while(0)
+
+#define TEST_FAILED(A, B)                  \
+do                                         \
+{                                          \
+    printf("FAIL - %s @ L%d\n", (A), (B)); \
+    return(1);                             \
+} while(0)
+
+
 int
 report_encoding_test_result(struct kmip *ctx, const uint8 *expected,
                             const uint8 *observed, int result,
@@ -40,8 +57,7 @@ report_encoding_test_result(struct kmip *ctx, const uint8 *expected,
             }
         }
         
-        printf("PASS - %s\n", function);
-        return(0);
+        TEST_PASSED(function);
     }
     else
     {
@@ -63,8 +79,7 @@ report_decoding_test_result(struct kmip *ctx, int comparison, int result,
     {
         if(comparison)
         {
-            printf("PASS - %s\n", function);
-            return(0);
+            TEST_PASSED(function);
         }
         else
         {
@@ -83,6 +98,116 @@ report_decoding_test_result(struct kmip *ctx, int comparison, int result,
         kmip_print_stack_trace(ctx);
         return(1);
     }
+}
+
+int
+test_linked_list_push(void)
+{
+    LinkedList list = {0};
+
+    LinkedListItem a = {0};
+    LinkedListItem b = {0};
+    LinkedListItem c = {0};
+
+    if(list.head != NULL || list.tail != NULL || list.size != 0)
+    {
+        TEST_FAILED(__func__, __LINE__);
+    }
+
+    kmip_linked_list_push(&list, &a);
+
+    if(list.head != &a || list.tail != &a || list.size != 1)
+    {
+        TEST_FAILED(__func__, __LINE__);
+    }
+
+    kmip_linked_list_push(&list, &b);
+
+    if(list.head != &b || list.tail != &a || list.size != 2)
+    {
+        TEST_FAILED(__func__, __LINE__);
+    }
+
+    kmip_linked_list_push(&list, &c);
+
+    if(list.head != &c || list.tail != &a || list.size != 3)
+    {
+        TEST_FAILED(__func__, __LINE__);
+    }
+
+    LinkedListItem *curr = list.head;
+    if(curr != &c || curr->next != &b || curr->prev != NULL)
+    {
+        TEST_FAILED(__func__, __LINE__);
+    }
+    curr = curr->next;
+    if(curr != &b || curr->next != &a || curr->prev != &c)
+    {
+        TEST_FAILED(__func__, __LINE__);
+    }
+    curr = curr->next;
+    if(curr != &a || curr->next != NULL || curr->prev != &b)
+    {
+        TEST_FAILED(__func__, __LINE__);
+    }
+
+    TEST_PASSED(__func__);
+}
+
+int
+test_linked_list_pop(void)
+{
+    LinkedList list = {0};
+
+    if(list.head != NULL || list.tail != NULL || list.size != 0)
+    {
+        TEST_FAILED(__func__, __LINE__);
+    }
+
+    LinkedListItem *item = kmip_linked_list_pop(&list);
+
+    if(item != NULL || list.head != NULL || list.tail != NULL || list.size != 0)
+    {
+        TEST_FAILED(__func__, __LINE__);
+    }
+
+    LinkedListItem a = {0};
+    LinkedListItem b = {0};
+    LinkedListItem c = {0};
+
+    a.next = &b;
+    a.prev = NULL;
+    b.next = &c;
+    b.prev = &a;
+    c.next = NULL;
+    c.prev = &b;
+
+    list.head = &a;
+    list.tail = &c;
+    list.size = 3;
+
+    item = kmip_linked_list_pop(&list);
+
+    if(item != &a || list.head != &b || list.tail != &c || list.size != 2)
+    {
+        TEST_FAILED(__func__, __LINE__);
+    }
+
+    item = kmip_linked_list_pop(&list);
+
+    if(item != &b || list.head != &c || list.tail != &c || list.size != 1)
+    {
+        TEST_FAILED(__func__, __LINE__);
+    }
+
+    item = kmip_linked_list_pop(&list);
+
+    if(item != &c || list.head != NULL || list.tail != NULL || list.size != 0)
+    {
+        TEST_FAILED(__func__, __LINE__);
+    }
+
+    TEST_PASSED(__func__);
 }
 
 int
@@ -7781,12 +7906,17 @@ test_kmip_1_1_test_suite_3_1_3_2_b(void)
 int
 run_tests(void)
 {
-    int num_tests = 135;
+    int num_tests = 137;
     int num_failures = 0;
     
     printf("Tests\n");
     printf("=====\n");
     
+    printf("\nUtility Tests\n");
+    printf("-------------\n");
+    num_failures += test_linked_list_pop();
+    num_failures += test_linked_list_push();
+
     printf("\nKMIP 1.0 Feature Tests\n");
     printf("----------------------\n");
     num_failures += test_buffer_full_and_resize();
