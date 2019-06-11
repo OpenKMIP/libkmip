@@ -65,6 +65,11 @@ kmip_linked_list_pop(LinkedList *list)
         {
             list->head->prev = NULL;
         }
+
+        if(popped == list->tail)
+        {
+            list->tail = NULL;
+        }
         
         if(list->size > 0)
         {
@@ -96,6 +101,11 @@ kmip_linked_list_push(LinkedList *list, LinkedListItem *item)
         if(head != NULL)
         {
             head->prev = item;
+        }
+
+        if(list->tail == NULL)
+        {
+            list->tail = list->head;
         }
     }
 }

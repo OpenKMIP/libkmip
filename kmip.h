@@ -674,6 +674,8 @@ typedef struct linked_list_item
 typedef struct linked_list
 {
     LinkedListItem *head;
+    LinkedListItem *tail;
+
     size_t size;
 } LinkedList;
 
