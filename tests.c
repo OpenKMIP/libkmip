@@ -211,6 +211,60 @@ test_linked_list_pop(void)
 }
 
 int
+test_linked_list_enqueue(void)
+{
+    LinkedList list = {0};
+
+    LinkedListItem a = {0};
+    LinkedListItem b = {0};
+    LinkedListItem c = {0};
+
+    if(list.head != NULL || list.tail != NULL || list.size != 0)
+    {
+        TEST_FAILED(__func__, __LINE__);
+    }
+
+    kmip_linked_list_enqueue(&list, &a);
+
+    if(list.head != &a || list.tail != &a || list.size != 1)
+    {
+        TEST_FAILED(__func__, __LINE__);
+    }
+
+    kmip_linked_list_enqueue(&list, &b);
+
+    if(list.head != &a || list.tail != &b || list.size != 2)
+    {
+        TEST_FAILED(__func__, __LINE__);
+    }
+
+    kmip_linked_list_enqueue(&list, &c);
+
+    if(list.head != &a || list.tail != &c || list.size != 3)
+    {
+        TEST_FAILED(__func__, __LINE__);
+    }
+
+    LinkedListItem *curr = list.head;
+    if(curr != &a || curr->next != &b || curr->prev != NULL)
+    {
+        TEST_FAILED(__func__, __LINE__);
+    }
+    curr = curr->next;
+    if(curr != &b || curr->next != &c || curr->prev != &a)
+    {
+        TEST_FAILED(__func__, __LINE__);
+    }
+    curr = curr->next;
+    if(curr != &c || curr->next != NULL || curr->prev != &b)
+    {
+        TEST_FAILED(__func__, __LINE__);
+    }
+
+    TEST_PASSED(__func__);
+}
+
+int
 test_buffer_full_and_resize(void)
 {
     uint8 expected[40] = {
@@ -7906,7 +7960,7 @@ test_kmip_1_1_test_suite_3_1_3_2_b(void)
 int
 run_tests(void)
 {
-    int num_tests = 137;
+    int num_tests = 138;
     int num_failures = 0;
     
     printf("Tests\n");
@@ -7916,6 +7970,7 @@ run_tests(void)
     printf("-------------\n");
     num_failures += test_linked_list_pop();
     num_failures += test_linked_list_push();
+    num_failures += test_linked_list_enqueue();
 
     printf("\nKMIP 1.0 Feature Tests\n");
     printf("----------------------\n");
