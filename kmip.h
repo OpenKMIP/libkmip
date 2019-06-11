@@ -1123,6 +1123,7 @@ Miscellaneous Utilities
 size_t kmip_strnlen_s(const char *, size_t);
 LinkedListItem *kmip_linked_list_pop(LinkedList *);
 void kmip_linked_list_push(LinkedList *, LinkedListItem *);
+void kmip_linked_list_enqueue(LinkedList *, LinkedListItem *);
 
 /*
 Memory Handlers

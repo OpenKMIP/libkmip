@@ -110,6 +110,29 @@ kmip_linked_list_push(LinkedList *list, LinkedListItem *item)
     }
 }
 
+void
+kmip_linked_list_enqueue(LinkedList *list, LinkedListItem *item)
+{
+    if(list != NULL && item != NULL)
+    {
+        LinkedListItem *tail = list->tail;
+        list->tail = item;
+        item->next = NULL;
+        item->prev = tail;
+        list->size += 1;
+
+        if(tail != NULL)
+        {
+            tail->next = item;
+        }
+
+        if(list->head == NULL)
+        {
+            list->head = list->tail;
+        }
+    }
+}
+
 /*
 Memory Handlers
 */
