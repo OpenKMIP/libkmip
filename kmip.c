@@ -1455,6 +1455,24 @@ kmip_get_num_items_next(KMIP *ctx, enum tag t)
     return(count);
 }
 
+int
+kmip_peek_tag(KMIP *ctx)
+{
+    if(BUFFER_BYTES_LEFT(ctx) < 3)
+    {
+        return(0);
+    }
+
+    uint8 *index = ctx->index;
+    int32 tag = 0;
+
+    tag |= ((int32)*index++ << 16);
+    tag |= ((int32)*index++ << 8);
+    tag |= ((int32)*index++ << 0);
+
+    return(tag);
+}
+
 /*
 Initialization Functions
 */

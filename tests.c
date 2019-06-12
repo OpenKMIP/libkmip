@@ -633,6 +633,92 @@ test_get_num_items_next_with_non_structures(void)
 }
 
 int
+test_buffer_bytes_left(void)
+{
+    uint8 a[1] = {0x42};
+    uint8 b[3] = {0x42, 0x00, 0x08};
+    uint8 c[5] = {0x42, 0x00, 0x53, 0x01, 0x00};
+
+    KMIP ctx = {0};
+    kmip_init(&ctx, a, ARRAY_LENGTH(a), KMIP_1_0);
+
+    if(BUFFER_BYTES_LEFT(&ctx) != 1)
+    {
+        TEST_FAILED(__func__, __LINE__);
+    }
+
+    kmip_destroy(&ctx);
+    kmip_init(&ctx, b, ARRAY_LENGTH(b), KMIP_1_0);
+
+    if(BUFFER_BYTES_LEFT(&ctx) != 3)
+    {
+        TEST_FAILED(__func__, __LINE__);
+    }
+
+    kmip_destroy(&ctx);
+    kmip_init(&ctx, c, ARRAY_LENGTH(c), KMIP_1_0);
+
+    if(BUFFER_BYTES_LEFT(&ctx) != 5)
+    {
+        TEST_FAILED(__func__, __LINE__);
+    }
+
+    TEST_PASSED(__func__);
+}
+
+int
+test_peek_tag(void)
+{
+    uint8 underfull_encoding[1] = {0x42};
+    uint8 full_encoding[3] = {0x42, 0x00, 0x08};
+    uint8 overfull_encoding[5] = {0x42, 0x00, 0x53, 0x01, 0x00};
+
+    int32 tag = 0;
+    uint8 *prev_buffer = NULL;
+    uint8 *prev_index = NULL;
+    size_t prev_size = 0;
+    KMIP ctx = {0};
+    kmip_init(&ctx, underfull_encoding, ARRAY_LENGTH(underfull_encoding), KMIP_1_0);
+
+    prev_buffer = ctx.buffer;
+    prev_index = ctx.index;
+    prev_size = ctx.size;
+    tag = kmip_peek_tag(&ctx);
+    if(tag != 0 || ctx.buffer != prev_buffer || ctx.index != prev_index || ctx.size != prev_size)
+    {
+        TEST_FAILED(__func__, __LINE__);
+    }
+
+    kmip_destroy(&ctx);
+    kmip_init(&ctx, full_encoding, ARRAY_LENGTH(full_encoding), KMIP_1_0);
+
+    prev_buffer = ctx.buffer;
+    prev_index = ctx.index;
+    prev_size = ctx.size;
+    tag = kmip_peek_tag(&ctx);
+    if(tag != KMIP_TAG_ATTRIBUTE || ctx.buffer != prev_buffer || ctx.index != prev_index || ctx.size != prev_size)
+    {
+        TEST_FAILED(__func__, __LINE__);
+    }
+
+    kmip_destroy(&ctx);
+    kmip_init(&ctx, overfull_encoding, ARRAY_LENGTH(overfull_encoding), KMIP_1_0);
+
+    prev_buffer = ctx.buffer;
+    prev_index = ctx.index;
+    prev_size = ctx.size;
+    tag = kmip_peek_tag(&ctx);
+    if(tag != KMIP_TAG_NAME || ctx.buffer != prev_buffer || ctx.index != prev_index || ctx.size != prev_size)
+    {
+        TEST_FAILED(__func__, __LINE__);
+    }
+
+    kmip_destroy(&ctx);
+
+    TEST_PASSED(__func__);
+}
+
+int
 test_decode_int8_be(void)
 {
     uint8 encoding[1] = {0x42};
@@ -7960,7 +8046,7 @@ test_kmip_1_1_test_suite_3_1_3_2_b(void)
 int
 run_tests(void)
 {
-    int num_tests = 138;
+    int num_tests = 140;
     int num_failures = 0;
     
     printf("Tests\n");
@@ -7971,6 +8057,8 @@ run_tests(void)
     num_failures += test_linked_list_pop();
     num_failures += test_linked_list_push();
     num_failures += test_linked_list_enqueue();
+    num_failures += test_buffer_bytes_left();
+    num_failures += test_peek_tag();
 
     printf("\nKMIP 1.0 Feature Tests\n");
     printf("----------------------\n");
