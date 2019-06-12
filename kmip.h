@@ -1024,6 +1024,8 @@ Macros
 
 #define ARRAY_LENGTH(A) (sizeof((A)) / sizeof((A)[0]))
 
+#define BUFFER_BYTES_LEFT(A) ((A)->size - ((A)->index - (A)->buffer))
+
 #define CHECK_BUFFER_FULL(A, B)                         \
 do                                                      \
 {                                                       \
@@ -1160,6 +1162,7 @@ void kmip_set_error_message(KMIP *, const char *);
 int kmip_is_tag_next(const KMIP *, enum tag);
 int kmip_is_tag_type_next(const KMIP *, enum tag, enum type);
 int kmip_get_num_items_next(KMIP *, enum tag);
+int kmip_peek_tag(KMIP *);
 
 /*
 Initialization Functions
