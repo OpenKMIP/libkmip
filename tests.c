@@ -20,25 +20,41 @@
 
 
 
-#define TEST_PASSED(A)          \
+#define TEST_PASSED(A, B)       \
 do                              \
 {                               \
-    printf("PASS - %s\n", (A)); \
+    printf("PASS - %s\n", (B)); \
+    (A)->tests_passed++;         \
     return(0);                  \
 } while(0)
 
-#define TEST_FAILED(A, B)                  \
+#define TEST_FAILED(A, B, C)               \
 do                                         \
 {                                          \
-    printf("FAIL - %s @ L%d\n", (A), (B)); \
+    printf("FAIL - %s @ L%d\n", (B), (C)); \
+    (A)->tests_failed++;                    \
     return(1);                             \
 } while(0)
 
+#define TRACK_TEST(A) ((A)->test_count++)
+
+
+typedef struct test_tracker
+{
+    uint16 test_count;
+    uint16 tests_failed;
+    uint16 tests_passed;
+} TestTracker;
+
 
 int
-report_encoding_test_result(struct kmip *ctx, const uint8 *expected,
-                            const uint8 *observed, int result,
-                            const char *function)
+report_encoding_test_result(
+    TestTracker *tracker,
+    struct kmip *ctx,
+    const uint8 *expected,
+    const uint8 *observed,
+    int result,
+    const char *function)
 {
     if(result == KMIP_OK)
     {
@@ -53,11 +69,12 @@ report_encoding_test_result(struct kmip *ctx, const uint8 *expected,
                 {
                     printf("- %zu: %X - %X\n", j, expected[j], observed[j]);
                 }
+                tracker->tests_failed++;
                 return(1);
             }
         }
         
-        TEST_PASSED(function);
+        TEST_PASSED(tracker, function);
     }
     else
     {
@@ -67,24 +84,30 @@ report_encoding_test_result(struct kmip *ctx, const uint8 *expected,
             printf("- context buffer is full\n");
         }
         kmip_print_stack_trace(ctx);
+        tracker->tests_failed++;
         return(1);
     }
 }
 
 int
-report_decoding_test_result(struct kmip *ctx, int comparison, int result,
-                            const char *function)
+report_decoding_test_result(
+    TestTracker *tracker,
+    struct kmip *ctx,
+    int comparison,
+    int result,
+    const char *function)
 {
     if(result == KMIP_OK)
     {
         if(comparison)
         {
-            TEST_PASSED(function);
+            TEST_PASSED(tracker, function);
         }
         else
         {
             printf("FAIL - %s\n", function);
             printf("- compared objects are not identical\n");
+            tracker->tests_failed++;
             return(1);
         }
     }
@@ -96,28 +119,31 @@ report_decoding_test_result(struct kmip *ctx, int comparison, int result,
             printf("- context buffer is underfull\n");
         }
         kmip_print_stack_trace(ctx);
+        tracker->tests_failed++;
         return(1);
     }
 }
 
 int
-report_result(int observed, int expected, const char *function)
+report_result(TestTracker *tracker, int observed, int expected, const char *function)
 {
     if(observed == expected)
     {
-        printf("PASS - %s\n", function);
-        return(0);
+        TEST_PASSED(tracker, function);
     }
     else
     {
         printf("FAIL - %s\n", function);
+        tracker->tests_failed++;
         return(1);
     }
 }
 
 int
-test_linked_list_push(void)
+test_linked_list_push(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     LinkedList list = {0};
 
     LinkedListItem a = {0};
@@ -126,64 +152,66 @@ test_linked_list_push(void)
 
     if(list.head != NULL || list.tail != NULL || list.size != 0)
     {
-        TEST_FAILED(__func__, __LINE__);
+        TEST_FAILED(tracker, __func__, __LINE__);
     }
 
     kmip_linked_list_push(&list, &a);
 
     if(list.head != &a || list.tail != &a || list.size != 1)
     {
-        TEST_FAILED(__func__, __LINE__);
+        TEST_FAILED(tracker, __func__, __LINE__);
     }
 
     kmip_linked_list_push(&list, &b);
 
     if(list.head != &b || list.tail != &a || list.size != 2)
     {
-        TEST_FAILED(__func__, __LINE__);
+        TEST_FAILED(tracker, __func__, __LINE__);
     }
 
     kmip_linked_list_push(&list, &c);
 
     if(list.head != &c || list.tail != &a || list.size != 3)
     {
-        TEST_FAILED(__func__, __LINE__);
+        TEST_FAILED(tracker, __func__, __LINE__);
     }
 
     LinkedListItem *curr = list.head;
     if(curr != &c || curr->next != &b || curr->prev != NULL)
     {
-        TEST_FAILED(__func__, __LINE__);
+        TEST_FAILED(tracker, __func__, __LINE__);
     }
     curr = curr->next;
     if(curr != &b || curr->next != &a || curr->prev != &c)
     {
-        TEST_FAILED(__func__, __LINE__);
+        TEST_FAILED(tracker, __func__, __LINE__);
     }
     curr = curr->next;
     if(curr != &a || curr->next != NULL || curr->prev != &b)
     {
-        TEST_FAILED(__func__, __LINE__);
+        TEST_FAILED(tracker, __func__, __LINE__);
     }
 
-    TEST_PASSED(__func__);
+    TEST_PASSED(tracker, __func__);
 }
 
 int
-test_linked_list_pop(void)
+test_linked_list_pop(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     LinkedList list = {0};
 
     if(list.head != NULL || list.tail != NULL || list.size != 0)
     {
-        TEST_FAILED(__func__, __LINE__);
+        TEST_FAILED(tracker, __func__, __LINE__);
     }
 
     LinkedListItem *item = kmip_linked_list_pop(&list);
 
     if(item != NULL || list.head != NULL || list.tail != NULL || list.size != 0)
     {
-        TEST_FAILED(__func__, __LINE__);
+        TEST_FAILED(tracker, __func__, __LINE__);
     }
 
     LinkedListItem a = {0};
@@ -205,29 +233,31 @@ test_linked_list_pop(void)
 
     if(item != &a || list.head != &b || list.tail != &c || list.size != 2)
     {
-        TEST_FAILED(__func__, __LINE__);
+        TEST_FAILED(tracker, __func__, __LINE__);
     }
 
     item = kmip_linked_list_pop(&list);
 
     if(item != &b || list.head != &c || list.tail != &c || list.size != 1)
     {
-        TEST_FAILED(__func__, __LINE__);
+        TEST_FAILED(tracker, __func__, __LINE__);
     }
 
     item = kmip_linked_list_pop(&list);
 
     if(item != &c || list.head != NULL || list.tail != NULL || list.size != 0)
     {
-        TEST_FAILED(__func__, __LINE__);
+        TEST_FAILED(tracker, __func__, __LINE__);
     }
 
-    TEST_PASSED(__func__);
+    TEST_PASSED(tracker, __func__);
 }
 
 int
-test_linked_list_enqueue(void)
+test_linked_list_enqueue(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     LinkedList list = {0};
 
     LinkedListItem a = {0};
@@ -236,52 +266,54 @@ test_linked_list_enqueue(void)
 
     if(list.head != NULL || list.tail != NULL || list.size != 0)
     {
-        TEST_FAILED(__func__, __LINE__);
+        TEST_FAILED(tracker, __func__, __LINE__);
     }
 
     kmip_linked_list_enqueue(&list, &a);
 
     if(list.head != &a || list.tail != &a || list.size != 1)
     {
-        TEST_FAILED(__func__, __LINE__);
+        TEST_FAILED(tracker, __func__, __LINE__);
     }
 
     kmip_linked_list_enqueue(&list, &b);
 
     if(list.head != &a || list.tail != &b || list.size != 2)
     {
-        TEST_FAILED(__func__, __LINE__);
+        TEST_FAILED(tracker, __func__, __LINE__);
     }
 
     kmip_linked_list_enqueue(&list, &c);
 
     if(list.head != &a || list.tail != &c || list.size != 3)
     {
-        TEST_FAILED(__func__, __LINE__);
+        TEST_FAILED(tracker, __func__, __LINE__);
     }
 
     LinkedListItem *curr = list.head;
     if(curr != &a || curr->next != &b || curr->prev != NULL)
     {
-        TEST_FAILED(__func__, __LINE__);
+        TEST_FAILED(tracker, __func__, __LINE__);
     }
     curr = curr->next;
     if(curr != &b || curr->next != &c || curr->prev != &a)
     {
-        TEST_FAILED(__func__, __LINE__);
+        TEST_FAILED(tracker, __func__, __LINE__);
     }
     curr = curr->next;
     if(curr != &c || curr->next != NULL || curr->prev != &b)
     {
-        TEST_FAILED(__func__, __LINE__);
+        TEST_FAILED(tracker, __func__, __LINE__);
     }
 
-    TEST_PASSED(__func__);
+    TEST_PASSED(tracker, __func__);
 }
 
 int
-test_buffer_full_and_resize(void)
+test_buffer_full_and_resize(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     uint8 expected[40] = {
         0x42, 0x00, 0x69, 0x01, 0x00, 0x00, 0x00, 0x20,
         0x42, 0x00, 0x6A, 0x02, 0x00, 0x00, 0x00, 0x04,
@@ -308,6 +340,7 @@ test_buffer_full_and_resize(void)
         
         result = kmip_encode_protocol_version(&ctx, &pv);
         result = report_encoding_test_result(
+            tracker,
             &ctx,
             expected,
             large_enough,
@@ -324,14 +357,16 @@ test_buffer_full_and_resize(void)
         printf("- expected buffer full\n");
         
         kmip_destroy(&ctx);
-        
+        tracker->tests_failed++;
         return(1);
     }
 }
 
 int
-test_is_tag_next(void)
+test_is_tag_next(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     uint8 encoding[3] = {0x42, 0x00, 0x08};
     
     struct kmip ctx = {0};
@@ -344,6 +379,7 @@ test_is_tag_next(void)
     {
         printf("FAIL - %s\n", __func__);
         printf("- expected tag is not next\n");
+        tracker->tests_failed++;
         result = 1;
     }
     
@@ -353,6 +389,7 @@ test_is_tag_next(void)
     {
         printf("FAIL - %s\n", __func__);
         printf("- tag checking modifies context buffer index\n");
+        tracker->tests_failed++;
         result = 1;
     }
     
@@ -361,14 +398,17 @@ test_is_tag_next(void)
     if(result == 0)
     {
         printf("PASS - %s\n", __func__);
+        tracker->tests_passed++;
     }
     
     return(result);
 }
 
 int
-test_get_num_items_next(void)
+test_get_num_items_next(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     uint8 encoding[168] = {
         0x42, 0x00, 0x08, 0x01, 0x00, 0x00, 0x00, 0x30, 
         0x42, 0x00, 0x0A, 0x07, 0x00, 0x00, 0x00, 0x17, 
@@ -406,6 +446,7 @@ test_get_num_items_next(void)
         printf("FAIL - %s\n", __func__);
         printf("- expected item count not found (exp. 3, obs. %d)\n",
                count);
+        tracker->tests_failed++;
         result = 1;
     }
     
@@ -415,6 +456,7 @@ test_get_num_items_next(void)
     {
         printf("FAIL - %s\n", __func__);
         printf("- item count checking modifies context buffer index\n");
+        tracker->tests_failed++;
         result = 1;
     }
     
@@ -423,14 +465,17 @@ test_get_num_items_next(void)
     if(result == 0)
     {
         printf("PASS - %s\n", __func__);
+        tracker->tests_passed++;
     }
     
     return(result);
 }
 
 int
-test_get_num_items_next_with_partial_item(void)
+test_get_num_items_next_with_partial_item(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     uint8 encoding[136] = {
         0x42, 0x00, 0x08, 0x01, 0x00, 0x00, 0x00, 0x30, 
         0x42, 0x00, 0x0A, 0x07, 0x00, 0x00, 0x00, 0x14, 
@@ -464,6 +509,7 @@ test_get_num_items_next_with_partial_item(void)
         printf("FAIL - %s\n", __func__);
         printf("- expected item count not found (exp. 2, obs. %d)\n",
                count);
+        tracker->tests_failed++;
         result = 1;
     }
     
@@ -473,6 +519,7 @@ test_get_num_items_next_with_partial_item(void)
     {
         printf("FAIL - %s\n", __func__);
         printf("- item count checking modifies context buffer index\n");
+        tracker->tests_failed++;
         result = 1;
     }
     
@@ -481,14 +528,17 @@ test_get_num_items_next_with_partial_item(void)
     if(result == 0)
     {
         printf("PASS - %s\n", __func__);
+        tracker->tests_passed++;
     }
     
     return(result);
 }
 
 int
-test_get_num_items_next_with_mismatch_item(void)
+test_get_num_items_next_with_mismatch_item(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     uint8 encoding[80] = {
         0x42, 0x00, 0x08, 0x01, 0x00, 0x00, 0x00, 0x30, 
         0x42, 0x00, 0x0A, 0x07, 0x00, 0x00, 0x00, 0x18, 
@@ -515,6 +565,7 @@ test_get_num_items_next_with_mismatch_item(void)
         printf("FAIL - %s\n", __func__);
         printf("- expected item count not found (exp. 1, obs. %d)\n",
                count);
+        tracker->tests_failed++;
         result = 1;
     }
     
@@ -524,6 +575,7 @@ test_get_num_items_next_with_mismatch_item(void)
     {
         printf("FAIL - %s\n", __func__);
         printf("- item count checking modifies context buffer index\n");
+        tracker->tests_failed++;
         result = 1;
     }
     
@@ -532,14 +584,17 @@ test_get_num_items_next_with_mismatch_item(void)
     if(result == 0)
     {
         printf("PASS - %s\n", __func__);
+        tracker->tests_passed++;
     }
     
     return(result);
 }
 
 int
-test_get_num_items_next_with_no_matches(void)
+test_get_num_items_next_with_no_matches(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     uint8 encoding[80] = {
         0x42, 0x00, 0x20, 0x01, 0x00, 0x00, 0x00, 0x30, 
         0x42, 0x00, 0x0A, 0x07, 0x00, 0x00, 0x00, 0x18, 
@@ -566,6 +621,7 @@ test_get_num_items_next_with_no_matches(void)
         printf("FAIL - %s\n", __func__);
         printf("- expected item count not found (exp. 0, obs. %d)\n",
                count);
+        tracker->tests_failed++;
         result = 1;
     }
     
@@ -575,6 +631,7 @@ test_get_num_items_next_with_no_matches(void)
     {
         printf("FAIL - %s\n", __func__);
         printf("- item count checking modifies context buffer index\n");
+        tracker->tests_failed++;
         result = 1;
     }
     
@@ -583,14 +640,17 @@ test_get_num_items_next_with_no_matches(void)
     if(result == 0)
     {
         printf("PASS - %s\n", __func__);
+        tracker->tests_passed++;
     }
     
     return(result);
 }
 
 int
-test_get_num_items_next_with_non_structures(void)
+test_get_num_items_next_with_non_structures(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     uint8 encoding[144] = {
         0x42, 0x00, 0x94, 0x07, 0x00, 0x00, 0x00, 0x26,
         0x31, 0x30, 0x30, 0x31, 0x38, 0x32, 0x64, 0x35, 
@@ -625,6 +685,7 @@ test_get_num_items_next_with_non_structures(void)
         printf("FAIL - %s\n", __func__);
         printf("- expected item count not found (exp. 3, obs. %d)\n",
                count);
+        tracker->tests_failed++;
         result = 1;
     }
     
@@ -634,6 +695,7 @@ test_get_num_items_next_with_non_structures(void)
     {
         printf("FAIL - %s\n", __func__);
         printf("- item count checking modifies context buffer index\n");
+        tracker->tests_failed++;
         result = 1;
     }
     
@@ -642,14 +704,17 @@ test_get_num_items_next_with_non_structures(void)
     if(result == 0)
     {
         printf("PASS - %s\n", __func__);
+        tracker->tests_passed++;
     }
     
     return(result);
 }
 
 int
-test_buffer_bytes_left(void)
+test_buffer_bytes_left(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     uint8 a[1] = {0x42};
     uint8 b[3] = {0x42, 0x00, 0x08};
     uint8 c[5] = {0x42, 0x00, 0x53, 0x01, 0x00};
@@ -660,7 +725,7 @@ test_buffer_bytes_left(void)
     if(BUFFER_BYTES_LEFT(&ctx) != 1)
     {
         kmip_destroy(&ctx);
-        TEST_FAILED(__func__, __LINE__);
+        TEST_FAILED(tracker, __func__, __LINE__);
     }
 
     kmip_destroy(&ctx);
@@ -669,7 +734,7 @@ test_buffer_bytes_left(void)
     if(BUFFER_BYTES_LEFT(&ctx) != 3)
     {
         kmip_destroy(&ctx);
-        TEST_FAILED(__func__, __LINE__);
+        TEST_FAILED(tracker, __func__, __LINE__);
     }
 
     kmip_destroy(&ctx);
@@ -678,17 +743,19 @@ test_buffer_bytes_left(void)
     if(BUFFER_BYTES_LEFT(&ctx) != 5)
     {
         kmip_destroy(&ctx);
-        TEST_FAILED(__func__, __LINE__);
+        TEST_FAILED(tracker, __func__, __LINE__);
     }
 
     kmip_destroy(&ctx);
 
-    TEST_PASSED(__func__);
+    TEST_PASSED(tracker, __func__);
 }
 
 int
-test_get_num_attributes_next(void)
+test_get_num_attributes_next(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     /* Need to build an encoding with one of each type of support
        attribute. Verify that this function returns the correct
        count.
@@ -696,12 +763,14 @@ test_get_num_attributes_next(void)
        Need to build an encoding with bad attribute length? Handle
        weird corner cases?
     */
-    TEST_FAILED(__func__, __LINE__);
+    TEST_FAILED(tracker, __func__, __LINE__);
 }
 
 int
-test_peek_tag(void)
+test_peek_tag(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     /* Build an encoding with an arbitrary tag value. Verify that this
        function reads and returns this tag value without changing the
        context buffer.
@@ -724,7 +793,7 @@ test_peek_tag(void)
     tag = kmip_peek_tag(&ctx);
     if(tag != 0 || ctx.buffer != prev_buffer || ctx.index != prev_index || ctx.size != prev_size)
     {
-        TEST_FAILED(__func__, __LINE__);
+        TEST_FAILED(tracker, __func__, __LINE__);
     }
 
     kmip_destroy(&ctx);
@@ -736,7 +805,7 @@ test_peek_tag(void)
     tag = kmip_peek_tag(&ctx);
     if(tag != KMIP_TAG_ATTRIBUTE || ctx.buffer != prev_buffer || ctx.index != prev_index || ctx.size != prev_size)
     {
-        TEST_FAILED(__func__, __LINE__);
+        TEST_FAILED(tracker, __func__, __LINE__);
     }
 
     kmip_destroy(&ctx);
@@ -748,61 +817,65 @@ test_peek_tag(void)
     tag = kmip_peek_tag(&ctx);
     if(tag != KMIP_TAG_NAME || ctx.buffer != prev_buffer || ctx.index != prev_index || ctx.size != prev_size)
     {
-        TEST_FAILED(__func__, __LINE__);
+        TEST_FAILED(tracker, __func__, __LINE__);
     }
 
     kmip_destroy(&ctx);
 
-    TEST_PASSED(__func__);
+    TEST_PASSED(tracker, __func__);
 }
 
 int
-test_is_attribute_tag(void)
+test_is_attribute_tag(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     if(!kmip_is_attribute_tag(KMIP_TAG_UNIQUE_IDENTIFIER))
     {
-        TEST_FAILED(__func__, __LINE__);
+        TEST_FAILED(tracker, __func__, __LINE__);
     }
     if(!kmip_is_attribute_tag(KMIP_TAG_NAME))
     {
-        TEST_FAILED(__func__, __LINE__);
+        TEST_FAILED(tracker, __func__, __LINE__);
     }
     if(!kmip_is_attribute_tag(KMIP_TAG_OBJECT_TYPE))
     {
-        TEST_FAILED(__func__, __LINE__);
+        TEST_FAILED(tracker, __func__, __LINE__);
     }
     if(!kmip_is_attribute_tag(KMIP_TAG_CRYPTOGRAPHIC_ALGORITHM))
     {
-        TEST_FAILED(__func__, __LINE__);
+        TEST_FAILED(tracker, __func__, __LINE__);
     }
     if(!kmip_is_attribute_tag(KMIP_TAG_CRYPTOGRAPHIC_LENGTH))
     {
-        TEST_FAILED(__func__, __LINE__);
+        TEST_FAILED(tracker, __func__, __LINE__);
     }
     if(!kmip_is_attribute_tag(KMIP_TAG_OPERATION_POLICY_NAME))
     {
-        TEST_FAILED(__func__, __LINE__);
+        TEST_FAILED(tracker, __func__, __LINE__);
     }
     if(!kmip_is_attribute_tag(KMIP_TAG_CRYPTOGRAPHIC_USAGE_MASK))
     {
-        TEST_FAILED(__func__, __LINE__);
+        TEST_FAILED(tracker, __func__, __LINE__);
     }
     if(!kmip_is_attribute_tag(KMIP_TAG_STATE))
     {
-        TEST_FAILED(__func__, __LINE__);
+        TEST_FAILED(tracker, __func__, __LINE__);
     }
 
     if(kmip_is_attribute_tag(KMIP_TAG_REQUEST_MESSAGE))
     {
-        TEST_FAILED(__func__, __LINE__);
+        TEST_FAILED(tracker, __func__, __LINE__);
     }
 
-    TEST_PASSED(__func__);
+    TEST_PASSED(tracker, __func__);
 }
 
 int
-test_print_attributes(void)
+test_print_attributes(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     /* For now this will probably be left as a placeholder for a
        future test. Ideally the print functions would output to
        an arbitrary buffer so that we can verify that they are
@@ -810,12 +883,14 @@ test_print_attributes(void)
        Since they currently use printf directly, this may be hard
        to do in the short term.
     */
-    TEST_FAILED(__func__, __LINE__);
+    TEST_FAILED(tracker, __func__, __LINE__);
 }
 
 int
-test_free_attributes(void)
+test_free_attributes(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     /* Build a dynamically allocated Attributes structure. Free it
        with this function. Verify that all internal pointers and
        fields are correctly nullified.
@@ -825,12 +900,14 @@ test_free_attributes(void)
        made on the internal Attributes structure pointers. This
        may require more infrastructure work than currently exists.
     */
-    TEST_FAILED(__func__, __LINE__);
+    TEST_FAILED(tracker, __func__, __LINE__);
 }
 
 int
-test_compare_attributes(void)
+test_compare_attributes(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     /* Build two separate identical Attributes structures. Compare
        them with this function and confirm they match.
 
@@ -840,12 +917,14 @@ test_compare_attributes(void)
        underlying Attributes structure. It may make more sense to
        split this into multiple test functions.
     */
-    TEST_FAILED(__func__, __LINE__);
+    TEST_FAILED(tracker, __func__, __LINE__);
 }
 
 int
-test_decode_int8_be(void)
+test_decode_int8_be(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     uint8 encoding[1] = {0x42};
     
     struct kmip ctx = {0};
@@ -855,6 +934,7 @@ test_decode_int8_be(void)
     
     int result = kmip_decode_int8_be(&ctx, &value);
     result = report_decoding_test_result(
+        tracker,
         &ctx,
         value == 0x42, 
         result,
@@ -864,8 +944,10 @@ test_decode_int8_be(void)
 }
 
 int
-test_decode_int32_be(void)
+test_decode_int32_be(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     uint8 encoding[4] = {0x11, 0x22, 0x33, 0x44};
     
     struct kmip ctx = {0};
@@ -876,6 +958,7 @@ test_decode_int32_be(void)
     
     int result = kmip_decode_int32_be(&ctx, &observed);
     result = report_decoding_test_result(
+        tracker,
         &ctx,
         observed == expected,
         result,
@@ -885,8 +968,10 @@ test_decode_int32_be(void)
 }
 
 int
-test_decode_int64_be(void)
+test_decode_int64_be(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     uint8 encoding[8] = {
         0x01, 0xB6, 0x9B, 0x4B, 0xA5, 0x74, 0x92, 0x00
     };
@@ -899,6 +984,7 @@ test_decode_int64_be(void)
     
     int result = kmip_decode_int64_be(&ctx, &observed);
     result = report_decoding_test_result(
+        tracker,
         &ctx,
         observed == expected,
         result,
@@ -908,8 +994,10 @@ test_decode_int64_be(void)
 }
 
 int
-test_encode_integer(void)
+test_encode_integer(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     uint8 expected[16] = {
         0x42, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x04,
         0x00, 0x00, 0x00, 0x08, 0x00, 0x00, 0x00, 0x00
@@ -921,6 +1009,7 @@ test_encode_integer(void)
     
     int result = kmip_encode_integer(&ctx, KMIP_TAG_DEFAULT, 8);
     result = report_encoding_test_result(
+        tracker,
         &ctx,
         expected,
         observed,
@@ -931,8 +1020,10 @@ test_encode_integer(void)
 }
 
 int
-test_decode_integer(void)
+test_decode_integer(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     uint8 encoding[16] = {
         0x42, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x04,
         0x00, 0x00, 0x00, 0x08, 0x00, 0x00, 0x00, 0x00
@@ -946,6 +1037,7 @@ test_decode_integer(void)
     
     int result = kmip_decode_integer(&ctx, KMIP_TAG_DEFAULT, &observed);
     result = report_decoding_test_result(
+        tracker,
         &ctx,
         observed == expected,
         result,
@@ -955,8 +1047,10 @@ test_decode_integer(void)
 }
 
 int
-test_encode_long(void)
+test_encode_long(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     uint8 expected[16] = {
         0x42, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x08,
         0x01, 0xB6, 0x9B, 0x4B, 0xA5, 0x74, 0x92, 0x00
@@ -968,6 +1062,7 @@ test_encode_long(void)
     
     int result = kmip_encode_long(&ctx, KMIP_TAG_DEFAULT, 123456789000000000);
     result = report_encoding_test_result(
+        tracker,
         &ctx,
         expected,
         observed,
@@ -978,8 +1073,10 @@ test_encode_long(void)
 }
 
 int
-test_decode_long(void)
+test_decode_long(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     uint8 encoding[16] = {
         0x42, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x08,
         0x01, 0xB6, 0x9B, 0x4B, 0xA5, 0x74, 0x92, 0x00
@@ -993,6 +1090,7 @@ test_decode_long(void)
     
     int result = kmip_decode_long(&ctx, KMIP_TAG_DEFAULT, &observed);
     result = report_decoding_test_result(
+        tracker,
         &ctx,
         observed == expected,
         result,
@@ -1002,8 +1100,10 @@ test_decode_long(void)
 }
 
 int
-test_encode_enum(void)
+test_encode_enum(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     uint8 expected[16] = {
         0x42, 0x00, 0x00, 0x05, 0x00, 0x00, 0x00, 0x04,
         0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x00
@@ -1015,6 +1115,7 @@ test_encode_enum(void)
     
     int result = kmip_encode_enum(&ctx, KMIP_TAG_DEFAULT, KMIP_CRYPTOALG_AES);
     result = report_encoding_test_result(
+        tracker,
         &ctx,
         expected,
         observed,
@@ -1025,8 +1126,10 @@ test_encode_enum(void)
 }
 
 int
-test_decode_enum(void)
+test_decode_enum(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     uint8 encoding[16] = {
         0x42, 0x00, 0x00, 0x05, 0x00, 0x00, 0x00, 0x04,
         0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x00
@@ -1040,6 +1143,7 @@ test_decode_enum(void)
     
     int result = kmip_decode_enum(&ctx, KMIP_TAG_DEFAULT, &observed);
     result = report_decoding_test_result(
+        tracker,
         &ctx,
         observed == expected,
         result,
@@ -1049,8 +1153,10 @@ test_decode_enum(void)
 }
 
 int
-test_encode_bool(void)
+test_encode_bool(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     uint8 expected[16] = {
         0x42, 0x00, 0x00, 0x06, 0x00, 0x00, 0x00, 0x08,
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01
@@ -1062,6 +1168,7 @@ test_encode_bool(void)
     
     int result = kmip_encode_bool(&ctx, KMIP_TAG_DEFAULT, KMIP_TRUE);
     result = report_encoding_test_result(
+        tracker,
         &ctx,
         expected,
         observed,
@@ -1072,8 +1179,10 @@ test_encode_bool(void)
 }
 
 int
-test_decode_bool(void)
+test_decode_bool(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     uint8 encoding[16] = {
         0x42, 0x00, 0x00, 0x06, 0x00, 0x00, 0x00, 0x08,
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01
@@ -1087,6 +1196,7 @@ test_decode_bool(void)
     
     int result = kmip_decode_bool(&ctx, KMIP_TAG_DEFAULT, &observed);
     result = report_decoding_test_result(
+        tracker,
         &ctx,
         observed == expected,
         result,
@@ -1096,8 +1206,10 @@ test_decode_bool(void)
 }
 
 int
-test_encode_text_string(void)
+test_encode_text_string(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     uint8 expected[24] = {
         0x42, 0x00, 0x00, 0x07, 0x00, 0x00, 0x00, 0x0B,
         0x48, 0x65, 0x6C, 0x6C, 0x6F, 0x20, 0x57, 0x6F,
@@ -1114,6 +1226,7 @@ test_encode_text_string(void)
     
     int result = kmip_encode_text_string(&ctx, KMIP_TAG_DEFAULT, &example);
     result = report_encoding_test_result(
+        tracker,
         &ctx,
         expected,
         observed,
@@ -1124,8 +1237,10 @@ test_encode_text_string(void)
 }
 
 int
-test_decode_text_string(void)
+test_decode_text_string(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     uint8 encoding[24] = {
         0x42, 0x00, 0x00, 0x07, 0x00, 0x00, 0x00, 0x0B,
         0x48, 0x65, 0x6C, 0x6C, 0x6F, 0x20, 0x57, 0x6F,
@@ -1142,6 +1257,7 @@ test_decode_text_string(void)
     
     int result = kmip_decode_text_string(&ctx, KMIP_TAG_DEFAULT, &observed);
     result = report_decoding_test_result(
+        tracker,
         &ctx,
         kmip_compare_text_string(&expected, &observed),
         result,
@@ -1152,8 +1268,10 @@ test_decode_text_string(void)
 }
 
 int
-test_encode_byte_string(void)
+test_encode_byte_string(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     uint8 expected[16] = {
         0x42, 0x00, 0x00, 0x08, 0x00, 0x00, 0x00, 0x03,
         0x01, 0x02, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00
@@ -1170,6 +1288,7 @@ test_encode_byte_string(void)
     
     int result = kmip_encode_byte_string(&ctx, KMIP_TAG_DEFAULT, &example);
     result = report_encoding_test_result(
+        tracker,
         &ctx,
         expected,
         observed,
@@ -1180,8 +1299,10 @@ test_encode_byte_string(void)
 }
 
 int
-test_decode_byte_string(void)
+test_decode_byte_string(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     uint8 encoding[16] = {
         0x42, 0x00, 0x00, 0x08, 0x00, 0x00, 0x00, 0x03,
         0x01, 0x02, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00
@@ -1199,6 +1320,7 @@ test_decode_byte_string(void)
     
     int result = kmip_decode_byte_string(&ctx, KMIP_TAG_DEFAULT, &observed);
     result = report_decoding_test_result(
+        tracker,
         &ctx,
         kmip_compare_byte_string(&expected, &observed),
         result,
@@ -1209,8 +1331,10 @@ test_decode_byte_string(void)
 }
 
 int
-test_encode_date_time(void)
+test_encode_date_time(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     uint8 expected[16] = {
         0x42, 0x00, 0x00, 0x09, 0x00, 0x00, 0x00, 0x08,
         0x00, 0x00, 0x00, 0x00, 0x47, 0xDA, 0x67, 0xF8
@@ -1222,6 +1346,7 @@ test_encode_date_time(void)
     
     int result = kmip_encode_date_time(&ctx, KMIP_TAG_DEFAULT, 1205495800);
     result = report_encoding_test_result(
+        tracker,
         &ctx,
         expected,
         observed,
@@ -1232,8 +1357,10 @@ test_encode_date_time(void)
 }
 
 int
-test_decode_date_time(void)
+test_decode_date_time(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     uint8 encoding[16] = {
         0x42, 0x00, 0x00, 0x09, 0x00, 0x00, 0x00, 0x08,
         0x00, 0x00, 0x00, 0x00, 0x47, 0xDA, 0x67, 0xF8
@@ -1247,6 +1374,7 @@ test_decode_date_time(void)
     
     int result = kmip_decode_date_time(&ctx, KMIP_TAG_DEFAULT, &observed);
     result = report_decoding_test_result(
+        tracker,
         &ctx,
         observed == expected,
         result,
@@ -1256,8 +1384,10 @@ test_decode_date_time(void)
 }
 
 int
-test_encode_interval(void)
+test_encode_interval(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     uint8 expected[16] = {
         0x42, 0x00, 0x00, 0x0A, 0x00, 0x00, 0x00, 0x04,
         0x00, 0x0D, 0x2F, 0x00, 0x00, 0x00, 0x00, 0x00
@@ -1269,6 +1399,7 @@ test_encode_interval(void)
     
     int result = kmip_encode_interval(&ctx, KMIP_TAG_DEFAULT, 864000);
     result = report_encoding_test_result(
+        tracker,
         &ctx,
         expected,
         observed,
@@ -1279,8 +1410,10 @@ test_encode_interval(void)
 }
 
 int
-test_decode_interval(void)
+test_decode_interval(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     uint8 encoding[16] = {
         0x42, 0x00, 0x00, 0x0A, 0x00, 0x00, 0x00, 0x04,
         0x00, 0x0D, 0x2F, 0x00, 0x00, 0x00, 0x00, 0x00
@@ -1294,6 +1427,7 @@ test_decode_interval(void)
     
     int result = kmip_decode_interval(&ctx, KMIP_TAG_DEFAULT, &observed);
     result = report_decoding_test_result(
+        tracker,
         &ctx,
         observed == expected,
         result,
@@ -1303,8 +1437,10 @@ test_decode_interval(void)
 }
 
 int
-test_encode_name(void)
+test_encode_name(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     uint8 expected[48] = {
         0x42, 0x00, 0x53, 0x01, 0x00, 0x00, 0x00, 0x28,
         0x42, 0x00, 0x55, 0x07, 0x00, 0x00, 0x00, 0x09,
@@ -1328,6 +1464,7 @@ test_encode_name(void)
     
     int result = kmip_encode_name(&ctx, &n);
     result = report_encoding_test_result(
+        tracker,
         &ctx,
         expected,
         observed,
@@ -1338,8 +1475,10 @@ test_encode_name(void)
 }
 
 int
-test_decode_name(void)
+test_decode_name(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     uint8 encoding[48] = {
         0x42, 0x00, 0x53, 0x01, 0x00, 0x00, 0x00, 0x28,
         0x42, 0x00, 0x55, 0x07, 0x00, 0x00, 0x00, 0x09,
@@ -1363,6 +1502,7 @@ test_decode_name(void)
     
     int result = kmip_decode_name(&ctx, &observed);
     result = report_decoding_test_result(
+        tracker,
         &ctx,
         kmip_compare_name(&expected, &observed),
         result,
@@ -1373,8 +1513,10 @@ test_decode_name(void)
 }
 
 int
-test_encode_attribute_unique_identifier(void)
+test_encode_attribute_unique_identifier(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     uint8 expected[88] = {
         0x42, 0x00, 0x08, 0x01, 0x00, 0x00, 0x00, 0x50,
         0x42, 0x00, 0x0A, 0x07, 0x00, 0x00, 0x00, 0x11,
@@ -1405,6 +1547,7 @@ test_encode_attribute_unique_identifier(void)
     
     int result = kmip_encode_attribute(&ctx, &attr);
     result = report_encoding_test_result(
+        tracker,
         &ctx,
         expected,
         observed,
@@ -1415,8 +1558,10 @@ test_encode_attribute_unique_identifier(void)
 }
 
 int
-test_decode_attribute_unique_identifier(void)
+test_decode_attribute_unique_identifier(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     uint8 encoding[88] = {
         0x42, 0x00, 0x08, 0x01, 0x00, 0x00, 0x00, 0x50,
         0x42, 0x00, 0x0A, 0x07, 0x00, 0x00, 0x00, 0x11,
@@ -1447,6 +1592,7 @@ test_decode_attribute_unique_identifier(void)
     
     int result = kmip_decode_attribute(&ctx, &observed);
     result = report_decoding_test_result(
+        tracker,
         &ctx,
         kmip_compare_attribute(&expected, &observed),
         result,
@@ -1457,8 +1603,10 @@ test_decode_attribute_unique_identifier(void)
 }
 
 int
-test_encode_attribute_name(void)
+test_encode_attribute_name(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     uint8 expected[72] = {
         0x42, 0x00, 0x08, 0x01, 0x00, 0x00, 0x00, 0x40,
         0x42, 0x00, 0x0A, 0x07, 0x00, 0x00, 0x00, 0x04,
@@ -1491,6 +1639,7 @@ test_encode_attribute_name(void)
     
     int result = kmip_encode_attribute(&ctx, &attr);
     result = report_encoding_test_result(
+        tracker,
         &ctx,
         expected,
         observed,
@@ -1501,8 +1650,10 @@ test_encode_attribute_name(void)
 }
 
 int
-test_decode_attribute_name(void)
+test_decode_attribute_name(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     uint8 encoding[72] = {
         0x42, 0x00, 0x08, 0x01, 0x00, 0x00, 0x00, 0x40,
         0x42, 0x00, 0x0A, 0x07, 0x00, 0x00, 0x00, 0x04,
@@ -1535,6 +1686,7 @@ test_decode_attribute_name(void)
     
     int result = kmip_decode_attribute(&ctx, &observed);
     result = report_decoding_test_result(
+        tracker,
         &ctx,
         kmip_compare_attribute(&expected, &observed),
         result,
@@ -1545,8 +1697,10 @@ test_decode_attribute_name(void)
 }
 
 int
-test_encode_attribute_object_type(void)
+test_encode_attribute_object_type(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     uint8 expected[48] = {
         0x42, 0x00, 0x08, 0x01, 0x00, 0x00, 0x00, 0x28,
         0x42, 0x00, 0x0A, 0x07, 0x00, 0x00, 0x00, 0x0B,
@@ -1569,6 +1723,7 @@ test_encode_attribute_object_type(void)
     
     int result = kmip_encode_attribute(&ctx, &attr);
     result = report_encoding_test_result(
+        tracker,
         &ctx,
         expected,
         observed,
@@ -1579,8 +1734,10 @@ test_encode_attribute_object_type(void)
 }
 
 int
-test_decode_attribute_object_type(void)
+test_decode_attribute_object_type(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     uint8 encoding[48] = {
         0x42, 0x00, 0x08, 0x01, 0x00, 0x00, 0x00, 0x28,
         0x42, 0x00, 0x0A, 0x07, 0x00, 0x00, 0x00, 0x0B,
@@ -1603,6 +1760,7 @@ test_decode_attribute_object_type(void)
     
     int result = kmip_decode_attribute(&ctx, &observed);
     result = report_decoding_test_result(
+        tracker,
         &ctx,
         kmip_compare_attribute(&expected, &observed),
         result,
@@ -1613,8 +1771,10 @@ test_decode_attribute_object_type(void)
 }
 
 int
-test_encode_attribute_cryptographic_algorithm(void)
+test_encode_attribute_cryptographic_algorithm(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     uint8 expected[56] = {
         0x42, 0x00, 0x08, 0x01, 0x00, 0x00, 0x00, 0x30,
         0x42, 0x00, 0x0A, 0x07, 0x00, 0x00, 0x00, 0x17,
@@ -1638,6 +1798,7 @@ test_encode_attribute_cryptographic_algorithm(void)
     
     int result = kmip_encode_attribute(&ctx, &attr);
     result = report_encoding_test_result(
+        tracker,
         &ctx,
         expected,
         observed,
@@ -1648,8 +1809,10 @@ test_encode_attribute_cryptographic_algorithm(void)
 }
 
 int
-test_decode_attribute_cryptographic_algorithm(void)
+test_decode_attribute_cryptographic_algorithm(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     uint8 encoding[56] = {
         0x42, 0x00, 0x08, 0x01, 0x00, 0x00, 0x00, 0x30,
         0x42, 0x00, 0x0A, 0x07, 0x00, 0x00, 0x00, 0x17,
@@ -1673,6 +1836,7 @@ test_decode_attribute_cryptographic_algorithm(void)
     
     int result = kmip_decode_attribute(&ctx, &observed);
     result = report_decoding_test_result(
+        tracker,
         &ctx,
         kmip_compare_attribute(&expected, &observed),
         result,
@@ -1683,8 +1847,10 @@ test_decode_attribute_cryptographic_algorithm(void)
 }
 
 int
-test_encode_attribute_cryptographic_length(void)
+test_encode_attribute_cryptographic_length(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     uint8 expected[56] = {
         0x42, 0x00, 0x08, 0x01, 0x00, 0x00, 0x00, 0x30,
         0x42, 0x00, 0x0A, 0x07, 0x00, 0x00, 0x00, 0x14,
@@ -1708,6 +1874,7 @@ test_encode_attribute_cryptographic_length(void)
     
     int result = kmip_encode_attribute(&ctx, &attr);
     result = report_encoding_test_result(
+        tracker,
         &ctx,
         expected,
         observed,
@@ -1718,8 +1885,10 @@ test_encode_attribute_cryptographic_length(void)
 }
 
 int
-test_decode_attribute_cryptographic_length(void)
+test_decode_attribute_cryptographic_length(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     uint8 encoding[56] = {
         0x42, 0x00, 0x08, 0x01, 0x00, 0x00, 0x00, 0x30,
         0x42, 0x00, 0x0A, 0x07, 0x00, 0x00, 0x00, 0x14,
@@ -1743,6 +1912,7 @@ test_decode_attribute_cryptographic_length(void)
     
     int result = kmip_decode_attribute(&ctx, &observed);
     result = report_decoding_test_result(
+        tracker,
         &ctx,
         kmip_compare_attribute(&expected, &observed),
         result,
@@ -1753,8 +1923,10 @@ test_decode_attribute_cryptographic_length(void)
 }
 
 int
-test_encode_attribute_operation_policy_name(void)
+test_encode_attribute_operation_policy_name(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     uint8 expected[56] = {
         0x42, 0x00, 0x08, 0x01, 0x00, 0x00, 0x00, 0x30,
         0x42, 0x00, 0x0A, 0x07, 0x00, 0x00, 0x00, 0x15,
@@ -1781,6 +1953,7 @@ test_encode_attribute_operation_policy_name(void)
     
     int result = kmip_encode_attribute(&ctx, &attr);
     result = report_encoding_test_result(
+        tracker,
         &ctx,
         expected,
         observed,
@@ -1791,8 +1964,10 @@ test_encode_attribute_operation_policy_name(void)
 }
 
 int
-test_decode_attribute_operation_policy_name(void)
+test_decode_attribute_operation_policy_name(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     uint8 encoding[56] = {
         0x42, 0x00, 0x08, 0x01, 0x00, 0x00, 0x00, 0x30,
         0x42, 0x00, 0x0A, 0x07, 0x00, 0x00, 0x00, 0x15,
@@ -1819,6 +1994,7 @@ test_decode_attribute_operation_policy_name(void)
     
     int result = kmip_decode_attribute(&ctx, &observed);
     result = report_decoding_test_result(
+        tracker,
         &ctx,
         kmip_compare_attribute(&expected, &observed),
         result,
@@ -1829,8 +2005,10 @@ test_decode_attribute_operation_policy_name(void)
 }
 
 int
-test_encode_attribute_cryptographic_usage_mask(void)
+test_encode_attribute_cryptographic_usage_mask(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     uint8 expected[56] = {
         0x42, 0x00, 0x08, 0x01, 0x00, 0x00, 0x00, 0x30,
         0x42, 0x00, 0x0A, 0x07, 0x00, 0x00, 0x00, 0x18,
@@ -1854,6 +2032,7 @@ test_encode_attribute_cryptographic_usage_mask(void)
     
     int result = kmip_encode_attribute(&ctx, &attr);
     result = report_encoding_test_result(
+        tracker,
         &ctx,
         expected,
         observed,
@@ -1864,8 +2043,10 @@ test_encode_attribute_cryptographic_usage_mask(void)
 }
 
 int
-test_decode_attribute_cryptographic_usage_mask(void)
+test_decode_attribute_cryptographic_usage_mask(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     uint8 encoding[56] = {
         0x42, 0x00, 0x08, 0x01, 0x00, 0x00, 0x00, 0x30,
         0x42, 0x00, 0x0A, 0x07, 0x00, 0x00, 0x00, 0x18,
@@ -1889,6 +2070,7 @@ test_decode_attribute_cryptographic_usage_mask(void)
     
     int result = kmip_decode_attribute(&ctx, &observed);
     result = report_decoding_test_result(
+        tracker,
         &ctx,
         kmip_compare_attribute(&expected, &observed),
         result,
@@ -1899,8 +2081,10 @@ test_decode_attribute_cryptographic_usage_mask(void)
 }
 
 int
-test_encode_attribute_state(void)
+test_encode_attribute_state(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     uint8 expected[40] = {
         0x42, 0x00, 0x08, 0x01, 0x00, 0x00, 0x00, 0x20,
         0x42, 0x00, 0x0A, 0x07, 0x00, 0x00, 0x00, 0x05, 
@@ -1922,6 +2106,7 @@ test_encode_attribute_state(void)
     
     int result = kmip_encode_attribute(&ctx, &attr);
     result = report_encoding_test_result(
+        tracker,
         &ctx,
         expected,
         observed,
@@ -1932,8 +2117,10 @@ test_encode_attribute_state(void)
 }
 
 int
-test_decode_attribute_state(void)
+test_decode_attribute_state(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     uint8 encoding[40] = {
         0x42, 0x00, 0x08, 0x01, 0x00, 0x00, 0x00, 0x20,
         0x42, 0x00, 0x0A, 0x07, 0x00, 0x00, 0x00, 0x05, 
@@ -1955,6 +2142,7 @@ test_decode_attribute_state(void)
     
     int result = kmip_decode_attribute(&ctx, &observed);
     result = report_decoding_test_result(
+        tracker,
         &ctx,
         kmip_compare_attribute(&expected, &observed),
         result,
@@ -1965,8 +2153,10 @@ test_decode_attribute_state(void)
 }
 
 int
-test_encode_protocol_version(void)
+test_encode_protocol_version(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     uint8 expected[40] = {
         0x42, 0x00, 0x69, 0x01, 0x00, 0x00, 0x00, 0x20,
         0x42, 0x00, 0x6A, 0x02, 0x00, 0x00, 0x00, 0x04,
@@ -1985,6 +2175,7 @@ test_encode_protocol_version(void)
     
     int result = kmip_encode_protocol_version(&ctx, &pv);
     result = report_encoding_test_result(
+        tracker,
         &ctx,
         expected,
         observed,
@@ -1995,8 +2186,10 @@ test_encode_protocol_version(void)
 }
 
 int
-test_decode_protocol_version(void)
+test_decode_protocol_version(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     uint8 encoding[40] = {
         0x42, 0x00, 0x69, 0x01, 0x00, 0x00, 0x00, 0x20,
         0x42, 0x00, 0x6A, 0x02, 0x00, 0x00, 0x00, 0x04,
@@ -2015,6 +2208,7 @@ test_decode_protocol_version(void)
     
     int result = kmip_decode_protocol_version(&ctx, &observed);
     result = report_decoding_test_result(
+        tracker,
         &ctx,
         kmip_compare_protocol_version(&expected, &observed),
         result,
@@ -2024,8 +2218,10 @@ test_decode_protocol_version(void)
 }
 
 int
-test_encode_cryptographic_parameters(void)
+test_encode_cryptographic_parameters(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     uint8 expected[72] = {
         0x42, 0x00, 0x2B, 0x01, 0x00, 0x00, 0x00, 0x40,
         0x42, 0x00, 0x11, 0x05, 0x00, 0x00, 0x00, 0x04,
@@ -2050,6 +2246,7 @@ test_encode_cryptographic_parameters(void)
     
     int result = kmip_encode_cryptographic_parameters(&ctx, &cp);
     result = report_encoding_test_result(
+        tracker,
         &ctx,
         expected,
         observed,
@@ -2060,8 +2257,10 @@ test_encode_cryptographic_parameters(void)
 }
 
 int
-test_decode_cryptographic_parameters(void)
+test_decode_cryptographic_parameters(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     uint8 encoding[72] = {
         0x42, 0x00, 0x2B, 0x01, 0x00, 0x00, 0x00, 0x40,
         0x42, 0x00, 0x11, 0x05, 0x00, 0x00, 0x00, 0x04,
@@ -2088,6 +2287,7 @@ test_decode_cryptographic_parameters(void)
     
     int result = kmip_decode_cryptographic_parameters(&ctx, &observed);
     result = report_decoding_test_result(
+        tracker,
         &ctx,
         kmip_compare_cryptographic_parameters(&expected, &observed),
         result,
@@ -2098,8 +2298,10 @@ test_decode_cryptographic_parameters(void)
 }
 
 int
-test_encode_encryption_key_information(void)
+test_encode_encryption_key_information(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     uint8 expected[80] = {
         0x42, 0x00, 0x36, 0x01, 0x00, 0x00, 0x00, 0x48,
         0x42, 0x00, 0x94, 0x07, 0x00, 0x00, 0x00, 0x24,
@@ -2130,6 +2332,7 @@ test_encode_encryption_key_information(void)
     
     int result = kmip_encode_encryption_key_information(&ctx, &eki);
     result = report_encoding_test_result(
+        tracker,
         &ctx,
         expected,
         observed,
@@ -2140,8 +2343,10 @@ test_encode_encryption_key_information(void)
 }
 
 int
-test_decode_encryption_key_information(void)
+test_decode_encryption_key_information(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     uint8 encoding[80] = {
         0x42, 0x00, 0x36, 0x01, 0x00, 0x00, 0x00, 0x48,
         0x42, 0x00, 0x94, 0x07, 0x00, 0x00, 0x00, 0x24,
@@ -2175,6 +2380,7 @@ test_decode_encryption_key_information(void)
     
     int result = kmip_decode_encryption_key_information(&ctx, &observed);
     result = report_decoding_test_result(
+        tracker,
         &ctx,
         kmip_compare_encryption_key_information(&expected, &observed),
         result,
@@ -2185,8 +2391,10 @@ test_decode_encryption_key_information(void)
 }
 
 int
-test_encode_mac_signature_key_information(void)
+test_encode_mac_signature_key_information(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     uint8 expected[80] = {
         0x42, 0x00, 0x4E, 0x01, 0x00, 0x00, 0x00, 0x48,
         0x42, 0x00, 0x94, 0x07, 0x00, 0x00, 0x00, 0x24,
@@ -2217,6 +2425,7 @@ test_encode_mac_signature_key_information(void)
     
     int result = kmip_encode_mac_signature_key_information(&ctx, &mski);
     result = report_encoding_test_result(
+        tracker,
         &ctx,
         expected,
         observed,
@@ -2227,8 +2436,10 @@ test_encode_mac_signature_key_information(void)
 }
 
 int
-test_decode_mac_signature_key_information(void)
+test_decode_mac_signature_key_information(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     uint8 encoding[80] = {
         0x42, 0x00, 0x4E, 0x01, 0x00, 0x00, 0x00, 0x48,
         0x42, 0x00, 0x94, 0x07, 0x00, 0x00, 0x00, 0x24,
@@ -2262,6 +2473,7 @@ test_decode_mac_signature_key_information(void)
     
     int result = kmip_decode_mac_signature_key_information(&ctx, &observed);
     result = report_decoding_test_result(
+        tracker,
         &ctx,
         kmip_compare_mac_signature_key_information(&expected, &observed),
         result,
@@ -2272,8 +2484,10 @@ test_decode_mac_signature_key_information(void)
 }
 
 int
-test_encode_key_wrapping_data(void)
+test_encode_key_wrapping_data(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     uint8 expected[104] = {
         0x42, 0x00, 0x46, 0x01, 0x00, 0x00, 0x00, 0x60, 
         0x42, 0x00, 0x9E, 0x05, 0x00, 0x00, 0x00, 0x04, 
@@ -2311,6 +2525,7 @@ test_encode_key_wrapping_data(void)
     
     int result = kmip_encode_key_wrapping_data(&ctx, &kwd);
     result = report_encoding_test_result(
+        tracker,
         &ctx,
         expected,
         observed,
@@ -2321,8 +2536,10 @@ test_encode_key_wrapping_data(void)
 }
 
 int
-test_decode_key_wrapping_data(void)
+test_decode_key_wrapping_data(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     uint8 encoding[104] = {
         0x42, 0x00, 0x46, 0x01, 0x00, 0x00, 0x00, 0x60, 
         0x42, 0x00, 0x9E, 0x05, 0x00, 0x00, 0x00, 0x04, 
@@ -2363,6 +2580,7 @@ test_decode_key_wrapping_data(void)
     
     int result = kmip_decode_key_wrapping_data(&ctx, &observed);
     result = report_decoding_test_result(
+        tracker,
         &ctx,
         kmip_compare_key_wrapping_data(&expected, &observed),
         result,
@@ -2373,8 +2591,10 @@ test_decode_key_wrapping_data(void)
 }
 
 int
-test_encode_key_material_byte_string(void)
+test_encode_key_material_byte_string(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     uint8 expected[24] = {
         0x42, 0x00, 0x43, 0x08, 0x00, 0x00, 0x00, 0x10,
         0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77,
@@ -2395,6 +2615,7 @@ test_encode_key_material_byte_string(void)
     
     int result = kmip_encode_key_material(&ctx, KMIP_KEYFORMAT_RAW, &key);
     result = report_encoding_test_result(
+        tracker,
         &ctx,
         expected,
         observed,
@@ -2405,8 +2626,10 @@ test_encode_key_material_byte_string(void)
 }
 
 int
-test_decode_key_material_byte_string(void)
+test_decode_key_material_byte_string(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     uint8 encoding[24] = {
         0x42, 0x00, 0x43, 0x08, 0x00, 0x00, 0x00, 0x10,
         0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77,
@@ -2432,10 +2655,9 @@ test_decode_key_material_byte_string(void)
         KMIP_KEYFORMAT_RAW,
         (void**)&observed_ptr);
     result = report_decoding_test_result(
+        tracker,
         &ctx,
-        kmip_compare_key_material(KMIP_KEYFORMAT_RAW,
-                                  (void**)&expected_ptr,
-                                  (void**)&observed_ptr),
+        kmip_compare_key_material(KMIP_KEYFORMAT_RAW, (void**)&expected_ptr, (void**)&observed_ptr),
         result,
         __func__);
     kmip_free_key_material(&ctx, KMIP_KEYFORMAT_RAW, (void**)&observed_ptr);
@@ -2444,8 +2666,10 @@ test_decode_key_material_byte_string(void)
 }
 
 int
-test_encode_key_material_transparent_symmetric_key(void)
+test_encode_key_material_transparent_symmetric_key(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     uint8 expected[48] = {
         0x42, 0x00, 0x43, 0x01, 0x00, 0x00, 0x00, 0x28, 
         0x42, 0x00, 0x3F, 0x08, 0x00, 0x00, 0x00, 0x20, 
@@ -2471,11 +2695,9 @@ test_encode_key_material_transparent_symmetric_key(void)
     struct transparent_symmetric_key tsk = {0};
     tsk.key = &key;
     
-    int result = kmip_encode_key_material(
-        &ctx,
-        KMIP_KEYFORMAT_TRANS_SYMMETRIC_KEY,
-        &tsk);
+    int result = kmip_encode_key_material(&ctx, KMIP_KEYFORMAT_TRANS_SYMMETRIC_KEY, &tsk);
     result = report_encoding_test_result(
+        tracker,
         &ctx,
         expected,
         observed,
@@ -2486,8 +2708,10 @@ test_encode_key_material_transparent_symmetric_key(void)
 }
 
 int
-test_decode_key_material_transparent_symmetric_key(void)
+test_decode_key_material_transparent_symmetric_key(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     uint8 encoding[48] = {
         0x42, 0x00, 0x43, 0x01, 0x00, 0x00, 0x00, 0x28, 
         0x42, 0x00, 0x3F, 0x08, 0x00, 0x00, 0x00, 0x20, 
@@ -2520,10 +2744,9 @@ test_decode_key_material_transparent_symmetric_key(void)
         KMIP_KEYFORMAT_TRANS_SYMMETRIC_KEY,
         (void**)&observed_ptr);
     result = report_decoding_test_result(
+        tracker,
         &ctx,
-        kmip_compare_key_material(KMIP_KEYFORMAT_TRANS_SYMMETRIC_KEY,
-                                  (void**)&expected_ptr,
-                                  (void**)&observed_ptr),
+        kmip_compare_key_material(KMIP_KEYFORMAT_TRANS_SYMMETRIC_KEY, (void**)&expected_ptr, (void**)&observed_ptr),
         result,
         __func__);
     kmip_free_key_material(
@@ -2535,8 +2758,10 @@ test_decode_key_material_transparent_symmetric_key(void)
 }
 
 int
-test_encode_key_value(void)
+test_encode_key_value(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     uint8 expected[32] = {
         0x42, 0x00, 0x45, 0x01, 0x00, 0x00, 0x00, 0x18,
         0x42, 0x00, 0x43, 0x08, 0x00, 0x00, 0x00, 0x10,
@@ -2559,11 +2784,9 @@ test_encode_key_value(void)
     struct key_value kv = {0};
     kv.key_material = &key;
     
-    int result = kmip_encode_key_value(
-        &ctx,
-        KMIP_KEYFORMAT_RAW,
-        &kv);
+    int result = kmip_encode_key_value(&ctx, KMIP_KEYFORMAT_RAW, &kv);
     result = report_encoding_test_result(
+        tracker,
         &ctx,
         expected,
         observed,
@@ -2574,8 +2797,10 @@ test_encode_key_value(void)
 }
 
 int
-test_decode_key_value(void)
+test_decode_key_value(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     uint8 encoding[32] = {
         0x42, 0x00, 0x45, 0x01, 0x00, 0x00, 0x00, 0x18,
         0x42, 0x00, 0x43, 0x08, 0x00, 0x00, 0x00, 0x10,
@@ -2598,11 +2823,9 @@ test_decode_key_value(void)
     expected.key_material = &key;
     struct key_value observed = {0};
     
-    int result = kmip_decode_key_value(
-        &ctx,
-        KMIP_KEYFORMAT_RAW,
-        &observed);
+    int result = kmip_decode_key_value(&ctx, KMIP_KEYFORMAT_RAW, &observed);
     result = report_decoding_test_result(
+        tracker,
         &ctx,
         kmip_compare_key_value(KMIP_KEYFORMAT_RAW, &expected, &observed),
         result,
@@ -2613,8 +2836,10 @@ test_decode_key_value(void)
 }
 
 int
-test_encode_key_value_with_attributes(void)
+test_encode_key_value_with_attributes(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     uint8 expected[144] = {
         0x42, 0x00, 0x45, 0x01, 0x00, 0x00, 0x00, 0x88, 
         0x42, 0x00, 0x43, 0x08, 0x00, 0x00, 0x00, 0x10, 
@@ -2666,11 +2891,9 @@ test_encode_key_value_with_attributes(void)
     kv.attributes = attributes;
     kv.attribute_count = ARRAY_LENGTH(attributes);
     
-    int result = kmip_encode_key_value(
-        &ctx,
-        KMIP_KEYFORMAT_RAW,
-        &kv);
+    int result = kmip_encode_key_value(&ctx, KMIP_KEYFORMAT_RAW, &kv);
     result = report_encoding_test_result(
+        tracker,
         &ctx,
         expected,
         observed,
@@ -2681,8 +2904,10 @@ test_encode_key_value_with_attributes(void)
 }
 
 int
-test_decode_key_value_with_attributes(void)
+test_decode_key_value_with_attributes(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     uint8 encoding[144] = {
         0x42, 0x00, 0x45, 0x01, 0x00, 0x00, 0x00, 0x88, 
         0x42, 0x00, 0x43, 0x08, 0x00, 0x00, 0x00, 0x10, 
@@ -2734,11 +2959,9 @@ test_decode_key_value_with_attributes(void)
     expected.attribute_count = ARRAY_LENGTH(attributes);
     struct key_value observed = {0};
     
-    int result = kmip_decode_key_value(
-        &ctx,
-        KMIP_KEYFORMAT_RAW,
-        &observed);
+    int result = kmip_decode_key_value(&ctx, KMIP_KEYFORMAT_RAW, &observed);
     result = report_decoding_test_result(
+        tracker,
         &ctx,
         kmip_compare_key_value(KMIP_KEYFORMAT_RAW, &expected, &observed),
         result,
@@ -2749,8 +2972,10 @@ test_decode_key_value_with_attributes(void)
 }
 
 int
-test_encode_key_block_key_value_byte_string(void)
+test_encode_key_block_key_value_byte_string(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     uint8 expected[192] = {
         0x42, 0x00, 0x40, 0x01, 0x00, 0x00, 0x00, 0xB8, 
         0x42, 0x00, 0x42, 0x05, 0x00, 0x00, 0x00, 0x04, 
@@ -2815,6 +3040,7 @@ test_encode_key_block_key_value_byte_string(void)
     
     int result = kmip_encode_key_block(&ctx, &kb);
     result = report_encoding_test_result(
+        tracker,
         &ctx,
         expected,
         observed,
@@ -2825,8 +3051,10 @@ test_encode_key_block_key_value_byte_string(void)
 }
 
 int
-test_decode_key_block_key_value_byte_string(void)
+test_decode_key_block_key_value_byte_string(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     uint8 encoding[192] = {
         0x42, 0x00, 0x40, 0x01, 0x00, 0x00, 0x00, 0xB8, 
         0x42, 0x00, 0x42, 0x05, 0x00, 0x00, 0x00, 0x04, 
@@ -2898,6 +3126,7 @@ test_decode_key_block_key_value_byte_string(void)
     
     int result = kmip_decode_key_block(&ctx, &observed);
     result = report_decoding_test_result(
+        tracker,
         &ctx,
         kmip_compare_key_block(&expected, &observed),
         result,
@@ -2908,8 +3137,10 @@ test_decode_key_block_key_value_byte_string(void)
 }
 
 int
-test_encode_key_block_key_value_structure(void)
+test_encode_key_block_key_value_structure(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     uint8 expected[88] = {
         0x42, 0x00, 0x40, 0x01, 0x00, 0x00, 0x00, 0x50, 
         0x42, 0x00, 0x42, 0x05, 0x00, 0x00, 0x00, 0x04,
@@ -2947,6 +3178,7 @@ test_encode_key_block_key_value_structure(void)
     
     int result = kmip_encode_key_block(&ctx, &kb);
     result = report_encoding_test_result(
+        tracker,
         &ctx,
         expected,
         observed,
@@ -2957,8 +3189,10 @@ test_encode_key_block_key_value_structure(void)
 }
 
 int
-test_decode_key_block_key_value_structure(void)
+test_decode_key_block_key_value_structure(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     uint8 encoding[88] = {
         0x42, 0x00, 0x40, 0x01, 0x00, 0x00, 0x00, 0x50, 
         0x42, 0x00, 0x42, 0x05, 0x00, 0x00, 0x00, 0x04,
@@ -3001,6 +3235,7 @@ test_decode_key_block_key_value_structure(void)
     
     int result = kmip_decode_key_block(&ctx, &observed);
     result = report_decoding_test_result(
+        tracker,
         &ctx,
         kmip_compare_key_block(&expected, &observed),
         result,
@@ -3011,8 +3246,10 @@ test_decode_key_block_key_value_structure(void)
 }
 
 int
-test_encode_symmetric_key(void)
+test_encode_symmetric_key(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     uint8 expected[96] = {
         0x42, 0x00, 0x8F, 0x01, 0x00, 0x00, 0x00, 0x58, 
         0x42, 0x00, 0x40, 0x01, 0x00, 0x00, 0x00, 0x50, 
@@ -3054,6 +3291,7 @@ test_encode_symmetric_key(void)
     
     int result = kmip_encode_symmetric_key(&ctx, &sk);
     result = report_encoding_test_result(
+        tracker,
         &ctx,
         expected,
         observed,
@@ -3064,8 +3302,10 @@ test_encode_symmetric_key(void)
 }
 
 int
-test_decode_symmetric_key(void)
+test_decode_symmetric_key(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     uint8 encoding[96] = {
         0x42, 0x00, 0x8F, 0x01, 0x00, 0x00, 0x00, 0x58, 
         0x42, 0x00, 0x40, 0x01, 0x00, 0x00, 0x00, 0x50, 
@@ -3109,6 +3349,7 @@ test_decode_symmetric_key(void)
     
     int result = kmip_decode_symmetric_key(&ctx, &observed);
     result = report_decoding_test_result(
+        tracker,
         &ctx,
         kmip_compare_symmetric_key(&expected, &observed),
         result,
@@ -3119,8 +3360,10 @@ test_decode_symmetric_key(void)
 }
 
 int
-test_encode_public_key(void)
+test_encode_public_key(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     uint8 expected[248] = {
         0x42, 0x00, 0x6D, 0x01, 0x00, 0x00, 0x00, 0xF0, 
         0x42, 0x00, 0x40, 0x01, 0x00, 0x00, 0x00, 0xE8, 
@@ -3200,6 +3443,7 @@ test_encode_public_key(void)
     
     int result = kmip_encode_public_key(&ctx, &pk);
     result = report_encoding_test_result(
+        tracker,
         &ctx,
         expected,
         observed,
@@ -3210,8 +3454,10 @@ test_encode_public_key(void)
 }
 
 int
-test_decode_public_key(void)
+test_decode_public_key(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     uint8 encoding[248] = {
         0x42, 0x00, 0x6D, 0x01, 0x00, 0x00, 0x00, 0xF0, 
         0x42, 0x00, 0x40, 0x01, 0x00, 0x00, 0x00, 0xE8, 
@@ -3293,6 +3539,7 @@ test_decode_public_key(void)
     
     int result = kmip_decode_public_key(&ctx, &observed);
     result = report_decoding_test_result(
+        tracker,
         &ctx,
         kmip_compare_public_key(&expected, &observed),
         result,
@@ -3303,8 +3550,10 @@ test_decode_public_key(void)
 }
 
 int
-test_encode_private_key(void)
+test_encode_private_key(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     uint8 expected[1280] = {
         0x42, 0x00, 0x64, 0x01, 0x00, 0x00, 0x04, 0xF8, 
         0x42, 0x00, 0x40, 0x01, 0x00, 0x00, 0x04, 0xF0, 
@@ -3642,6 +3891,7 @@ test_encode_private_key(void)
     
     int result = kmip_encode_private_key(&ctx, &pk);
     result = report_encoding_test_result(
+        tracker,
         &ctx,
         expected,
         observed,
@@ -3652,8 +3902,10 @@ test_encode_private_key(void)
 }
 
 int
-test_decode_private_key(void)
+test_decode_private_key(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     uint8 encoding[1280] = {
         0x42, 0x00, 0x64, 0x01, 0x00, 0x00, 0x04, 0xF8, 
         0x42, 0x00, 0x40, 0x01, 0x00, 0x00, 0x04, 0xF0, 
@@ -3993,6 +4245,7 @@ test_decode_private_key(void)
     
     int result = kmip_decode_private_key(&ctx, &observed);
     result = report_decoding_test_result(
+        tracker,
         &ctx,
         kmip_compare_private_key(&expected, &observed),
         result,
@@ -4003,8 +4256,10 @@ test_decode_private_key(void)
 }
 
 int
-test_encode_key_wrapping_specification(void)
+test_encode_key_wrapping_specification(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     uint8 expected[136] = {
         0x42, 0x00, 0x47, 0x01, 0x00, 0x00, 0x00, 0x80, 
         0x42, 0x00, 0x9E, 0x05, 0x00, 0x00, 0x00, 0x04, 
@@ -4052,6 +4307,7 @@ test_encode_key_wrapping_specification(void)
     
     int result = kmip_encode_key_wrapping_specification(&ctx, &kws);
     result = report_encoding_test_result(
+        tracker,
         &ctx,
         expected,
         observed,
@@ -4062,8 +4318,10 @@ test_encode_key_wrapping_specification(void)
 }
 
 int
-test_decode_key_wrapping_specification(void)
+test_decode_key_wrapping_specification(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     uint8 encoding[136] = {
         0x42, 0x00, 0x47, 0x01, 0x00, 0x00, 0x00, 0x80, 
         0x42, 0x00, 0x9E, 0x05, 0x00, 0x00, 0x00, 0x04, 
@@ -4114,6 +4372,7 @@ test_decode_key_wrapping_specification(void)
     
     int result = kmip_decode_key_wrapping_specification(&ctx, &observed);
     result = report_decoding_test_result(
+        tracker,
         &ctx,
         kmip_compare_key_wrapping_specification(&expected, &observed),
         result,
@@ -4124,8 +4383,10 @@ test_decode_key_wrapping_specification(void)
 }
 
 int
-test_encode_create_request_payload(void)
+test_encode_create_request_payload(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     uint8 expected[200] = {
         0x42, 0x00, 0x79, 0x01, 0x00, 0x00, 0x00, 0xC0, 
         0x42, 0x00, 0x57, 0x05, 0x00, 0x00, 0x00, 0x04, 
@@ -4186,6 +4447,7 @@ test_encode_create_request_payload(void)
     
     int result = kmip_encode_create_request_payload(&ctx, &crp);
     result = report_encoding_test_result(
+        tracker,
         &ctx,
         expected,
         observed,
@@ -4196,8 +4458,10 @@ test_encode_create_request_payload(void)
 }
 
 int
-test_decode_create_request_payload(void)
+test_decode_create_request_payload(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     uint8 encoding[200] = {
         0x42, 0x00, 0x79, 0x01, 0x00, 0x00, 0x00, 0xC0, 
         0x42, 0x00, 0x57, 0x05, 0x00, 0x00, 0x00, 0x04, 
@@ -4259,6 +4523,7 @@ test_decode_create_request_payload(void)
     
     int result = kmip_decode_create_request_payload(&ctx, &observed);
     result = report_decoding_test_result(
+        tracker,
         &ctx,
         kmip_compare_create_request_payload(&expected, &observed),
         result,
@@ -4269,8 +4534,10 @@ test_decode_create_request_payload(void)
 }
 
 int
-test_encode_create_response_payload(void)
+test_encode_create_response_payload(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     uint8 expected[72] = {
         0x42, 0x00, 0x7C, 0x01, 0x00, 0x00, 0x00, 0x40, 
         0x42, 0x00, 0x57, 0x05, 0x00, 0x00, 0x00, 0x04, 
@@ -4297,6 +4564,7 @@ test_encode_create_response_payload(void)
     
     int result = kmip_encode_create_response_payload(&ctx, &crp);
     result = report_encoding_test_result(
+        tracker,
         &ctx,
         expected,
         observed,
@@ -4307,8 +4575,10 @@ test_encode_create_response_payload(void)
 }
 
 int
-test_decode_create_response_payload(void)
+test_decode_create_response_payload(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     uint8 encoding[72] = {
         0x42, 0x00, 0x7C, 0x01, 0x00, 0x00, 0x00, 0x40, 
         0x42, 0x00, 0x57, 0x05, 0x00, 0x00, 0x00, 0x04, 
@@ -4336,6 +4606,7 @@ test_decode_create_response_payload(void)
     
     int result = kmip_decode_create_response_payload(&ctx, &observed);
     result = report_decoding_test_result(
+        tracker,
         &ctx,
         kmip_compare_create_response_payload(&expected, &observed),
         result,
@@ -4346,8 +4617,10 @@ test_decode_create_response_payload(void)
 }
 
 int
-test_encode_create_response_payload_with_template_attribute(void)
+test_encode_create_response_payload_with_template_attribute(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     uint8 expected[136] = {
         0x42, 0x00, 0x7C, 0x01, 0x00, 0x00, 0x00, 0x80, 
         0x42, 0x00, 0x57, 0x05, 0x00, 0x00, 0x00, 0x04, 
@@ -4394,6 +4667,7 @@ test_encode_create_response_payload_with_template_attribute(void)
     
     int result = kmip_encode_create_response_payload(&ctx, &crp);
     result = report_encoding_test_result(
+        tracker,
         &ctx,
         expected,
         observed,
@@ -4404,8 +4678,10 @@ test_encode_create_response_payload_with_template_attribute(void)
 }
 
 int
-test_decode_create_response_payload_with_template_attribute(void)
+test_decode_create_response_payload_with_template_attribute(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     uint8 encoding[136] = {
         0x42, 0x00, 0x7C, 0x01, 0x00, 0x00, 0x00, 0x80, 
         0x42, 0x00, 0x57, 0x05, 0x00, 0x00, 0x00, 0x04, 
@@ -4453,6 +4729,7 @@ test_decode_create_response_payload_with_template_attribute(void)
     
     int result = kmip_decode_create_response_payload(&ctx, &observed);
     result = report_decoding_test_result(
+        tracker,
         &ctx,
         kmip_compare_create_response_payload(&expected, &observed),
         result,
@@ -4463,8 +4740,10 @@ test_decode_create_response_payload_with_template_attribute(void)
 }
 
 int
-test_encode_get_request_payload(void)
+test_encode_get_request_payload(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     uint8 expected[56] = {
         0x42, 0x00, 0x79, 0x01, 0x00, 0x00, 0x00, 0x30, 
         0x42, 0x00, 0x94, 0x07, 0x00, 0x00, 0x00, 0x24, 
@@ -4488,6 +4767,7 @@ test_encode_get_request_payload(void)
     
     int result = kmip_encode_get_request_payload(&ctx, &grp);
     result = report_encoding_test_result(
+        tracker,
         &ctx,
         expected,
         observed,
@@ -4498,8 +4778,10 @@ test_encode_get_request_payload(void)
 }
 
 int
-test_decode_get_request_payload(void)
+test_decode_get_request_payload(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     uint8 encoding[56] = {
         0x42, 0x00, 0x79, 0x01, 0x00, 0x00, 0x00, 0x30, 
         0x42, 0x00, 0x94, 0x07, 0x00, 0x00, 0x00, 0x24, 
@@ -4524,6 +4806,7 @@ test_decode_get_request_payload(void)
     
     int result = kmip_decode_get_request_payload(&ctx, &observed);
     result = report_decoding_test_result(
+        tracker,
         &ctx,
         kmip_compare_get_request_payload(&expected, &observed),
         result,
@@ -4534,8 +4817,10 @@ test_decode_get_request_payload(void)
 }
 
 int
-test_encode_get_request_payload_with_format_compression(void)
+test_encode_get_request_payload_with_format_compression(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     uint8 expected[88] = {
         0x42, 0x00, 0x79, 0x01, 0x00, 0x00, 0x00, 0x50, 
         0x42, 0x00, 0x94, 0x07, 0x00, 0x00, 0x00, 0x24, 
@@ -4565,6 +4850,7 @@ test_encode_get_request_payload_with_format_compression(void)
     
     int result = kmip_encode_get_request_payload(&ctx, &grp);
     result = report_encoding_test_result(
+        tracker,
         &ctx,
         expected,
         observed,
@@ -4575,8 +4861,10 @@ test_encode_get_request_payload_with_format_compression(void)
 }
 
 int
-test_encode_get_request_payload_with_wrapping_spec(void)
+test_encode_get_request_payload_with_wrapping_spec(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     uint8 expected[160] = {
         0x42, 0x00, 0x79, 0x01, 0x00, 0x00, 0x00, 0x98, 
         0x42, 0x00, 0x94, 0x07, 0x00, 0x00, 0x00, 0x24, 
@@ -4628,6 +4916,7 @@ test_encode_get_request_payload_with_wrapping_spec(void)
     
     int result = kmip_encode_get_request_payload(&ctx, &grp);
     result = report_encoding_test_result(
+        tracker,
         &ctx,
         expected,
         observed,
@@ -4638,8 +4927,10 @@ test_encode_get_request_payload_with_wrapping_spec(void)
 }
 
 int
-test_encode_get_response_payload(void)
+test_encode_get_response_payload(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     uint8 expected[176] = {
         0x42, 0x00, 0x7C, 0x01, 0x00, 0x00, 0x00, 0xA8, 
         0x42, 0x00, 0x57, 0x05, 0x00, 0x00, 0x00, 0x04, 
@@ -4701,6 +4992,7 @@ test_encode_get_response_payload(void)
     
     int result = kmip_encode_get_response_payload(&ctx, &grp);
     result = report_encoding_test_result(
+        tracker,
         &ctx,
         expected,
         observed,
@@ -4711,8 +5003,10 @@ test_encode_get_response_payload(void)
 }
 
 int
-test_decode_get_response_payload(void)
+test_decode_get_response_payload(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     uint8 encoding[176] = {
         0x42, 0x00, 0x7C, 0x01, 0x00, 0x00, 0x00, 0xA8, 
         0x42, 0x00, 0x57, 0x05, 0x00, 0x00, 0x00, 0x04, 
@@ -4776,6 +5070,7 @@ test_decode_get_response_payload(void)
     
     int result = kmip_decode_get_response_payload(&ctx, &observed);
     result = report_decoding_test_result(
+        tracker,
         &ctx,
         kmip_compare_get_response_payload(&expected, &observed),
         result,
@@ -4786,8 +5081,10 @@ test_decode_get_response_payload(void)
 }
 
 int
-test_encode_destroy_request_payload(void)
+test_encode_destroy_request_payload(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     uint8 expected[56] = {
         0x42, 0x00, 0x79, 0x01, 0x00, 0x00, 0x00, 0x30, 
         0x42, 0x00, 0x94, 0x07, 0x00, 0x00, 0x00, 0x24, 
@@ -4811,6 +5108,7 @@ test_encode_destroy_request_payload(void)
     
     int result = kmip_encode_destroy_request_payload(&ctx, &drp);
     result = report_encoding_test_result(
+        tracker,
         &ctx,
         expected,
         observed,
@@ -4821,8 +5119,10 @@ test_encode_destroy_request_payload(void)
 }
 
 int
-test_decode_destroy_request_payload(void)
+test_decode_destroy_request_payload(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     uint8 encoding[56] = {
         0x42, 0x00, 0x79, 0x01, 0x00, 0x00, 0x00, 0x30, 
         0x42, 0x00, 0x94, 0x07, 0x00, 0x00, 0x00, 0x24, 
@@ -4847,6 +5147,7 @@ test_decode_destroy_request_payload(void)
     
     int result = kmip_decode_destroy_request_payload(&ctx, &observed);
     result = report_decoding_test_result(
+        tracker,
         &ctx,
         kmip_compare_destroy_request_payload(&expected, &observed),
         result,
@@ -4857,8 +5158,10 @@ test_decode_destroy_request_payload(void)
 }
 
 int
-test_encode_destroy_response_payload(void)
+test_encode_destroy_response_payload(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     uint8 expected[56] = {
         0x42, 0x00, 0x7C, 0x01, 0x00, 0x00, 0x00, 0x30,
         0x42, 0x00, 0x94, 0x07, 0x00, 0x00, 0x00, 0x24, 
@@ -4882,6 +5185,7 @@ test_encode_destroy_response_payload(void)
     
     int result = kmip_encode_destroy_response_payload(&ctx, &drp);
     result = report_encoding_test_result(
+        tracker,
         &ctx,
         expected,
         observed,
@@ -4892,8 +5196,10 @@ test_encode_destroy_response_payload(void)
 }
 
 int
-test_decode_destroy_response_payload(void)
+test_decode_destroy_response_payload(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     uint8 encoding[56] = {
         0x42, 0x00, 0x7C, 0x01, 0x00, 0x00, 0x00, 0x30,
         0x42, 0x00, 0x94, 0x07, 0x00, 0x00, 0x00, 0x24, 
@@ -4918,6 +5224,7 @@ test_decode_destroy_response_payload(void)
     
     int result = kmip_decode_destroy_response_payload(&ctx, &observed);
     result = report_decoding_test_result(
+        tracker,
         &ctx,
         kmip_compare_destroy_response_payload(&expected, &observed),
         result,
@@ -4928,8 +5235,10 @@ test_decode_destroy_response_payload(void)
 }
 
 int
-test_encode_username_password_credential(void)
+test_encode_username_password_credential(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     uint8 expected[48] = {
         0x42, 0x00, 0x25, 0x01, 0x00, 0x00, 0x00, 0x28, 
         0x42, 0x00, 0x99, 0x07, 0x00, 0x00, 0x00, 0x04, 
@@ -4956,6 +5265,7 @@ test_encode_username_password_credential(void)
     
     int result = kmip_encode_username_password_credential(&ctx, &upc);
     result = report_encoding_test_result(
+        tracker,
         &ctx,
         expected,
         observed,
@@ -4966,8 +5276,10 @@ test_encode_username_password_credential(void)
 }
 
 int
-test_decode_username_password_credential(void)
+test_decode_username_password_credential(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     uint8 encoding[48] = {
         0x42, 0x00, 0x25, 0x01, 0x00, 0x00, 0x00, 0x28, 
         0x42, 0x00, 0x99, 0x07, 0x00, 0x00, 0x00, 0x04, 
@@ -4995,6 +5307,7 @@ test_decode_username_password_credential(void)
     
     int result = kmip_decode_username_password_credential(&ctx, &observed);
     result = report_decoding_test_result(
+        tracker,
         &ctx,
         kmip_compare_username_password_credential(&expected, &observed),
         result,
@@ -5005,8 +5318,10 @@ test_decode_username_password_credential(void)
 }
 
 int
-test_encode_credential_username_password_credential(void)
+test_encode_credential_username_password_credential(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     uint8 expected[64] = {
         0x42, 0x00, 0x23, 0x01, 0x00, 0x00, 0x00, 0x38, 
         0x42, 0x00, 0x24, 0x05, 0x00, 0x00, 0x00, 0x04, 
@@ -5039,6 +5354,7 @@ test_encode_credential_username_password_credential(void)
     
     int result = kmip_encode_credential(&ctx, &c);
     result = report_encoding_test_result(
+        tracker,
         &ctx,
         expected,
         observed,
@@ -5049,8 +5365,10 @@ test_encode_credential_username_password_credential(void)
 }
 
 int
-test_decode_credential_username_password_credential(void)
+test_decode_credential_username_password_credential(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     uint8 encoding[64] = {
         0x42, 0x00, 0x23, 0x01, 0x00, 0x00, 0x00, 0x38, 
         0x42, 0x00, 0x24, 0x05, 0x00, 0x00, 0x00, 0x04, 
@@ -5084,6 +5402,7 @@ test_decode_credential_username_password_credential(void)
     
     int result = kmip_decode_credential(&ctx, &observed);
     result = report_decoding_test_result(
+        tracker,
         &ctx,
         kmip_compare_credential(&expected, &observed),
         result,
@@ -5094,8 +5413,10 @@ test_decode_credential_username_password_credential(void)
 }
 
 int
-test_encode_authentication_username_password_credential(void)
+test_encode_authentication_username_password_credential(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     uint8 expected[80] = {
         0x42, 0x00, 0x0C, 0x01, 0x00, 0x00, 0x00, 0x48, 
         0x42, 0x00, 0x23, 0x01, 0x00, 0x00, 0x00, 0x40, 
@@ -5133,6 +5454,7 @@ test_encode_authentication_username_password_credential(void)
     
     int result = kmip_encode_authentication(&ctx, &a);
     result = report_encoding_test_result(
+        tracker,
         &ctx,
         expected,
         observed,
@@ -5143,8 +5465,10 @@ test_encode_authentication_username_password_credential(void)
 }
 
 int
-test_decode_authentication_username_password_credential(void)
+test_decode_authentication_username_password_credential(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     uint8 encoding[80] = {
         0x42, 0x00, 0x0C, 0x01, 0x00, 0x00, 0x00, 0x48, 
         0x42, 0x00, 0x23, 0x01, 0x00, 0x00, 0x00, 0x40, 
@@ -5183,6 +5507,7 @@ test_decode_authentication_username_password_credential(void)
     
     int result = kmip_decode_authentication(&ctx, &observed);
     result = report_decoding_test_result(
+        tracker,
         &ctx,
         kmip_compare_authentication(&expected, &observed),
         result,
@@ -5193,8 +5518,10 @@ test_decode_authentication_username_password_credential(void)
 }
 
 int
-test_encode_request_header(void)
+test_encode_request_header(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     uint8 expected[168] = {
         0x42, 0x00, 0x77, 0x01, 0x00, 0x00, 0x00, 0xA0, 
         0x42, 0x00, 0x69, 0x01, 0x00, 0x00, 0x00, 0x20, 
@@ -5256,6 +5583,7 @@ test_encode_request_header(void)
     
     int result = kmip_encode_request_header(&ctx, &rh);
     result = report_encoding_test_result(
+        tracker,
         &ctx,
         expected,
         observed,
@@ -5266,8 +5594,10 @@ test_encode_request_header(void)
 }
 
 int
-test_decode_request_header(void)
+test_decode_request_header(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     uint8 encoding[168] = {
         0x42, 0x00, 0x77, 0x01, 0x00, 0x00, 0x00, 0xA0, 
         0x42, 0x00, 0x69, 0x01, 0x00, 0x00, 0x00, 0x20, 
@@ -5331,6 +5661,7 @@ test_decode_request_header(void)
     
     int result = kmip_decode_request_header(&ctx, &observed);
     result = report_decoding_test_result(
+        tracker,
         &ctx,
         kmip_compare_request_header(&expected, &observed),
         result,
@@ -5341,8 +5672,10 @@ test_decode_request_header(void)
 }
 
 int
-test_encode_response_header(void)
+test_encode_response_header(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     uint8 expected[80] = {
         0x42, 0x00, 0x7A, 0x01, 0x00, 0x00, 0x00, 0x48, 
         0x42, 0x00, 0x69, 0x01, 0x00, 0x00, 0x00, 0x20, 
@@ -5373,6 +5706,7 @@ test_encode_response_header(void)
     
     int result = kmip_encode_response_header(&ctx, &rh);
     result = report_encoding_test_result(
+        tracker,
         &ctx,
         expected,
         observed,
@@ -5383,8 +5717,10 @@ test_encode_response_header(void)
 }
 
 int
-test_decode_response_header(void)
+test_decode_response_header(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     uint8 encoding[80] = {
         0x42, 0x00, 0x7A, 0x01, 0x00, 0x00, 0x00, 0x48, 
         0x42, 0x00, 0x69, 0x01, 0x00, 0x00, 0x00, 0x20, 
@@ -5417,6 +5753,7 @@ test_decode_response_header(void)
     
     int result = kmip_decode_response_header(&ctx, &observed);
     result = report_decoding_test_result(
+        tracker,
         &ctx,
         kmip_compare_response_header(&expected, &observed),
         result,
@@ -5427,8 +5764,10 @@ test_decode_response_header(void)
 }
 
 int
-test_encode_request_batch_item_get_payload(void)
+test_encode_request_batch_item_get_payload(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     uint8 expected[80] = {
         0x42, 0x00, 0x0F, 0x01, 0x00, 0x00, 0x00, 0x48, 
         0x42, 0x00, 0x5C, 0x05, 0x00, 0x00, 0x00, 0x04, 
@@ -5459,6 +5798,7 @@ test_encode_request_batch_item_get_payload(void)
     
     int result = kmip_encode_request_batch_item(&ctx, &rbi);
     result = report_encoding_test_result(
+        tracker,
         &ctx,
         expected,
         observed,
@@ -5469,8 +5809,10 @@ test_encode_request_batch_item_get_payload(void)
 }
 
 int
-test_decode_request_batch_item_get_payload(void)
+test_decode_request_batch_item_get_payload(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     uint8 encoding[80] = {
         0x42, 0x00, 0x0F, 0x01, 0x00, 0x00, 0x00, 0x48, 
         0x42, 0x00, 0x5C, 0x05, 0x00, 0x00, 0x00, 0x04, 
@@ -5502,6 +5844,7 @@ test_decode_request_batch_item_get_payload(void)
     
     int result = kmip_decode_request_batch_item(&ctx, &observed);
     result = report_decoding_test_result(
+        tracker,
         &ctx,
         kmip_compare_request_batch_item(&expected, &observed),
         result,
@@ -5512,8 +5855,10 @@ test_decode_request_batch_item_get_payload(void)
 }
 
 int
-test_encode_response_batch_item_get_payload(void)
+test_encode_response_batch_item_get_payload(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     uint8 expected[216] = {
         0x42, 0x00, 0x0F, 0x01, 0x00, 0x00, 0x00, 0xD0, 
         0x42, 0x00, 0x5C, 0x05, 0x00, 0x00, 0x00, 0x04, 
@@ -5586,6 +5931,7 @@ test_encode_response_batch_item_get_payload(void)
     
     int result = kmip_encode_response_batch_item(&ctx, &rbi);
     result = report_encoding_test_result(
+        tracker,
         &ctx,
         expected,
         observed,
@@ -5596,8 +5942,10 @@ test_encode_response_batch_item_get_payload(void)
 }
 
 int
-test_decode_response_batch_item_get_payload(void)
+test_decode_response_batch_item_get_payload(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     uint8 encoding[216] = {
         0x42, 0x00, 0x0F, 0x01, 0x00, 0x00, 0x00, 0xD0, 
         0x42, 0x00, 0x5C, 0x05, 0x00, 0x00, 0x00, 0x04, 
@@ -5672,6 +6020,7 @@ test_decode_response_batch_item_get_payload(void)
     
     int result = kmip_decode_response_batch_item(&ctx, &observed);
     result = report_decoding_test_result(
+        tracker,
         &ctx,
         kmip_compare_response_batch_item(&expected, &observed),
         result,
@@ -5682,8 +6031,10 @@ test_decode_response_batch_item_get_payload(void)
 }
 
 int
-test_encode_request_message_get(void)
+test_encode_request_message_get(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     uint8 expected[152] = {
         0x42, 0x00, 0x78, 0x01, 0x00, 0x00, 0x00, 0x90, 
         0x42, 0x00, 0x77, 0x01, 0x00, 0x00, 0x00, 0x38, 
@@ -5738,6 +6089,7 @@ test_encode_request_message_get(void)
     
     int result = kmip_encode_request_message(&ctx, &rm);
     result = report_encoding_test_result(
+        tracker,
         &ctx,
         expected,
         observed,
@@ -5748,8 +6100,10 @@ test_encode_request_message_get(void)
 }
 
 int
-test_decode_request_message_get(void)
+test_decode_request_message_get(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     uint8 encoding[152] = {
         0x42, 0x00, 0x78, 0x01, 0x00, 0x00, 0x00, 0x90, 
         0x42, 0x00, 0x77, 0x01, 0x00, 0x00, 0x00, 0x38, 
@@ -5805,6 +6159,7 @@ test_decode_request_message_get(void)
     
     int result = kmip_decode_request_message(&ctx, &observed);
     result = report_decoding_test_result(
+        tracker,
         &ctx,
         kmip_compare_request_message(&expected, &observed),
         result,
@@ -5815,8 +6170,10 @@ test_decode_request_message_get(void)
 }
 
 int
-test_encode_response_message_get(void)
+test_encode_response_message_get(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     uint8 expected[304] = {
         0x42, 0x00, 0x7B, 0x01, 0x00, 0x00, 0x01, 0x28, 
         0x42, 0x00, 0x7A, 0x01, 0x00, 0x00, 0x00, 0x48, 
@@ -5916,6 +6273,7 @@ test_encode_response_message_get(void)
     
     int result = kmip_encode_response_message(&ctx, &rm);
     result = report_encoding_test_result(
+        tracker,
         &ctx,
         expected,
         observed,
@@ -5926,8 +6284,10 @@ test_encode_response_message_get(void)
 }
 
 int
-test_decode_response_message_get(void)
+test_decode_response_message_get(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     uint8 encoding[304] = {
         0x42, 0x00, 0x7B, 0x01, 0x00, 0x00, 0x01, 0x28, 
         0x42, 0x00, 0x7A, 0x01, 0x00, 0x00, 0x00, 0x48, 
@@ -6029,6 +6389,7 @@ test_decode_response_message_get(void)
     
     int result = kmip_decode_response_message(&ctx, &observed);
     result = report_decoding_test_result(
+        tracker,
         &ctx,
         kmip_compare_response_message(&expected, &observed),
         result,
@@ -6039,8 +6400,10 @@ test_decode_response_message_get(void)
 }
 
 int
-test_encode_attributes(void)
+test_encode_attributes(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     /* This encoding matches the following set of values:
     *  Attributes
     *      Cryptographic Algorithm - AES
@@ -6083,7 +6446,7 @@ test_encode_attributes(void)
     attributes.attribute_list = &attribute_list;
 
     int result = kmip_encode_attributes(&ctx, &attributes);
-    result = report_encoding_test_result(&ctx, expected, observed, result, __func__);
+    result = report_encoding_test_result(tracker, &ctx, expected, observed, result, __func__);
 
     kmip_destroy(&ctx);
 
@@ -6091,8 +6454,10 @@ test_encode_attributes(void)
 }
 
 int
-test_encode_attributes_with_invalid_kmip_version(void)
+test_encode_attributes_with_invalid_kmip_version(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     uint8 observed[40] = {0};
     struct kmip ctx = {0};
     kmip_init(&ctx, observed, ARRAY_LENGTH(observed), KMIP_1_4);
@@ -6102,13 +6467,15 @@ test_encode_attributes_with_invalid_kmip_version(void)
     int result = kmip_encode_attributes(&ctx, &attributes);
     kmip_destroy(&ctx);
 
-    result = report_result(result, KMIP_INVALID_FOR_VERSION, __func__);
+    result = report_result(tracker, result, KMIP_INVALID_FOR_VERSION, __func__);
     return(result);
 }
 
 int
-test_encode_attribute_v2_unique_identifier(void)
+test_encode_attribute_v2_unique_identifier(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     /* This encoding matches the following value:
     *  Unique Identifier - fb4b5b9c-6188-4c63-8142-fe9c328129fc
     */
@@ -6134,7 +6501,7 @@ test_encode_attribute_v2_unique_identifier(void)
     attribute.value = &unique_identifier;
 
     int result = kmip_encode_attribute_v2(&ctx, &attribute);
-    result = report_encoding_test_result(&ctx, expected, observed, result, __func__);
+    result = report_encoding_test_result(tracker, &ctx, expected, observed, result, __func__);
 
     kmip_destroy(&ctx);
 
@@ -6142,8 +6509,10 @@ test_encode_attribute_v2_unique_identifier(void)
 }
 
 int
-test_encode_attribute_v2_name(void)
+test_encode_attribute_v2_name(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     /* This encoding matches the following value:
     *  Name
     *      Value - Template1
@@ -6175,7 +6544,7 @@ test_encode_attribute_v2_name(void)
     attribute.value = &name;
 
     int result = kmip_encode_attribute_v2(&ctx, &attribute);
-    result = report_encoding_test_result(&ctx, expected, observed, result, __func__);
+    result = report_encoding_test_result(tracker, &ctx, expected, observed, result, __func__);
 
     kmip_destroy(&ctx);
 
@@ -6183,8 +6552,10 @@ test_encode_attribute_v2_name(void)
 }
 
 int
-test_encode_attribute_v2_object_type(void)
+test_encode_attribute_v2_object_type(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     /* This encoding matches the following value:
     *  Object Type - Symmetric Key
     */
@@ -6204,7 +6575,7 @@ test_encode_attribute_v2_object_type(void)
     attribute.value = &object_type;
 
     int result = kmip_encode_attribute_v2(&ctx, &attribute);
-    result = report_encoding_test_result(&ctx, expected, observed, result, __func__);
+    result = report_encoding_test_result(tracker, &ctx, expected, observed, result, __func__);
 
     kmip_destroy(&ctx);
 
@@ -6212,8 +6583,10 @@ test_encode_attribute_v2_object_type(void)
 }
 
 int
-test_encode_attribute_v2_cryptographic_algorithm(void)
+test_encode_attribute_v2_cryptographic_algorithm(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     /* This encoding matches the following value:
     *  Cryptographic Algorithm - AES
     */
@@ -6233,7 +6606,7 @@ test_encode_attribute_v2_cryptographic_algorithm(void)
     attribute.value = &algorithm;
 
     int result = kmip_encode_attribute_v2(&ctx, &attribute);
-    result = report_encoding_test_result(&ctx, expected, observed, result, __func__);
+    result = report_encoding_test_result(tracker, &ctx, expected, observed, result, __func__);
 
     kmip_destroy(&ctx);
 
@@ -6241,8 +6614,10 @@ test_encode_attribute_v2_cryptographic_algorithm(void)
 }
 
 int
-test_encode_attribute_v2_cryptographic_length(void)
+test_encode_attribute_v2_cryptographic_length(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     /* This encoding matches the following value:
     *  Cryptographic Length - 128
     */
@@ -6262,7 +6637,7 @@ test_encode_attribute_v2_cryptographic_length(void)
     attribute.value = &length;
 
     int result = kmip_encode_attribute_v2(&ctx, &attribute);
-    result = report_encoding_test_result(&ctx, expected, observed, result, __func__);
+    result = report_encoding_test_result(tracker, &ctx, expected, observed, result, __func__);
 
     kmip_destroy(&ctx);
 
@@ -6270,8 +6645,10 @@ test_encode_attribute_v2_cryptographic_length(void)
 }
 
 int
-test_encode_attribute_v2_cryptographic_usage_mask(void)
+test_encode_attribute_v2_cryptographic_usage_mask(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     /* This encoding matches the following value:
     *  Cryptographic Usage Mask - Encrypt | Decrypt
     */
@@ -6291,7 +6668,7 @@ test_encode_attribute_v2_cryptographic_usage_mask(void)
     attribute.value = &mask;
 
     int result = kmip_encode_attribute_v2(&ctx, &attribute);
-    result = report_encoding_test_result(&ctx, expected, observed, result, __func__);
+    result = report_encoding_test_result(tracker, &ctx, expected, observed, result, __func__);
 
     kmip_destroy(&ctx);
 
@@ -6299,8 +6676,10 @@ test_encode_attribute_v2_cryptographic_usage_mask(void)
 }
 
 int
-test_encode_attribute_v2_state(void)
+test_encode_attribute_v2_state(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     /* This encoding matches the following value:
     *  State - Active
     */
@@ -6320,7 +6699,7 @@ test_encode_attribute_v2_state(void)
     attribute.value = &state;
 
     int result = kmip_encode_attribute_v2(&ctx, &attribute);
-    result = report_encoding_test_result(&ctx, expected, observed, result, __func__);
+    result = report_encoding_test_result(tracker, &ctx, expected, observed, result, __func__);
 
     kmip_destroy(&ctx);
 
@@ -6328,8 +6707,10 @@ test_encode_attribute_v2_state(void)
 }
 
 int
-test_encode_attribute_v2_unsupported_attribute(void)
+test_encode_attribute_v2_unsupported_attribute(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     uint8 encoding[16] = {0};
 
     KMIP ctx = {0};
@@ -6340,17 +6721,19 @@ test_encode_attribute_v2_unsupported_attribute(void)
     int result = kmip_encode_attribute_v2(&ctx, &attribute);
     if(result != KMIP_ERROR_ATTR_UNSUPPORTED)
     {
-        TEST_FAILED(__func__, __LINE__);
+        TEST_FAILED(tracker, __func__, __LINE__);
     }
 
     kmip_destroy(&ctx);
 
-    TEST_PASSED(__func__);
+    TEST_PASSED(tracker, __func__);
 }
 
 int
-test_decode_attributes(void)
+test_decode_attributes(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     /* This encoding matches the following set of values:
     *  Attributes
     *      Cryptographic Algorithm - AES
@@ -6399,7 +6782,7 @@ test_decode_attributes(void)
         kmip_print_attributes(1, &expected);
         kmip_print_attributes(1, &observed);
     }
-    result = report_decoding_test_result(&ctx, comparison, result, __func__);
+    result = report_decoding_test_result(tracker, &ctx, comparison, result, __func__);
 
     kmip_free_attributes(&ctx, &observed);
     kmip_destroy(&ctx);
@@ -6408,8 +6791,10 @@ test_decode_attributes(void)
 }
 
 int
-test_decode_attributes_with_invalid_kmip_version(void)
+test_decode_attributes_with_invalid_kmip_version(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     uint8 encoding[] = {0};
 
     KMIP ctx = {0};
@@ -6421,13 +6806,15 @@ test_decode_attributes_with_invalid_kmip_version(void)
     kmip_free_attributes(&ctx, &observed);
     kmip_destroy(&ctx);
 
-    result = report_result(result, KMIP_INVALID_FOR_VERSION, __func__);
+    result = report_result(tracker, result, KMIP_INVALID_FOR_VERSION, __func__);
     return(result);
 }
 
 int
-test_decode_attribute_v2_unique_identifier(void)
+test_decode_attribute_v2_unique_identifier(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     /* This encoding matches the following value:
     *  Unique Identifier - fb4b5b9c-6188-4c63-8142-fe9c328129fc
     */
@@ -6459,7 +6846,7 @@ test_decode_attribute_v2_unique_identifier(void)
         kmip_print_attribute(1, &expected);
         kmip_print_attribute(1, &observed);
     }
-    result = report_decoding_test_result(&ctx, comparison, result, __func__);
+    result = report_decoding_test_result(tracker, &ctx, comparison, result, __func__);
 
     kmip_free_attribute(&ctx, &observed);
     kmip_destroy(&ctx);
@@ -6468,8 +6855,10 @@ test_decode_attribute_v2_unique_identifier(void)
 }
 
 int
-test_decode_attribute_v2_name(void)
+test_decode_attribute_v2_name(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     /* This encoding matches the following value:
     *  Name
     *      Value - Template1
@@ -6507,7 +6896,7 @@ test_decode_attribute_v2_name(void)
         kmip_print_attribute(1, &expected);
         kmip_print_attribute(1, &observed);
     }
-    result = report_decoding_test_result(&ctx, comparison, result, __func__);
+    result = report_decoding_test_result(tracker, &ctx, comparison, result, __func__);
 
     kmip_free_attribute(&ctx, &observed);
     kmip_destroy(&ctx);
@@ -6516,8 +6905,10 @@ test_decode_attribute_v2_name(void)
 }
 
 int
-test_decode_attribute_v2_object_type(void)
+test_decode_attribute_v2_object_type(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     /* This encoding matches the following value:
     *  Object Type - Symmetric Key
     */
@@ -6543,7 +6934,7 @@ test_decode_attribute_v2_object_type(void)
         kmip_print_attribute(1, &expected);
         kmip_print_attribute(1, &observed);
     }
-    result = report_decoding_test_result(&ctx, comparison, result, __func__);
+    result = report_decoding_test_result(tracker, &ctx, comparison, result, __func__);
 
     kmip_free_attribute(&ctx, &observed);
     kmip_destroy(&ctx);
@@ -6552,8 +6943,10 @@ test_decode_attribute_v2_object_type(void)
 }
 
 int
-test_decode_attribute_v2_cryptographic_algorithm(void)
+test_decode_attribute_v2_cryptographic_algorithm(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     /* This encoding matches the following value:
     *  Cryptographic Algorithm - AES
     */
@@ -6579,7 +6972,7 @@ test_decode_attribute_v2_cryptographic_algorithm(void)
         kmip_print_attribute(1, &expected);
         kmip_print_attribute(1, &observed);
     }
-    result = report_decoding_test_result(&ctx, comparison, result, __func__);
+    result = report_decoding_test_result(tracker, &ctx, comparison, result, __func__);
 
     kmip_free_attribute(&ctx, &observed);
     kmip_destroy(&ctx);
@@ -6588,8 +6981,10 @@ test_decode_attribute_v2_cryptographic_algorithm(void)
 }
 
 int
-test_decode_attribute_v2_cryptographic_length(void)
+test_decode_attribute_v2_cryptographic_length(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     /* This encoding matches the following value:
     *  Cryptographic Length - 128
     */
@@ -6615,7 +7010,7 @@ test_decode_attribute_v2_cryptographic_length(void)
         kmip_print_attribute(1, &expected);
         kmip_print_attribute(1, &observed);
     }
-    result = report_decoding_test_result(&ctx, comparison, result, __func__);
+    result = report_decoding_test_result(tracker, &ctx, comparison, result, __func__);
 
     kmip_free_attribute(&ctx, &observed);
     kmip_destroy(&ctx);
@@ -6624,8 +7019,10 @@ test_decode_attribute_v2_cryptographic_length(void)
 }
 
 int
-test_decode_attribute_v2_cryptographic_usage_mask(void)
+test_decode_attribute_v2_cryptographic_usage_mask(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     /* This encoding matches the following value:
     *  Cryptographic Usage Mask - Encrypt | Decrypt
     */
@@ -6651,7 +7048,7 @@ test_decode_attribute_v2_cryptographic_usage_mask(void)
         kmip_print_attribute(1, &expected);
         kmip_print_attribute(1, &observed);
     }
-    result = report_decoding_test_result(&ctx, comparison, result, __func__);
+    result = report_decoding_test_result(tracker, &ctx, comparison, result, __func__);
 
     kmip_free_attribute(&ctx, &observed);
     kmip_destroy(&ctx);
@@ -6660,8 +7057,10 @@ test_decode_attribute_v2_cryptographic_usage_mask(void)
 }
 
 int
-test_decode_attribute_v2_state(void)
+test_decode_attribute_v2_state(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     /* This encoding matches the following value:
     *  State - Active
     */
@@ -6687,7 +7086,7 @@ test_decode_attribute_v2_state(void)
         kmip_print_attribute(1, &expected);
         kmip_print_attribute(1, &observed);
     }
-    result = report_decoding_test_result(&ctx, comparison, result, __func__);
+    result = report_decoding_test_result(tracker, &ctx, comparison, result, __func__);
 
     kmip_free_attribute(&ctx, &observed);
     kmip_destroy(&ctx);
@@ -6696,8 +7095,10 @@ test_decode_attribute_v2_state(void)
 }
 
 int
-test_decode_attribute_v2_unsupported_attribute(void)
+test_decode_attribute_v2_unsupported_attribute(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     uint8 encoding[3] = {0x42, 0x00, 0x00};
 
     KMIP ctx = {0};
@@ -6707,18 +7108,20 @@ test_decode_attribute_v2_unsupported_attribute(void)
     int result = kmip_decode_attribute_v2(&ctx, &observed);
     if(result != KMIP_ERROR_ATTR_UNSUPPORTED)
     {
-        TEST_FAILED(__func__, __LINE__);
+        TEST_FAILED(tracker, __func__, __LINE__);
     }
 
     kmip_free_attribute(&ctx, &observed);
     kmip_destroy(&ctx);
 
-    TEST_PASSED(__func__);
+    TEST_PASSED(tracker, __func__);
 }
 
 int
-test_encode_template_attribute(void)
+test_encode_template_attribute(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     uint8 expected[288] = {
         0x42, 0x00, 0x91, 0x01, 0x00, 0x00, 0x01, 0x18, 
         0x42, 0x00, 0x53, 0x01, 0x00, 0x00, 0x00, 0x28, 
@@ -6806,6 +7209,7 @@ test_encode_template_attribute(void)
     
     int result = kmip_encode_template_attribute(&ctx, &ta);
     result = report_encoding_test_result(
+        tracker,
         &ctx,
         expected,
         observed,
@@ -6816,8 +7220,10 @@ test_encode_template_attribute(void)
 }
 
 int
-test_decode_template_attribute(void)
+test_decode_template_attribute(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     uint8 encoding[288] = {
         0x42, 0x00, 0x91, 0x01, 0x00, 0x00, 0x01, 0x18, 
         0x42, 0x00, 0x53, 0x01, 0x00, 0x00, 0x00, 0x28, 
@@ -6905,6 +7311,7 @@ test_decode_template_attribute(void)
     
     int result = kmip_decode_template_attribute(&ctx, &observed);
     result = report_decoding_test_result(
+        tracker,
         &ctx,
         kmip_compare_template_attribute(&expected, &observed),
         result,
@@ -6919,8 +7326,10 @@ The following tests cover features added in KMIP 1.1.
 */
 
 int
-test_encode_device_credential(void)
+test_encode_device_credential(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     uint8 expected[144] = {
         0x42, 0x00, 0x25, 0x01, 0x00, 0x00, 0x00, 0x88, 
         0x42, 0x00, 0xB0, 0x07, 0x00, 0x00, 0x00, 0x0C, 
@@ -6980,6 +7389,7 @@ test_encode_device_credential(void)
     
     int result = kmip_encode_device_credential(&ctx, &dc);
     result = report_encoding_test_result(
+        tracker,
         &ctx,
         expected,
         observed,
@@ -6990,8 +7400,10 @@ test_encode_device_credential(void)
 }
 
 int
-test_decode_device_credential(void)
+test_decode_device_credential(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     uint8 encoding[144] = {
         0x42, 0x00, 0x25, 0x01, 0x00, 0x00, 0x00, 0x88, 
         0x42, 0x00, 0xB0, 0x07, 0x00, 0x00, 0x00, 0x0C, 
@@ -7052,6 +7464,7 @@ test_decode_device_credential(void)
     
     int result = kmip_decode_device_credential(&ctx, &observed);
     result = report_decoding_test_result(
+        tracker,
         &ctx,
         kmip_compare_device_credential(&expected, &observed),
         result,
@@ -7062,8 +7475,10 @@ test_decode_device_credential(void)
 }
 
 int
-test_encode_key_wrapping_data_with_encoding_option(void)
+test_encode_key_wrapping_data_with_encoding_option(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     uint8 expected[120] = {
         0x42, 0x00, 0x46, 0x01, 0x00, 0x00, 0x00, 0x70, 
         0x42, 0x00, 0x9E, 0x05, 0x00, 0x00, 0x00, 0x04, 
@@ -7104,6 +7519,7 @@ test_encode_key_wrapping_data_with_encoding_option(void)
     
     int result = kmip_encode_key_wrapping_data(&ctx, &kwd);
     result = report_encoding_test_result(
+        tracker,
         &ctx,
         expected,
         observed,
@@ -7114,8 +7530,10 @@ test_encode_key_wrapping_data_with_encoding_option(void)
 }
 
 int
-test_decode_key_wrapping_data_with_encoding_option(void)
+test_decode_key_wrapping_data_with_encoding_option(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     uint8 encoding[120] = {
         0x42, 0x00, 0x46, 0x01, 0x00, 0x00, 0x00, 0x70, 
         0x42, 0x00, 0x9E, 0x05, 0x00, 0x00, 0x00, 0x04, 
@@ -7158,6 +7576,7 @@ test_decode_key_wrapping_data_with_encoding_option(void)
     
     int result = kmip_decode_key_wrapping_data(&ctx, &observed);
     result = report_decoding_test_result(
+        tracker,
         &ctx,
         kmip_compare_key_wrapping_data(&expected, &observed),
         result,
@@ -7168,8 +7587,10 @@ test_decode_key_wrapping_data_with_encoding_option(void)
 }
 
 int
-test_encode_key_wrapping_specification_with_encoding_option(void)
+test_encode_key_wrapping_specification_with_encoding_option(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     uint8 expected[120] = {
         0x42, 0x00, 0x47, 0x01, 0x00, 0x00, 0x00, 0x70, 
         0x42, 0x00, 0x9E, 0x05, 0x00, 0x00, 0x00, 0x04, 
@@ -7210,6 +7631,7 @@ test_encode_key_wrapping_specification_with_encoding_option(void)
     
     int result = kmip_encode_key_wrapping_specification(&ctx, &kws);
     result = report_encoding_test_result(
+        tracker,
         &ctx,
         expected,
         observed,
@@ -7224,8 +7646,10 @@ The following tests cover features added in KMIP 1.2.
 */
 
 int
-test_encode_nonce(void)
+test_encode_nonce(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     uint8 expected[40] = {
         0x42, 0x00, 0xC8, 0x01, 0x00, 0x00, 0x00, 0x20,
         0x42, 0x00, 0xC9, 0x08, 0x00, 0x00, 0x00, 0x04,
@@ -7254,6 +7678,7 @@ test_encode_nonce(void)
     
     int result = kmip_encode_nonce(&ctx, &n);
     result = report_encoding_test_result(
+        tracker,
         &ctx,
         expected,
         observed,
@@ -7264,8 +7689,10 @@ test_encode_nonce(void)
 }
 
 int
-test_decode_nonce(void)
+test_decode_nonce(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     uint8 encoding[40] = {
         0x42, 0x00, 0xC8, 0x01, 0x00, 0x00, 0x00, 0x20,
         0x42, 0x00, 0xC9, 0x08, 0x00, 0x00, 0x00, 0x04,
@@ -7295,6 +7722,7 @@ test_decode_nonce(void)
     
     int result = kmip_decode_nonce(&ctx, &observed);
     result = report_decoding_test_result(
+        tracker,
         &ctx,
         kmip_compare_nonce(&expected, &observed),
         result,
@@ -7305,8 +7733,10 @@ test_decode_nonce(void)
 }
 
 int
-test_encode_attestation_credential(void)
+test_encode_attestation_credential(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     uint8 expected[128] = {
         0x42, 0x00, 0x25, 0x01, 0x00, 0x00, 0x00, 0x70,
         0x42, 0x00, 0xC8, 0x01, 0x00, 0x00, 0x00, 0x20,
@@ -7368,6 +7798,7 @@ test_encode_attestation_credential(void)
     
     int result = kmip_encode_attestation_credential(&ctx, &ac);
     result = report_encoding_test_result(
+        tracker,
         &ctx,
         expected,
         observed,
@@ -7378,8 +7809,10 @@ test_encode_attestation_credential(void)
 }
 
 int
-test_decode_attestation_credential(void)
+test_decode_attestation_credential(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     uint8 encoding[128] = {
         0x42, 0x00, 0x25, 0x01, 0x00, 0x00, 0x00, 0x70,
         0x42, 0x00, 0xC8, 0x01, 0x00, 0x00, 0x00, 0x20,
@@ -7442,6 +7875,7 @@ test_decode_attestation_credential(void)
     
     int result = kmip_decode_attestation_credential(&ctx, &observed);
     result = report_decoding_test_result(
+        tracker,
         &ctx,
         kmip_compare_attestation_credential(&expected, &observed),
         result,
@@ -7452,8 +7886,10 @@ test_decode_attestation_credential(void)
 }
 
 int
-test_encode_request_header_with_attestation_details(void)
+test_encode_request_header_with_attestation_details(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     uint8 expected[216] = {
         0x42, 0x00, 0x77, 0x01, 0x00, 0x00, 0x00, 0xD0, 
         0x42, 0x00, 0x69, 0x01, 0x00, 0x00, 0x00, 0x20, 
@@ -7529,6 +7965,7 @@ test_encode_request_header_with_attestation_details(void)
     
     int result = kmip_encode_request_header(&ctx, &rh);
     result = report_encoding_test_result(
+        tracker,
         &ctx,
         expected,
         observed,
@@ -7539,8 +7976,10 @@ test_encode_request_header_with_attestation_details(void)
 }
 
 int
-test_encode_response_header_with_attestation_details(void)
+test_encode_response_header_with_attestation_details(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     uint8 expected[152] = {
         0x42, 0x00, 0x7A, 0x01, 0x00, 0x00, 0x00, 0x90, 
         0x42, 0x00, 0x69, 0x01, 0x00, 0x00, 0x00, 0x20, 
@@ -7602,6 +8041,7 @@ test_encode_response_header_with_attestation_details(void)
     
     int result = kmip_encode_response_header(&ctx, &rh);
     result = report_encoding_test_result(
+        tracker,
         &ctx,
         expected,
         observed,
@@ -7612,8 +8052,10 @@ test_encode_response_header_with_attestation_details(void)
 }
 
 int
-test_decode_response_header_with_attestation_details(void)
+test_decode_response_header_with_attestation_details(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     uint8 encoding[152] = {
         0x42, 0x00, 0x7A, 0x01, 0x00, 0x00, 0x00, 0x90, 
         0x42, 0x00, 0x69, 0x01, 0x00, 0x00, 0x00, 0x20, 
@@ -7677,6 +8119,7 @@ test_decode_response_header_with_attestation_details(void)
     
     int result = kmip_decode_response_header(&ctx, &observed);
     result = report_decoding_test_result(
+        tracker,
         &ctx,
         kmip_compare_response_header(&expected, &observed),
         result,
@@ -7687,8 +8130,10 @@ test_decode_response_header_with_attestation_details(void)
 }
 
 int
-test_encode_cryptographic_parameters_with_digital_signature_fields(void)
+test_encode_cryptographic_parameters_with_digital_signature_fields(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     uint8 expected[216] = {
         0x42, 0x00, 0x2B, 0x01, 0x00, 0x00, 0x00, 0xD0,
         0x42, 0x00, 0x11, 0x05, 0x00, 0x00, 0x00, 0x04,
@@ -7700,7 +8145,7 @@ test_encode_cryptographic_parameters_with_digital_signature_fields(void)
         0x42, 0x00, 0x83, 0x05, 0x00, 0x00, 0x00, 0x04,
         0x00, 0x00, 0x00, 0x0B, 0x00, 0x00, 0x00, 0x00,
         0x42, 0x00, 0xAE, 0x05, 0x00, 0x00, 0x00, 0x04,
-        0x00, 0x00 ,0x00, 0x05, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x05, 0x00, 0x00, 0x00, 0x00,
         0x42, 0x00, 0x28, 0x05, 0x00, 0x00, 0x00, 0x04,
         0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00,
         0x42, 0x00, 0xC5, 0x06, 0x00, 0x00, 0x00, 0x08,
@@ -7741,6 +8186,7 @@ test_encode_cryptographic_parameters_with_digital_signature_fields(void)
     
     int result = kmip_encode_cryptographic_parameters(&ctx, &cp);
     result = report_encoding_test_result(
+        tracker,
         &ctx,
         expected,
         observed,
@@ -7751,8 +8197,10 @@ test_encode_cryptographic_parameters_with_digital_signature_fields(void)
 }
 
 int
-test_decode_cryptographic_parameters_with_digital_signature_fields(void)
+test_decode_cryptographic_parameters_with_digital_signature_fields(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     uint8 encoding[216] = {
         0x42, 0x00, 0x2B, 0x01, 0x00, 0x00, 0x00, 0xD0,
         0x42, 0x00, 0x11, 0x05, 0x00, 0x00, 0x00, 0x04,
@@ -7808,6 +8256,7 @@ test_decode_cryptographic_parameters_with_digital_signature_fields(void)
     
     int result = kmip_decode_cryptographic_parameters(&ctx, &observed);
     result = report_decoding_test_result(
+        tracker,
         &ctx,
         kmip_compare_cryptographic_parameters(&expected, &observed),
         result,
@@ -7822,8 +8271,10 @@ The following tests cover features added in KMIP 1.4.
 */
 
 int
-test_encode_cryptographic_parameters_with_mask_fields(void)
+test_encode_cryptographic_parameters_with_mask_fields(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     uint8 expected[312] = {
         0x42, 0x00, 0x2B, 0x01, 0x00, 0x00, 0x01, 0x30,
         0x42, 0x00, 0x11, 0x05, 0x00, 0x00, 0x00, 0x04,
@@ -7835,7 +8286,7 @@ test_encode_cryptographic_parameters_with_mask_fields(void)
         0x42, 0x00, 0x83, 0x05, 0x00, 0x00, 0x00, 0x04,
         0x00, 0x00, 0x00, 0x0B, 0x00, 0x00, 0x00, 0x00,
         0x42, 0x00, 0xAE, 0x05, 0x00, 0x00, 0x00, 0x04,
-        0x00, 0x00 ,0x00, 0x05, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x05, 0x00, 0x00, 0x00, 0x00,
         0x42, 0x00, 0x28, 0x05, 0x00, 0x00, 0x00, 0x04,
         0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00,
         0x42, 0x00, 0xC5, 0x06, 0x00, 0x00, 0x00, 0x08,
@@ -7903,6 +8354,7 @@ test_encode_cryptographic_parameters_with_mask_fields(void)
     
     int result = kmip_encode_cryptographic_parameters(&ctx, &cp);
     result = report_encoding_test_result(
+        tracker,
         &ctx,
         expected,
         observed,
@@ -7913,8 +8365,10 @@ test_encode_cryptographic_parameters_with_mask_fields(void)
 }
 
 int
-test_decode_cryptographic_parameters_with_mask_fields(void)
+test_decode_cryptographic_parameters_with_mask_fields(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     uint8 encoding[312] = {
         0x42, 0x00, 0x2B, 0x01, 0x00, 0x00, 0x01, 0x30,
         0x42, 0x00, 0x11, 0x05, 0x00, 0x00, 0x00, 0x04,
@@ -7926,7 +8380,7 @@ test_decode_cryptographic_parameters_with_mask_fields(void)
         0x42, 0x00, 0x83, 0x05, 0x00, 0x00, 0x00, 0x04,
         0x00, 0x00, 0x00, 0x0B, 0x00, 0x00, 0x00, 0x00,
         0x42, 0x00, 0xAE, 0x05, 0x00, 0x00, 0x00, 0x04,
-        0x00, 0x00 ,0x00, 0x05, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x05, 0x00, 0x00, 0x00, 0x00,
         0x42, 0x00, 0x28, 0x05, 0x00, 0x00, 0x00, 0x04,
         0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00,
         0x42, 0x00, 0xC5, 0x06, 0x00, 0x00, 0x00, 0x08,
@@ -7998,6 +8452,7 @@ test_decode_cryptographic_parameters_with_mask_fields(void)
     
     int result = kmip_decode_cryptographic_parameters(&ctx, &observed);
     result = report_decoding_test_result(
+        tracker,
         &ctx,
         kmip_compare_cryptographic_parameters(&expected, &observed),
         result,
@@ -8008,8 +8463,10 @@ test_decode_cryptographic_parameters_with_mask_fields(void)
 }
 
 int
-test_encode_get_request_payload_with_wrap_type(void)
+test_encode_get_request_payload_with_wrap_type(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     uint8 expected[104] = {
         0x42, 0x00, 0x79, 0x01, 0x00, 0x00, 0x00, 0x60, 
         0x42, 0x00, 0x94, 0x07, 0x00, 0x00, 0x00, 0x24, 
@@ -8043,6 +8500,7 @@ test_encode_get_request_payload_with_wrap_type(void)
     
     int result = kmip_encode_get_request_payload(&ctx, &grp);
     result = report_encoding_test_result(
+        tracker,
         &ctx,
         expected,
         observed,
@@ -8053,8 +8511,10 @@ test_encode_get_request_payload_with_wrap_type(void)
 }
 
 int
-test_encode_request_header_with_correlation_values(void)
+test_encode_request_header_with_correlation_values(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     uint8 expected[280] = {
         0x42, 0x00, 0x77, 0x01, 0x00, 0x00, 0x01, 0x10, 
         0x42, 0x00, 0x69, 0x01, 0x00, 0x00, 0x00, 0x20, 
@@ -8151,6 +8611,7 @@ test_encode_request_header_with_correlation_values(void)
     
     int result = kmip_encode_request_header(&ctx, &rh);
     result = report_encoding_test_result(
+        tracker,
         &ctx,
         expected,
         observed,
@@ -8161,8 +8622,10 @@ test_encode_request_header_with_correlation_values(void)
 }
 
 int
-test_encode_response_header_with_correlation_values(void)
+test_encode_response_header_with_correlation_values(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     uint8 expected[184] = {
         0x42, 0x00, 0x7A, 0x01, 0x00, 0x00, 0x00, 0xB0, 
         0x42, 0x00, 0x69, 0x01, 0x00, 0x00, 0x00, 0x20, 
@@ -8239,6 +8702,7 @@ test_encode_response_header_with_correlation_values(void)
     
     int result = kmip_encode_response_header(&ctx, &rh);
     result = report_encoding_test_result(
+        tracker,
         &ctx,
         expected,
         observed,
@@ -8249,8 +8713,10 @@ test_encode_response_header_with_correlation_values(void)
 }
 
 int
-test_decode_response_header_with_correlation_values(void)
+test_decode_response_header_with_correlation_values(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     uint8 encoding[184] = {
         0x42, 0x00, 0x7A, 0x01, 0x00, 0x00, 0x00, 0xB0, 
         0x42, 0x00, 0x69, 0x01, 0x00, 0x00, 0x00, 0x20, 
@@ -8329,6 +8795,7 @@ test_decode_response_header_with_correlation_values(void)
     
     int result = kmip_decode_response_header(&ctx, &observed);
     result = report_decoding_test_result(
+        tracker,
         &ctx,
         kmip_compare_response_header(&expected, &observed),
         result,
@@ -8346,8 +8813,10 @@ http://docs.oasis-open.org/kmip/testcases/v1.1/kmip-testcases-v1.1.html
 */
 
 int
-test_kmip_1_1_test_suite_3_1_1_0_a(void)
+test_kmip_1_1_test_suite_3_1_1_0_a(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     /* KMIP 1.1 Test Suite - Test 3.1.1.0a */
     uint8 expected[296] = {
         0x42, 0x00, 0x78, 0x01, 0x00, 0x00, 0x01, 0x20, 
@@ -8441,6 +8910,7 @@ test_kmip_1_1_test_suite_3_1_1_0_a(void)
     
     int result = kmip_encode_request_message(&ctx, &rm);
     result = report_encoding_test_result(
+        tracker,
         &ctx,
         expected,
         observed,
@@ -8451,8 +8921,10 @@ test_kmip_1_1_test_suite_3_1_1_0_a(void)
 }
 
 int
-test_kmip_1_1_test_suite_3_1_1_0_b(void)
+test_kmip_1_1_test_suite_3_1_1_0_b(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     /* KMIP 1.1 Test Suite - Test 3.1.1.0b */
     uint8 expected[200] = {
         0x42, 0x00, 0x7B, 0x01, 0x00, 0x00, 0x00, 0xC0, 
@@ -8517,6 +8989,7 @@ test_kmip_1_1_test_suite_3_1_1_0_b(void)
     
     int result = kmip_encode_response_message(&ctx, &rm);
     result = report_encoding_test_result(
+        tracker,
         &ctx,
         expected,
         observed,
@@ -8527,8 +9000,10 @@ test_kmip_1_1_test_suite_3_1_1_0_b(void)
 }
 
 int
-test_kmip_1_1_test_suite_3_1_1_1_a(void)
+test_kmip_1_1_test_suite_3_1_1_1_a(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     /* KMIP 1.1 Test Suite - Test 3.1.1.1a */
     uint8 expected[152] = {
         0x42, 0x00, 0x78, 0x01, 0x00, 0x00, 0x00, 0x90, 
@@ -8584,6 +9059,7 @@ test_kmip_1_1_test_suite_3_1_1_1_a(void)
     
     int result = kmip_encode_request_message(&ctx, &rm);
     result = report_encoding_test_result(
+        tracker,
         &ctx,
         expected,
         observed,
@@ -8594,8 +9070,10 @@ test_kmip_1_1_test_suite_3_1_1_1_a(void)
 }
 
 int
-test_kmip_1_1_test_suite_3_1_1_1_b(void)
+test_kmip_1_1_test_suite_3_1_1_1_b(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     /* KMIP 1.1 Test Suite - Test 3.1.1.1b */
     uint8 expected[184] = {
         0x42, 0x00, 0x7B, 0x01, 0x00, 0x00, 0x00, 0xB0, 
@@ -8657,6 +9135,7 @@ test_kmip_1_1_test_suite_3_1_1_1_b(void)
     
     int result = kmip_encode_response_message(&ctx, &rm);
     result = report_encoding_test_result(
+        tracker,
         &ctx,
         expected,
         observed,
@@ -8667,8 +9146,10 @@ test_kmip_1_1_test_suite_3_1_1_1_b(void)
 }
 
 int
-test_kmip_1_1_test_suite_3_1_3_2_a(void)
+test_kmip_1_1_test_suite_3_1_3_2_a(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     /* KMIP 1.1 Test Suite - Test 3.1.3.2a */
     uint8 expected[152] = {
         0x42, 0x00, 0x78, 0x01, 0x00, 0x00, 0x00, 0x90, 
@@ -8724,6 +9205,7 @@ test_kmip_1_1_test_suite_3_1_3_2_a(void)
     
     int result = kmip_encode_request_message(&ctx, &rm);
     result = report_encoding_test_result(
+        tracker,
         &ctx,
         expected,
         observed,
@@ -8734,8 +9216,10 @@ test_kmip_1_1_test_suite_3_1_3_2_a(void)
 }
 
 int
-test_kmip_1_1_test_suite_3_1_3_2_b(void)
+test_kmip_1_1_test_suite_3_1_3_2_b(TestTracker *tracker)
 {
+    TRACK_TEST(tracker);
+
     uint8 expected[304] = {
         0x42, 0x00, 0x7B, 0x01, 0x00, 0x00, 0x01, 0x28, 
         0x42, 0x00, 0x7A, 0x01, 0x00, 0x00, 0x00, 0x48, 
@@ -8835,6 +9319,7 @@ test_kmip_1_1_test_suite_3_1_3_2_b(void)
     
     int result = kmip_encode_response_message(&ctx, &rm);
     result = report_encoding_test_result(
+        tracker,
         &ctx,
         expected,
         observed,
@@ -8849,214 +9334,213 @@ test_kmip_1_1_test_suite_3_1_3_2_b(void)
 int
 run_tests(void)
 {
-    int num_tests = 161;
-    int num_failures = 0;
+    TestTracker tracker = {0};
     
     printf("Tests\n");
     printf("=====\n");
     
     printf("\nUtility Tests\n");
     printf("-------------\n");
-    num_failures += test_linked_list_pop();
-    num_failures += test_linked_list_push();
-    num_failures += test_linked_list_enqueue();
-    num_failures += test_buffer_bytes_left();
-    num_failures += test_peek_tag();
-    num_failures += test_is_attribute_tag();
+    test_linked_list_pop(&tracker);
+    test_linked_list_push(&tracker);
+    test_linked_list_enqueue(&tracker);
+    test_buffer_bytes_left(&tracker);
+    test_peek_tag(&tracker);
+    test_is_attribute_tag(&tracker);
 
     printf("\nKMIP 1.0 Feature Tests\n");
     printf("----------------------\n");
-    num_failures += test_buffer_full_and_resize();
-    num_failures += test_is_tag_next();
-    num_failures += test_get_num_items_next();
-    num_failures += test_get_num_items_next_with_partial_item();
-    num_failures += test_get_num_items_next_with_mismatch_item();
-    num_failures += test_get_num_items_next_with_no_matches();
-    num_failures += test_get_num_items_next_with_non_structures();
+    test_buffer_full_and_resize(&tracker);
+    test_is_tag_next(&tracker);
+    test_get_num_items_next(&tracker);
+    test_get_num_items_next_with_partial_item(&tracker);
+    test_get_num_items_next_with_mismatch_item(&tracker);
+    test_get_num_items_next_with_no_matches(&tracker);
+    test_get_num_items_next_with_non_structures(&tracker);
     
     printf("\n");
-    num_failures += test_decode_int8_be();
-    num_failures += test_decode_int32_be();
-    num_failures += test_decode_int64_be();
-    num_failures += test_decode_integer();
-    num_failures += test_decode_long();
-    num_failures += test_decode_enum();
-    num_failures += test_decode_bool();
-    num_failures += test_decode_text_string();
-    num_failures += test_decode_byte_string();
-    num_failures += test_decode_date_time();
-    num_failures += test_decode_interval();
-    num_failures += test_decode_name();
-    num_failures += test_decode_attribute_unique_identifier();
-    num_failures += test_decode_attribute_name();
-    num_failures += test_decode_attribute_object_type();
-    num_failures += test_decode_attribute_cryptographic_algorithm();
-    num_failures += test_decode_attribute_cryptographic_length();
-    num_failures += test_decode_attribute_operation_policy_name();
-    num_failures += test_decode_attribute_cryptographic_usage_mask();
-    num_failures += test_decode_attribute_state();
-    num_failures += test_decode_template_attribute();
-    num_failures += test_decode_protocol_version();
-    num_failures += test_decode_key_material_byte_string();
-    num_failures += test_decode_key_material_transparent_symmetric_key();
-    num_failures += test_decode_key_value();
-    num_failures += test_decode_key_value_with_attributes();
-    num_failures += test_decode_cryptographic_parameters();
-    num_failures += test_decode_encryption_key_information();
-    num_failures += test_decode_mac_signature_key_information();
-    num_failures += test_decode_key_wrapping_data();
-    num_failures += test_decode_key_block_key_value_byte_string();
-    num_failures += test_decode_key_block_key_value_structure();
-    num_failures += test_decode_symmetric_key();
-    num_failures += test_decode_public_key();
-    num_failures += test_decode_private_key();
-    num_failures += test_decode_key_wrapping_specification();
-    num_failures += test_decode_create_request_payload();
-    num_failures += test_decode_create_response_payload();
-    num_failures += test_decode_create_response_payload_with_template_attribute();
-    num_failures += test_decode_get_request_payload();
-    num_failures += test_decode_get_response_payload();
-    num_failures += test_decode_destroy_request_payload();
-    num_failures += test_decode_destroy_response_payload();
-    num_failures += test_decode_response_batch_item_get_payload();
-    num_failures += test_decode_username_password_credential();
-    num_failures += test_decode_credential_username_password_credential();
-    num_failures += test_decode_authentication_username_password_credential();
-    num_failures += test_decode_request_header();
-    num_failures += test_decode_response_header();
-    num_failures += test_decode_request_batch_item_get_payload();
-    num_failures += test_decode_request_message_get();
-    num_failures += test_decode_response_message_get();
+    test_decode_int8_be(&tracker);
+    test_decode_int32_be(&tracker);
+    test_decode_int64_be(&tracker);
+    test_decode_integer(&tracker);
+    test_decode_long(&tracker);
+    test_decode_enum(&tracker);
+    test_decode_bool(&tracker);
+    test_decode_text_string(&tracker);
+    test_decode_byte_string(&tracker);
+    test_decode_date_time(&tracker);
+    test_decode_interval(&tracker);
+    test_decode_name(&tracker);
+    test_decode_attribute_unique_identifier(&tracker);
+    test_decode_attribute_name(&tracker);
+    test_decode_attribute_object_type(&tracker);
+    test_decode_attribute_cryptographic_algorithm(&tracker);
+    test_decode_attribute_cryptographic_length(&tracker);
+    test_decode_attribute_operation_policy_name(&tracker);
+    test_decode_attribute_cryptographic_usage_mask(&tracker);
+    test_decode_attribute_state(&tracker);
+    test_decode_template_attribute(&tracker);
+    test_decode_protocol_version(&tracker);
+    test_decode_key_material_byte_string(&tracker);
+    test_decode_key_material_transparent_symmetric_key(&tracker);
+    test_decode_key_value(&tracker);
+    test_decode_key_value_with_attributes(&tracker);
+    test_decode_cryptographic_parameters(&tracker);
+    test_decode_encryption_key_information(&tracker);
+    test_decode_mac_signature_key_information(&tracker);
+    test_decode_key_wrapping_data(&tracker);
+    test_decode_key_block_key_value_byte_string(&tracker);
+    test_decode_key_block_key_value_structure(&tracker);
+    test_decode_symmetric_key(&tracker);
+    test_decode_public_key(&tracker);
+    test_decode_private_key(&tracker);
+    test_decode_key_wrapping_specification(&tracker);
+    test_decode_create_request_payload(&tracker);
+    test_decode_create_response_payload(&tracker);
+    test_decode_create_response_payload_with_template_attribute(&tracker);
+    test_decode_get_request_payload(&tracker);
+    test_decode_get_response_payload(&tracker);
+    test_decode_destroy_request_payload(&tracker);
+    test_decode_destroy_response_payload(&tracker);
+    test_decode_response_batch_item_get_payload(&tracker);
+    test_decode_username_password_credential(&tracker);
+    test_decode_credential_username_password_credential(&tracker);
+    test_decode_authentication_username_password_credential(&tracker);
+    test_decode_request_header(&tracker);
+    test_decode_response_header(&tracker);
+    test_decode_request_batch_item_get_payload(&tracker);
+    test_decode_request_message_get(&tracker);
+    test_decode_response_message_get(&tracker);
     
     printf("\n");
-    num_failures += test_encode_integer();
-    num_failures += test_encode_long();
-    num_failures += test_encode_enum();
-    num_failures += test_encode_bool();
-    num_failures += test_encode_text_string();
-    num_failures += test_encode_byte_string();
-    num_failures += test_encode_date_time();
-    num_failures += test_encode_interval();
-    num_failures += test_encode_name();
-    num_failures += test_encode_attribute_unique_identifier();
-    num_failures += test_encode_attribute_name();
-    num_failures += test_encode_attribute_object_type();
-    num_failures += test_encode_attribute_cryptographic_algorithm();
-    num_failures += test_encode_attribute_cryptographic_length();
-    num_failures += test_encode_attribute_operation_policy_name();
-    num_failures += test_encode_attribute_cryptographic_usage_mask();
-    num_failures += test_encode_attribute_state();
-    num_failures += test_encode_protocol_version();
-    num_failures += test_encode_cryptographic_parameters();
-    num_failures += test_encode_encryption_key_information();
-    num_failures += test_encode_mac_signature_key_information();
-    num_failures += test_encode_key_wrapping_data();
-    num_failures += test_encode_key_material_byte_string();
-    num_failures += test_encode_key_material_transparent_symmetric_key();
-    num_failures += test_encode_key_value();
-    num_failures += test_encode_key_value_with_attributes();
-    num_failures += test_encode_key_block_key_value_byte_string();
-    num_failures += test_encode_key_block_key_value_structure();
-    num_failures += test_encode_symmetric_key();
-    num_failures += test_encode_public_key();
-    num_failures += test_encode_private_key();
-    num_failures += test_encode_key_wrapping_specification();
-    num_failures += test_encode_create_request_payload();
-    num_failures += test_encode_create_response_payload();
-    num_failures += test_encode_create_response_payload_with_template_attribute();
-    num_failures += test_encode_get_request_payload();
-    num_failures += test_encode_get_request_payload_with_format_compression();
-    num_failures += test_encode_get_request_payload_with_wrapping_spec();
-    num_failures += test_encode_get_response_payload();
-    num_failures += test_encode_destroy_request_payload();
-    num_failures += test_encode_destroy_response_payload();
-    num_failures += test_encode_username_password_credential();
-    num_failures += test_encode_credential_username_password_credential();
-    num_failures += test_encode_authentication_username_password_credential();
-    num_failures += test_encode_request_header();
-    num_failures += test_encode_response_header();
-    num_failures += test_encode_request_batch_item_get_payload();
-    num_failures += test_encode_response_batch_item_get_payload();
-    num_failures += test_encode_request_message_get();
-    num_failures += test_encode_response_message_get();
-    num_failures += test_encode_template_attribute();
+    test_encode_integer(&tracker);
+    test_encode_long(&tracker);
+    test_encode_enum(&tracker);
+    test_encode_bool(&tracker);
+    test_encode_text_string(&tracker);
+    test_encode_byte_string(&tracker);
+    test_encode_date_time(&tracker);
+    test_encode_interval(&tracker);
+    test_encode_name(&tracker);
+    test_encode_attribute_unique_identifier(&tracker);
+    test_encode_attribute_name(&tracker);
+    test_encode_attribute_object_type(&tracker);
+    test_encode_attribute_cryptographic_algorithm(&tracker);
+    test_encode_attribute_cryptographic_length(&tracker);
+    test_encode_attribute_operation_policy_name(&tracker);
+    test_encode_attribute_cryptographic_usage_mask(&tracker);
+    test_encode_attribute_state(&tracker);
+    test_encode_protocol_version(&tracker);
+    test_encode_cryptographic_parameters(&tracker);
+    test_encode_encryption_key_information(&tracker);
+    test_encode_mac_signature_key_information(&tracker);
+    test_encode_key_wrapping_data(&tracker);
+    test_encode_key_material_byte_string(&tracker);
+    test_encode_key_material_transparent_symmetric_key(&tracker);
+    test_encode_key_value(&tracker);
+    test_encode_key_value_with_attributes(&tracker);
+    test_encode_key_block_key_value_byte_string(&tracker);
+    test_encode_key_block_key_value_structure(&tracker);
+    test_encode_symmetric_key(&tracker);
+    test_encode_public_key(&tracker);
+    test_encode_private_key(&tracker);
+    test_encode_key_wrapping_specification(&tracker);
+    test_encode_create_request_payload(&tracker);
+    test_encode_create_response_payload(&tracker);
+    test_encode_create_response_payload_with_template_attribute(&tracker);
+    test_encode_get_request_payload(&tracker);
+    test_encode_get_request_payload_with_format_compression(&tracker);
+    test_encode_get_request_payload_with_wrapping_spec(&tracker);
+    test_encode_get_response_payload(&tracker);
+    test_encode_destroy_request_payload(&tracker);
+    test_encode_destroy_response_payload(&tracker);
+    test_encode_username_password_credential(&tracker);
+    test_encode_credential_username_password_credential(&tracker);
+    test_encode_authentication_username_password_credential(&tracker);
+    test_encode_request_header(&tracker);
+    test_encode_response_header(&tracker);
+    test_encode_request_batch_item_get_payload(&tracker);
+    test_encode_response_batch_item_get_payload(&tracker);
+    test_encode_request_message_get(&tracker);
+    test_encode_response_message_get(&tracker);
+    test_encode_template_attribute(&tracker);
     
     printf("\nKMIP 1.1 Feature Tests\n");
     printf("----------------------\n");
-    num_failures += test_decode_device_credential();
-    num_failures += test_decode_key_wrapping_data_with_encoding_option();
+    test_decode_device_credential(&tracker);
+    test_decode_key_wrapping_data_with_encoding_option(&tracker);
     
     printf("\n");
-    num_failures += test_encode_device_credential();
-    num_failures += test_encode_key_wrapping_data_with_encoding_option();
-    num_failures += test_encode_key_wrapping_specification_with_encoding_option();
+    test_encode_device_credential(&tracker);
+    test_encode_key_wrapping_data_with_encoding_option(&tracker);
+    test_encode_key_wrapping_specification_with_encoding_option(&tracker);
     
     printf("\nKMIP 1.1 Test Suite Test Cases\n");
     printf("------------------------------\n");
-    num_failures += test_kmip_1_1_test_suite_3_1_1_0_a();
-    num_failures += test_kmip_1_1_test_suite_3_1_1_0_b();
-    num_failures += test_kmip_1_1_test_suite_3_1_1_1_a();
-    num_failures += test_kmip_1_1_test_suite_3_1_1_1_b();
-    num_failures += test_kmip_1_1_test_suite_3_1_3_2_a();
-    num_failures += test_kmip_1_1_test_suite_3_1_3_2_b();
+    test_kmip_1_1_test_suite_3_1_1_0_a(&tracker);
+    test_kmip_1_1_test_suite_3_1_1_0_b(&tracker);
+    test_kmip_1_1_test_suite_3_1_1_1_a(&tracker);
+    test_kmip_1_1_test_suite_3_1_1_1_b(&tracker);
+    test_kmip_1_1_test_suite_3_1_3_2_a(&tracker);
+    test_kmip_1_1_test_suite_3_1_3_2_b(&tracker);
     
     printf("\nKMIP 1.2 Feature Tests\n");
     printf("----------------------\n");
-    num_failures += test_decode_nonce();
-    num_failures += test_decode_attestation_credential();
-    num_failures += test_decode_response_header_with_attestation_details();
-    num_failures += test_decode_cryptographic_parameters_with_digital_signature_fields();
+    test_decode_nonce(&tracker);
+    test_decode_attestation_credential(&tracker);
+    test_decode_response_header_with_attestation_details(&tracker);
+    test_decode_cryptographic_parameters_with_digital_signature_fields(&tracker);
     
     printf("\n");
-    num_failures += test_encode_nonce();
-    num_failures += test_encode_attestation_credential();
-    num_failures += test_encode_request_header_with_attestation_details();
-    num_failures += test_encode_response_header_with_attestation_details();
-    num_failures += test_encode_cryptographic_parameters_with_digital_signature_fields();
+    test_encode_nonce(&tracker);
+    test_encode_attestation_credential(&tracker);
+    test_encode_request_header_with_attestation_details(&tracker);
+    test_encode_response_header_with_attestation_details(&tracker);
+    test_encode_cryptographic_parameters_with_digital_signature_fields(&tracker);
     
     printf("\nKMIP 1.4 Feature Tests\n");
     printf("----------------------\n");
-    num_failures += test_decode_cryptographic_parameters_with_mask_fields();
-    num_failures += test_decode_response_header_with_correlation_values();
+    test_decode_cryptographic_parameters_with_mask_fields(&tracker);
+    test_decode_response_header_with_correlation_values(&tracker);
     
     printf("\n");
-    num_failures += test_encode_cryptographic_parameters_with_mask_fields();
-    num_failures += test_encode_get_request_payload_with_wrap_type();
-    num_failures += test_encode_request_header_with_correlation_values();
-    num_failures += test_encode_response_header_with_correlation_values();
+    test_encode_cryptographic_parameters_with_mask_fields(&tracker);
+    test_encode_get_request_payload_with_wrap_type(&tracker);
+    test_encode_request_header_with_correlation_values(&tracker);
+    test_encode_response_header_with_correlation_values(&tracker);
     
     printf("\nKMIP 2.0 Feature Tests\n");
     printf("----------------------\n");
-    num_failures += test_decode_attributes();
-    num_failures += test_decode_attributes_with_invalid_kmip_version();
-    num_failures += test_decode_attribute_v2_unique_identifier();
-    num_failures += test_decode_attribute_v2_name();
-    num_failures += test_decode_attribute_v2_object_type();
-    num_failures += test_decode_attribute_v2_cryptographic_algorithm();
-    num_failures += test_decode_attribute_v2_cryptographic_length();
-    num_failures += test_decode_attribute_v2_cryptographic_usage_mask();
-    num_failures += test_decode_attribute_v2_state();
-    num_failures += test_decode_attribute_v2_unsupported_attribute();
+    test_decode_attributes(&tracker);
+    test_decode_attributes_with_invalid_kmip_version(&tracker);
+    test_decode_attribute_v2_unique_identifier(&tracker);
+    test_decode_attribute_v2_name(&tracker);
+    test_decode_attribute_v2_object_type(&tracker);
+    test_decode_attribute_v2_cryptographic_algorithm(&tracker);
+    test_decode_attribute_v2_cryptographic_length(&tracker);
+    test_decode_attribute_v2_cryptographic_usage_mask(&tracker);
+    test_decode_attribute_v2_state(&tracker);
+    test_decode_attribute_v2_unsupported_attribute(&tracker);
 
     printf("\n");
-    num_failures += test_encode_attributes();
-    num_failures += test_encode_attributes_with_invalid_kmip_version();
-    num_failures += test_encode_attribute_v2_unique_identifier();
-    num_failures += test_encode_attribute_v2_name();
-    num_failures += test_encode_attribute_v2_object_type();
-    num_failures += test_encode_attribute_v2_cryptographic_algorithm();
-    num_failures += test_encode_attribute_v2_cryptographic_length();
-    num_failures += test_encode_attribute_v2_cryptographic_usage_mask();
-    num_failures += test_encode_attribute_v2_state();
-    num_failures += test_encode_attribute_v2_unsupported_attribute();
+    test_encode_attributes(&tracker);
+    test_encode_attributes_with_invalid_kmip_version(&tracker);
+    test_encode_attribute_v2_unique_identifier(&tracker);
+    test_encode_attribute_v2_name(&tracker);
+    test_encode_attribute_v2_object_type(&tracker);
+    test_encode_attribute_v2_cryptographic_algorithm(&tracker);
+    test_encode_attribute_v2_cryptographic_length(&tracker);
+    test_encode_attribute_v2_cryptographic_usage_mask(&tracker);
+    test_encode_attribute_v2_state(&tracker);
+    test_encode_attribute_v2_unsupported_attribute(&tracker);
 
     printf("\nSummary\n");
     printf("================\n");
-    printf("Total tests: %d\n", num_tests);
-    printf("       PASS: %d\n", num_tests - num_failures);
-    printf("    FAILURE: %d\n", num_failures);
+    printf("Total tests: %u\n", tracker.test_count);
+    printf("       PASS: %u\n", tracker.tests_passed);
+    printf("    FAILURE: %u\n", tracker.tests_failed);
 
-    return(num_failures);
+    return(tracker.tests_failed);
 }
 
 void
