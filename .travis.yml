@@ -15,7 +15,7 @@ before_install:
   - pushd ~/build/openssl/openssl-1.1.0i
   - ./Configure enable-crypto-mdebug enable-crypto-mdebug-backtrace linux-x86_64
   - make &> ~/build/openssl/openssl-1.1.0i-make.log
-  - sudo make install
+  - sudo make install &> ~/build/openssl/openssl-1.1.0i-make-install.log
   - popd
 
 script:
