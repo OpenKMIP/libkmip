@@ -872,6 +872,302 @@ test_is_attribute_tag(TestTracker *tracker)
 }
 
 int
+test_get_enum_string_index(TestTracker *tracker)
+{
+    TRACK_TEST(tracker);
+
+    if(kmip_get_enum_string_index(KMIP_TAG_ATTESTATION_TYPE) != 0)
+    {
+        TEST_FAILED(tracker, __func__, __LINE__);
+    }
+
+    if(kmip_get_enum_string_index(KMIP_TAG_BATCH_ERROR_CONTINUATION_OPTION) != 1)
+    {
+        TEST_FAILED(tracker, __func__, __LINE__);
+    }
+
+    if(kmip_get_enum_string_index(KMIP_TAG_BLOCK_CIPHER_MODE) != 2)
+    {
+        TEST_FAILED(tracker, __func__, __LINE__);
+    }
+
+    if(kmip_get_enum_string_index(KMIP_TAG_CREDENTIAL_TYPE) != 3)
+    {
+        TEST_FAILED(tracker, __func__, __LINE__);
+    }
+
+    if(kmip_get_enum_string_index(KMIP_TAG_CRYPTOGRAPHIC_ALGORITHM) != 4)
+    {
+        TEST_FAILED(tracker, __func__, __LINE__);
+    }
+
+    if(kmip_get_enum_string_index(KMIP_TAG_CRYPTOGRAPHIC_USAGE_MASK) != 5)
+    {
+        TEST_FAILED(tracker, __func__, __LINE__);
+    }
+
+    if(kmip_get_enum_string_index(KMIP_TAG_DIGITAL_SIGNATURE_ALGORITHM) != 6)
+    {
+        TEST_FAILED(tracker, __func__, __LINE__);
+    }
+
+    if(kmip_get_enum_string_index(KMIP_TAG_ENCODING_OPTION) != 7)
+    {
+        TEST_FAILED(tracker, __func__, __LINE__);
+    }
+
+    if(kmip_get_enum_string_index(KMIP_TAG_HASHING_ALGORITHM) != 8)
+    {
+        TEST_FAILED(tracker, __func__, __LINE__);
+    }
+
+    if(kmip_get_enum_string_index(KMIP_TAG_KEY_COMPRESSION_TYPE) != 9)
+    {
+        TEST_FAILED(tracker, __func__, __LINE__);
+    }
+
+    if(kmip_get_enum_string_index(KMIP_TAG_KEY_FORMAT_TYPE) != 10)
+    {
+        TEST_FAILED(tracker, __func__, __LINE__);
+    }
+
+    if(kmip_get_enum_string_index(KMIP_TAG_KEY_ROLE_TYPE) != 11)
+    {
+        TEST_FAILED(tracker, __func__, __LINE__);
+    }
+
+    if(kmip_get_enum_string_index(KMIP_TAG_KEY_WRAP_TYPE) != 12)
+    {
+        TEST_FAILED(tracker, __func__, __LINE__);
+    }
+
+    if(kmip_get_enum_string_index(KMIP_TAG_MASK_GENERATOR) != 13)
+    {
+        TEST_FAILED(tracker, __func__, __LINE__);
+    }
+
+    if(kmip_get_enum_string_index(KMIP_TAG_NAME_TYPE) != 14)
+    {
+        TEST_FAILED(tracker, __func__, __LINE__);
+    }
+
+    if(kmip_get_enum_string_index(KMIP_TAG_OBJECT_TYPE) != 15)
+    {
+        TEST_FAILED(tracker, __func__, __LINE__);
+    }
+
+    if(kmip_get_enum_string_index(KMIP_TAG_OPERATION) != 16)
+    {
+        TEST_FAILED(tracker, __func__, __LINE__);
+    }
+
+    if(kmip_get_enum_string_index(KMIP_TAG_PADDING_METHOD) != 17)
+    {
+        TEST_FAILED(tracker, __func__, __LINE__);
+    }
+
+    if(kmip_get_enum_string_index(KMIP_TAG_PROTECTION_STORAGE_MASK) != 18)
+    {
+        TEST_FAILED(tracker, __func__, __LINE__);
+    }
+
+    if(kmip_get_enum_string_index(KMIP_TAG_RESULT_REASON) != 19)
+    {
+        TEST_FAILED(tracker, __func__, __LINE__);
+    }
+
+    if(kmip_get_enum_string_index(KMIP_TAG_RESULT_STATUS) != 20)
+    {
+        TEST_FAILED(tracker, __func__, __LINE__);
+    }
+
+    if(kmip_get_enum_string_index(KMIP_TAG_STATE) != 21)
+    {
+        TEST_FAILED(tracker, __func__, __LINE__);
+    }
+
+    if(kmip_get_enum_string_index(KMIP_TAG_TAG) != 22)
+    {
+        TEST_FAILED(tracker, __func__, __LINE__);
+    }
+
+    if(kmip_get_enum_string_index(KMIP_TAG_TYPE) != 23)
+    {
+        TEST_FAILED(tracker, __func__, __LINE__);
+    }
+
+    if(kmip_get_enum_string_index(KMIP_TAG_WRAPPING_METHOD) != 24)
+    {
+        TEST_FAILED(tracker, __func__, __LINE__);
+    }
+
+    if(kmip_get_enum_string_index(-1) != 25)
+    {
+        TEST_FAILED(tracker, __func__, __LINE__);
+    }
+
+    TEST_PASSED(tracker, __func__);
+}
+
+int
+test_check_enum_value_protection_storage_masks(TestTracker *tracker)
+{
+    TRACK_TEST(tracker);
+
+    enum kmip_version v = KMIP_2_0;
+    enum tag t = KMIP_TAG_PROTECTION_STORAGE_MASK;
+
+    if(kmip_check_enum_value(v, t, KMIP_PROTECT_SOFTWARE) != KMIP_OK)
+    {
+        TEST_FAILED(tracker, __func__, __LINE__);
+    }
+
+    if(kmip_check_enum_value(v, t, KMIP_PROTECT_HARDWARE) != KMIP_OK)
+    {
+        TEST_FAILED(tracker, __func__, __LINE__);
+    }
+
+    if(kmip_check_enum_value(v, t, KMIP_PROTECT_ON_PROCESSOR) != KMIP_OK)
+    {
+        TEST_FAILED(tracker, __func__, __LINE__);
+    }
+
+    if(kmip_check_enum_value(v, t, KMIP_PROTECT_ON_SYSTEM) != KMIP_OK)
+    {
+        TEST_FAILED(tracker, __func__, __LINE__);
+    }
+
+    if(kmip_check_enum_value(v, t, KMIP_PROTECT_OFF_SYSTEM) != KMIP_OK)
+    {
+        TEST_FAILED(tracker, __func__, __LINE__);
+    }
+
+    if(kmip_check_enum_value(v, t, KMIP_PROTECT_HYPERVISOR) != KMIP_OK)
+    {
+        TEST_FAILED(tracker, __func__, __LINE__);
+    }
+
+    if(kmip_check_enum_value(v, t, KMIP_PROTECT_OPERATING_SYSTEM) != KMIP_OK)
+    {
+        TEST_FAILED(tracker, __func__, __LINE__);
+    }
+
+    if(kmip_check_enum_value(v, t, KMIP_PROTECT_CONTAINER) != KMIP_OK)
+    {
+        TEST_FAILED(tracker, __func__, __LINE__);
+    }
+
+    if(kmip_check_enum_value(v, t, KMIP_PROTECT_ON_PREMISES) != KMIP_OK)
+    {
+        TEST_FAILED(tracker, __func__, __LINE__);
+    }
+
+    if(kmip_check_enum_value(v, t, KMIP_PROTECT_OFF_PREMISES) != KMIP_OK)
+    {
+        TEST_FAILED(tracker, __func__, __LINE__);
+    }
+
+    if(kmip_check_enum_value(v, t, KMIP_PROTECT_SELF_MANAGED) != KMIP_OK)
+    {
+        TEST_FAILED(tracker, __func__, __LINE__);
+    }
+
+    if(kmip_check_enum_value(v, t, KMIP_PROTECT_OUTSOURCED) != KMIP_OK)
+    {
+        TEST_FAILED(tracker, __func__, __LINE__);
+    }
+
+    if(kmip_check_enum_value(v, t, KMIP_PROTECT_VALIDATED) != KMIP_OK)
+    {
+        TEST_FAILED(tracker, __func__, __LINE__);
+    }
+
+    if(kmip_check_enum_value(v, t, KMIP_PROTECT_SAME_JURISDICTION) != KMIP_OK)
+    {
+        TEST_FAILED(tracker, __func__, __LINE__);
+    }
+
+    v = KMIP_1_4;
+
+    if(kmip_check_enum_value(v, t, KMIP_PROTECT_SOFTWARE) != KMIP_INVALID_FOR_VERSION)
+    {
+        TEST_FAILED(tracker, __func__, __LINE__);
+    }
+
+    if(kmip_check_enum_value(v, t, KMIP_PROTECT_HARDWARE) != KMIP_INVALID_FOR_VERSION)
+    {
+        TEST_FAILED(tracker, __func__, __LINE__);
+    }
+
+    if(kmip_check_enum_value(v, t, KMIP_PROTECT_ON_PROCESSOR) != KMIP_INVALID_FOR_VERSION)
+    {
+        TEST_FAILED(tracker, __func__, __LINE__);
+    }
+
+    if(kmip_check_enum_value(v, t, KMIP_PROTECT_ON_SYSTEM) != KMIP_INVALID_FOR_VERSION)
+    {
+        TEST_FAILED(tracker, __func__, __LINE__);
+    }
+
+    if(kmip_check_enum_value(v, t, KMIP_PROTECT_OFF_SYSTEM) != KMIP_INVALID_FOR_VERSION)
+    {
+        TEST_FAILED(tracker, __func__, __LINE__);
+    }
+
+    if(kmip_check_enum_value(v, t, KMIP_PROTECT_HYPERVISOR) != KMIP_INVALID_FOR_VERSION)
+    {
+        TEST_FAILED(tracker, __func__, __LINE__);
+    }
+
+    if(kmip_check_enum_value(v, t, KMIP_PROTECT_OPERATING_SYSTEM) != KMIP_INVALID_FOR_VERSION)
+    {
+        TEST_FAILED(tracker, __func__, __LINE__);
+    }
+
+    if(kmip_check_enum_value(v, t, KMIP_PROTECT_CONTAINER) != KMIP_INVALID_FOR_VERSION)
+    {
+        TEST_FAILED(tracker, __func__, __LINE__);
+    }
+
+    if(kmip_check_enum_value(v, t, KMIP_PROTECT_ON_PREMISES) != KMIP_INVALID_FOR_VERSION)
+    {
+        TEST_FAILED(tracker, __func__, __LINE__);
+    }
+
+    if(kmip_check_enum_value(v, t, KMIP_PROTECT_OFF_PREMISES) != KMIP_INVALID_FOR_VERSION)
+    {
+        TEST_FAILED(tracker, __func__, __LINE__);
+    }
+
+    if(kmip_check_enum_value(v, t, KMIP_PROTECT_SELF_MANAGED) != KMIP_INVALID_FOR_VERSION)
+    {
+        TEST_FAILED(tracker, __func__, __LINE__);
+    }
+
+    if(kmip_check_enum_value(v, t, KMIP_PROTECT_OUTSOURCED) != KMIP_INVALID_FOR_VERSION)
+    {
+        TEST_FAILED(tracker, __func__, __LINE__);
+    }
+
+    if(kmip_check_enum_value(v, t, KMIP_PROTECT_VALIDATED) != KMIP_INVALID_FOR_VERSION)
+    {
+        TEST_FAILED(tracker, __func__, __LINE__);
+    }
+
+    if(kmip_check_enum_value(v, t, KMIP_PROTECT_SAME_JURISDICTION) != KMIP_INVALID_FOR_VERSION)
+    {
+        TEST_FAILED(tracker, __func__, __LINE__);
+    }
+
+    if(kmip_check_enum_value(v, t, -1) != KMIP_ENUM_MISMATCH)
+    {
+        TEST_FAILED(tracker, __func__, __LINE__);
+    }
+
+    TEST_PASSED(tracker, __func__);
+}
+
+int
 test_print_attributes(TestTracker *tracker)
 {
     TRACK_TEST(tracker);
@@ -1509,6 +1805,135 @@ test_decode_name(TestTracker *tracker)
         __func__);
     kmip_free_name(&ctx, &observed);
     kmip_destroy(&ctx);
+    return(result);
+}
+
+int
+test_encode_protection_storage_masks(TestTracker *tracker)
+{
+    TRACK_TEST(tracker);
+
+    /* This encoding matches the following set of values:
+    *  Protection Storage Masks
+    *      Protection Storage Mask
+    *          Software
+    *          Hardware
+    *          On Processor
+    *          On System
+    *          Off System
+    *          Hypervisor
+    *          Operating System
+    *          Container
+    *          On Premises
+    *          Off Premises
+    *          Self Managed
+    *          Outsourced
+    *          Validated
+    *          Same Jurisdiction
+    *      Protection Storage Mask
+    *          Software
+    *          Hardware
+    */
+    uint8 expected[40] = {
+        0x42, 0x01, 0x5F, 0x01, 0x00, 0x00, 0x00, 0x20,
+        0x42, 0x01, 0x5E, 0x02, 0x00, 0x00, 0x00, 0x04,
+        0x00, 0x00, 0x3F, 0xFF, 0x00, 0x00, 0x00, 0x00,
+        0x42, 0x01, 0x5E, 0x02, 0x00, 0x00, 0x00, 0x04,
+        0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x00
+    };
+
+    uint8 observed[40] = {0};
+    KMIP ctx = {0};
+    kmip_init(&ctx, observed, ARRAY_LENGTH(observed), KMIP_2_0);
+
+    LinkedList list = {0};
+    LinkedListItem item_1 = {0};
+    int32 mask_1 = 0x3FFF;
+    item_1.data = &mask_1;
+
+    LinkedListItem item_2 = {0};
+    int32 mask_2 = 0x0003;
+    item_2.data = &mask_2;
+
+    kmip_linked_list_enqueue(&list, &item_1);
+    kmip_linked_list_enqueue(&list, &item_2);
+
+    ProtectionStorageMasks psm = {0};
+    psm.masks = &list;
+
+    int result = kmip_encode_protection_storage_masks(&ctx, &psm);
+    result = report_encoding_test_result(tracker, &ctx, expected, observed, result, __func__);
+
+    kmip_destroy(&ctx);
+
+    return(result);
+}
+
+int
+test_decode_protection_storage_masks(TestTracker *tracker)
+{
+    TRACK_TEST(tracker);
+
+    /* This encoding matches the following set of values:
+    *  Protection Storage Masks
+    *      Protection Storage Mask
+    *          Software
+    *          Hardware
+    *          On Processor
+    *          On System
+    *          Off System
+    *          Hypervisor
+    *          Operating System
+    *          Container
+    *          On Premises
+    *          Off Premises
+    *          Self Managed
+    *          Outsourced
+    *          Validated
+    *          Same Jurisdiction
+    *      Protection Storage Mask
+    *          Software
+    *          Hardware
+    */
+    uint8 encoding[40] = {
+        0x42, 0x01, 0x5F, 0x01, 0x00, 0x00, 0x00, 0x20,
+        0x42, 0x01, 0x5E, 0x02, 0x00, 0x00, 0x00, 0x04,
+        0x00, 0x00, 0x3F, 0xFF, 0x00, 0x00, 0x00, 0x00,
+        0x42, 0x01, 0x5E, 0x02, 0x00, 0x00, 0x00, 0x04,
+        0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x00
+    };
+
+    KMIP ctx = {0};
+    kmip_init(&ctx, encoding, ARRAY_LENGTH(encoding), KMIP_2_0);
+
+    LinkedList list = {0};
+    LinkedListItem item_1 = {0};
+    int32 mask_1 = 0x3FFF;
+    item_1.data = &mask_1;
+
+    LinkedListItem item_2 = {0};
+    int32 mask_2 = 0x0003;
+    item_2.data = &mask_2;
+
+    kmip_linked_list_enqueue(&list, &item_1);
+    kmip_linked_list_enqueue(&list, &item_2);
+
+    ProtectionStorageMasks expected = {0};
+    expected.masks = &list;
+
+    ProtectionStorageMasks observed = {0};
+    int result = kmip_decode_protection_storage_masks(&ctx, &observed);
+    int comparison = kmip_compare_protection_storage_masks(&expected, &observed);
+    if(!comparison)
+    {
+        kmip_print_protection_storage_masks(1, &expected);
+        kmip_print_protection_storage_masks(1, &observed);
+    }
+    result = report_decoding_test_result(tracker, &ctx, comparison, result, __func__);
+
+    kmip_free_protection_storage_masks(&ctx, &observed);
+    kmip_destroy(&ctx);
+
     return(result);
 }
 
@@ -9347,6 +9772,8 @@ run_tests(void)
     test_buffer_bytes_left(&tracker);
     test_peek_tag(&tracker);
     test_is_attribute_tag(&tracker);
+    test_get_enum_string_index(&tracker);
+    test_check_enum_value_protection_storage_masks(&tracker);
 
     printf("\nKMIP 1.0 Feature Tests\n");
     printf("----------------------\n");
@@ -9511,6 +9938,7 @@ run_tests(void)
     
     printf("\nKMIP 2.0 Feature Tests\n");
     printf("----------------------\n");
+    test_decode_protection_storage_masks(&tracker);
     test_decode_attributes(&tracker);
     test_decode_attributes_with_invalid_kmip_version(&tracker);
     test_decode_attribute_v2_unique_identifier(&tracker);
@@ -9523,6 +9951,7 @@ run_tests(void)
     test_decode_attribute_v2_unsupported_attribute(&tracker);
 
     printf("\n");
+    test_encode_protection_storage_masks(&tracker);
     test_encode_attributes(&tracker);
     test_encode_attributes_with_invalid_kmip_version(&tracker);
     test_encode_attribute_v2_unique_identifier(&tracker);

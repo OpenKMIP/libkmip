@@ -163,7 +163,7 @@ kmip_free(void *state, void *ptr)
 Enumeration Utilities
 */
 
-static const char *kmip_attribute_names[25] = {
+static const char *kmip_attribute_names[26] = {
     "Attestation Type",
     "BatchErrorContinuation Option",
     "BlockCipher Mode",
@@ -182,6 +182,7 @@ static const char *kmip_attribute_names[25] = {
     "Object Type",
     "Operation",
     "Padding Method",
+    "Protection Storage Mask",
     "Result Reason",
     "Result Status",
     "State",
@@ -267,33 +268,37 @@ kmip_get_enum_string_index(enum tag t)
         case KMIP_TAG_PADDING_METHOD:
         return(17);
         break;
-        
-        case KMIP_TAG_RESULT_REASON:
+
+        case KMIP_TAG_PROTECTION_STORAGE_MASK:
         return(18);
         break;
         
-        case KMIP_TAG_RESULT_STATUS:
+        case KMIP_TAG_RESULT_REASON:
         return(19);
         break;
         
-        case KMIP_TAG_STATE:
+        case KMIP_TAG_RESULT_STATUS:
         return(20);
         break;
         
-        case KMIP_TAG_TAG:
+        case KMIP_TAG_STATE:
         return(21);
         break;
         
-        case KMIP_TAG_TYPE:
+        case KMIP_TAG_TAG:
         return(22);
         break;
         
-        case KMIP_TAG_WRAPPING_METHOD:
+        case KMIP_TAG_TYPE:
         return(23);
         break;
         
-        default:
+        case KMIP_TAG_WRAPPING_METHOD:
         return(24);
+        break;
+        
+        default:
+        return(25);
         break;
     };
 }
@@ -890,6 +895,38 @@ kmip_check_enum_value(enum kmip_version version, enum tag t, int value)
             default:
             return(KMIP_ENUM_MISMATCH);
             break;
+        };
+        break;
+
+        case KMIP_TAG_PROTECTION_STORAGE_MASK:
+        {
+            switch(value)
+            {
+                /* KMIP 2.0 */
+                case KMIP_PROTECT_SOFTWARE:
+                case KMIP_PROTECT_HARDWARE:
+                case KMIP_PROTECT_ON_PROCESSOR:
+                case KMIP_PROTECT_ON_SYSTEM:
+                case KMIP_PROTECT_OFF_SYSTEM:
+                case KMIP_PROTECT_HYPERVISOR:
+                case KMIP_PROTECT_OPERATING_SYSTEM:
+                case KMIP_PROTECT_CONTAINER:
+                case KMIP_PROTECT_ON_PREMISES:
+                case KMIP_PROTECT_OFF_PREMISES:
+                case KMIP_PROTECT_SELF_MANAGED:
+                case KMIP_PROTECT_OUTSOURCED:
+                case KMIP_PROTECT_VALIDATED:
+                case KMIP_PROTECT_SAME_JURISDICTION:
+                if(version >= KMIP_2_0)
+                    return(KMIP_OK);
+                else
+                    return(KMIP_INVALID_FOR_VERSION);
+                break;
+
+                default:
+                return(KMIP_ENUM_MISMATCH);
+                break;
+            };
         };
         break;
         
@@ -3443,6 +3480,104 @@ kmip_print_cryptographic_usage_mask_enums(int indent, int32 value)
 }
 
 void
+kmip_print_protection_storage_mask_enum(int indent, int32 value)
+{
+    printf("\n");
+
+    if((value & KMIP_PROTECT_SOFTWARE) == KMIP_PROTECT_SOFTWARE)
+    {
+        printf("%*sSoftware\n", indent, "");
+    }
+
+    if((value & KMIP_PROTECT_HARDWARE) == KMIP_PROTECT_HARDWARE)
+    {
+        printf("%*sHardware\n", indent, "");
+    }
+
+    if((value & KMIP_PROTECT_ON_PROCESSOR) == KMIP_PROTECT_ON_PROCESSOR)
+    {
+        printf("%*sOn Processor\n", indent, "");
+    }
+
+    if((value & KMIP_PROTECT_ON_SYSTEM) == KMIP_PROTECT_ON_SYSTEM)
+    {
+        printf("%*sOn System\n", indent, "");
+    }
+
+    if((value & KMIP_PROTECT_OFF_SYSTEM) == KMIP_PROTECT_OFF_SYSTEM)
+    {
+        printf("%*sOff System\n", indent, "");
+    }
+
+    if((value & KMIP_PROTECT_HYPERVISOR) == KMIP_PROTECT_HYPERVISOR)
+    {
+        printf("%*sHypervisor\n", indent, "");
+    }
+
+    if((value & KMIP_PROTECT_OPERATING_SYSTEM) == KMIP_PROTECT_OPERATING_SYSTEM)
+    {
+        printf("%*sOperating System\n", indent, "");
+    }
+
+    if((value & KMIP_PROTECT_CONTAINER) == KMIP_PROTECT_CONTAINER)
+    {
+        printf("%*sContainer\n", indent, "");
+    }
+
+    if((value & KMIP_PROTECT_ON_PREMISES) == KMIP_PROTECT_ON_PREMISES)
+    {
+        printf("%*sOn Premises\n", indent, "");
+    }
+
+    if((value & KMIP_PROTECT_OFF_PREMISES) == KMIP_PROTECT_OFF_PREMISES)
+    {
+        printf("%*sOff Premises\n", indent, "");
+    }
+
+    if((value & KMIP_PROTECT_SELF_MANAGED) == KMIP_PROTECT_SELF_MANAGED)
+    {
+        printf("%*sSelf Managed\n", indent, "");
+    }
+
+    if((value & KMIP_PROTECT_OUTSOURCED) == KMIP_PROTECT_OUTSOURCED)
+    {
+        printf("%*sOutsourced\n", indent, "");
+    }
+
+    if((value & KMIP_PROTECT_VALIDATED) == KMIP_PROTECT_VALIDATED)
+    {
+        printf("%*sValidated\n", indent, "");
+    }
+
+    if((value & KMIP_PROTECT_SAME_JURISDICTION) == KMIP_PROTECT_SAME_JURISDICTION)
+    {
+        printf("%*sSame Jurisdiction\n", indent, "");
+    }
+}
+
+void
+kmip_print_protection_storage_masks(int indent, ProtectionStorageMasks *value)
+{
+    printf("%*sProtection Storage Masks @ %p\n", indent, "", (void *)value);
+
+    if(value != NULL)
+    {
+        printf("%*sMasks: %zu\n", indent + 2, "", value->masks->size);
+        LinkedListItem *curr = value->masks->head;
+        size_t count = 1;
+        while(curr != NULL)
+        {
+            printf("%*sMask: %zu", indent + 4, "", count);
+            int32 mask = *(int32 *)curr->data;
+            kmip_print_protection_storage_mask_enum(indent + 6, mask);
+
+            curr = curr->next;
+            count++;
+        }
+    }
+}
+
+void
 kmip_print_integer(int32 value)
 {
     switch(value)
@@ -4424,6 +4559,29 @@ kmip_free_name(KMIP *ctx, Name *value)
         value->type = 0;
     }
     
+    return;
+}
+
+void
+kmip_free_protection_storage_masks(KMIP *ctx, ProtectionStorageMasks *value)
+{
+    if(value != NULL)
+    {
+        if(value->masks != NULL)
+        {
+            LinkedListItem *curr = kmip_linked_list_pop(value->masks);
+            while(curr != NULL)
+            {
+                ctx->free_func(ctx->state, curr->data);
+                curr->data = NULL;
+                ctx->free_func(ctx->state, curr);
+                curr = kmip_linked_list_pop(value->masks);
+            }
+            ctx->free_func(ctx->state, value->masks);
+            value->masks = NULL;
+        }
+    }
+
     return;
 }
 
@@ -5603,6 +5761,56 @@ kmip_compare_name(const Name *a, const Name *b)
         }
     }
     
+    return(KMIP_TRUE);
+}
+
+int
+kmip_compare_protection_storage_masks(const ProtectionStorageMasks *a, const ProtectionStorageMasks *b)
+{
+    if(a != b)
+    {
+        if((a == NULL) || (b == NULL))
+        {
+            return(KMIP_FALSE);
+        }
+
+        if((a->masks != b->masks))
+        {
+            if((a->masks == NULL) || (b->masks == NULL))
+            {
+                return(KMIP_FALSE);
+            }
+
+            if((a->masks->size != b->masks->size))
+            {
+                return(KMIP_FALSE);
+            }
+
+            LinkedListItem *a_item = a->masks->head;
+            LinkedListItem *b_item = b->masks->head;
+            while((a_item != NULL) || (b_item != NULL))
+            {
+                if(a_item != b_item)
+                {
+                    int32 a_data = *(int32 *)a_item->data;
+                    int32 b_data = *(int32 *)b_item->data;
+                    if(a_data != b_data)
+                    {
+                        return(KMIP_FALSE);
+                    }
+                }
+
+                a_item = a_item->next;
+                b_item = b_item->next;
+            }
+
+            if(a_item != b_item)
+            {
+                return(KMIP_FALSE);
+            }
+        }
+    }
+
     return(KMIP_TRUE);
 }
 
@@ -7712,6 +7920,46 @@ kmip_encode_name(KMIP *ctx, const Name *value)
 }
 
 int
+kmip_encode_protection_storage_masks(KMIP *ctx, const ProtectionStorageMasks *value)
+{
+    CHECK_ENCODE_ARGS(ctx, value);
+    CHECK_KMIP_VERSION(ctx, KMIP_2_0);
+
+    int result = 0;
+
+    result = kmip_encode_int32_be(
+        ctx,
+        TAG_TYPE(KMIP_TAG_PROTECTION_STORAGE_MASKS, KMIP_TYPE_STRUCTURE)
+    );
+    CHECK_RESULT(ctx, result);
+
+    uint8 *length_index = ctx->index;
+    uint8 *value_index = ctx->index += 4;
+
+    if(value->masks != NULL)
+    {
+        LinkedListItem *curr = value->masks->head;
+        while(curr != NULL)
+        {
+            result = kmip_encode_integer(ctx, KMIP_TAG_PROTECTION_STORAGE_MASK, *(int32 *)curr->data);
+            CHECK_RESULT(ctx, result);
+
+            curr = curr->next;
+        }
+    }
+
+    uint8 *curr_index = ctx->index;
+    ctx->index = length_index;
+
+    result = kmip_encode_int32_be(ctx, curr_index - value_index);
+    CHECK_RESULT(ctx, result);
+
+    ctx->index = curr_index;
+
+    return(KMIP_OK);
+}
+
+int
 kmip_encode_attribute_name(KMIP *ctx, enum attribute_type value)
 {
     int result = 0;
@@ -9742,6 +9990,47 @@ kmip_decode_attribute_name(KMIP *ctx, enum attribute_type *value)
     }
     
     kmip_free_text_string(ctx, &n);
+    return(KMIP_OK);
+}
+
+int
+kmip_decode_protection_storage_masks(KMIP *ctx, ProtectionStorageMasks *value)
+{
+    CHECK_DECODE_ARGS(ctx, value);
+    CHECK_KMIP_VERSION(ctx, KMIP_2_0);
+    CHECK_BUFFER_FULL(ctx, 8);
+
+    int result = 0;
+    int32 tag_type = 0;
+    uint32 length = 0;
+
+    result = kmip_decode_int32_be(ctx, &tag_type);
+    CHECK_RESULT(ctx, result);
+    CHECK_TAG_TYPE(ctx, tag_type, KMIP_TAG_PROTECTION_STORAGE_MASKS, KMIP_TYPE_STRUCTURE);
+
+    result = kmip_decode_int32_be(ctx, &length);
+    CHECK_RESULT(ctx, result);
+    CHECK_BUFFER_FULL(ctx, length);
+
+    value->masks = ctx->calloc_func(ctx->state, 1, sizeof(LinkedList));
+    CHECK_NEW_MEMORY(ctx, value->masks, sizeof(LinkedList), "LinkedList");
+
+    uint32 tag = kmip_peek_tag(ctx);
+    while(tag == KMIP_TAG_PROTECTION_STORAGE_MASK)
+    {
+        LinkedListItem *item = ctx->calloc_func(ctx->state, 1, sizeof(LinkedListItem));
+        CHECK_NEW_MEMORY(ctx, item, sizeof(LinkedListItem), "LinkedListItem");
+        kmip_linked_list_enqueue(value->masks, item);
+
+        item->data = ctx->calloc_func(ctx->state, 1, sizeof(int32));
+        CHECK_NEW_MEMORY(ctx, item->data, sizeof(int32), "Protection Storage Mask");
+
+        result = kmip_decode_integer(ctx, KMIP_TAG_PROTECTION_STORAGE_MASK, (int32 *)item->data);
+        CHECK_RESULT(ctx, result);
+
+        tag = kmip_peek_tag(ctx);
+    }
+
     return(KMIP_OK);
 }
 
