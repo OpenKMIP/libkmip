@@ -427,6 +427,25 @@ enum padding_method
     KMIP_PAD_PSS       = 0x0A
 };
 
+enum protection_storage_mask
+{
+    /* KMIP 2.0 */
+    KMIP_PROTECT_SOFTWARE          = 0x00000001,
+    KMIP_PROTECT_HARDWARE          = 0x00000002,
+    KMIP_PROTECT_ON_PROCESSOR      = 0x00000004,
+    KMIP_PROTECT_ON_SYSTEM         = 0x00000008,
+    KMIP_PROTECT_OFF_SYSTEM        = 0x00000010,
+    KMIP_PROTECT_HYPERVISOR        = 0x00000020,
+    KMIP_PROTECT_OPERATING_SYSTEM  = 0x00000040,
+    KMIP_PROTECT_CONTAINER         = 0x00000080,
+    KMIP_PROTECT_ON_PREMISES       = 0x00000100,
+    KMIP_PROTECT_OFF_PREMISES      = 0x00000200,
+    KMIP_PROTECT_SELF_MANAGED      = 0x00000400,
+    KMIP_PROTECT_OUTSOURCED        = 0x00000800,
+    KMIP_PROTECT_VALIDATED         = 0x00001000,
+    KMIP_PROTECT_SAME_JURISDICTION = 0x00002000
+};
+
 enum result_reason
 {
     /* KMIP 1.0 */
@@ -633,7 +652,12 @@ enum tag
     KMIP_TAG_CLIENT_CORRELATION_VALUE         = 0x420105,
     KMIP_TAG_SERVER_CORRELATION_VALUE         = 0x420106,
     /* KMIP 2.0 */
-    KMIP_TAG_ATTRIBUTES                       = 0x420125
+    KMIP_TAG_ATTRIBUTES                       = 0x420125,
+    KMIP_TAG_PROTECTION_STORAGE_MASK          = 0x42015E,
+    KMIP_TAG_PROTECTION_STORAGE_MASKS         = 0x42015F,
+    KMIP_TAG_COMMON_PROTECTION_STORAGE_MASKS  = 0x420163,
+    KMIP_TAG_PRIVATE_PROTECTION_STORAGE_MASKS = 0x420164,
+    KMIP_TAG_PUBLIC_PROTECTION_STORAGE_MASKS  = 0x420165
 };
 
 enum type
@@ -761,6 +785,12 @@ typedef struct protocol_version
     int32 major;
     int32 minor;
 } ProtocolVersion;
+
+typedef struct protection_storage_masks
+{
+    /* KMIP 2.0 */
+    LinkedList *masks;
+} ProtectionStorageMasks;
 
 typedef struct cryptographic_parameters
 {
@@ -1255,6 +1285,8 @@ void kmip_print_byte_string(int, const char *, ByteString *);
 void kmip_print_protocol_version(int, ProtocolVersion *);
 void kmip_print_name(int, Name *);
 void kmip_print_nonce(int, Nonce *);
+void kmip_print_protection_storage_masks_enum(int, int32);
+void kmip_print_protection_storage_masks(int, ProtectionStorageMasks *);
 void kmip_print_cryptographic_parameters(int, CryptographicParameters *);
 void kmip_print_encryption_key_information(int, EncryptionKeyInformation *);
 void kmip_print_mac_signature_key_information(int, MACSignatureKeyInformation *);
@@ -1304,6 +1336,7 @@ void kmip_free_template_attribute(KMIP *, TemplateAttribute *);
 void kmip_free_transparent_symmetric_key(KMIP *, TransparentSymmetricKey *);
 void kmip_free_key_material(KMIP *, enum key_format_type, void **);
 void kmip_free_key_value(KMIP *, enum key_format_type, KeyValue *);
+void kmip_free_protection_storage_masks(KMIP *, ProtectionStorageMasks *);
 void kmip_free_cryptographic_parameters(KMIP *, CryptographicParameters *);
 void kmip_free_encryption_key_information(KMIP *, EncryptionKeyInformation *);
 void kmip_free_mac_signature_key_information(KMIP *, MACSignatureKeyInformation *);
@@ -1347,6 +1380,7 @@ int kmip_compare_protocol_version(const ProtocolVersion *, const ProtocolVersion
 int kmip_compare_transparent_symmetric_key(const TransparentSymmetricKey *, const TransparentSymmetricKey *);
 int kmip_compare_key_material(enum key_format_type, void **, void **);
 int kmip_compare_key_value(enum key_format_type, const KeyValue *, const KeyValue *);
+int kmip_compare_protection_storage_masks(const ProtectionStorageMasks *, const ProtectionStorageMasks *);
 int kmip_compare_cryptographic_parameters(const CryptographicParameters *, const CryptographicParameters *);
 int kmip_compare_encryption_key_information(const EncryptionKeyInformation *, const EncryptionKeyInformation *);
 int kmip_compare_mac_signature_key_information(const MACSignatureKeyInformation *, const MACSignatureKeyInformation *);
@@ -1399,6 +1433,7 @@ int kmip_encode_attribute(KMIP *, const Attribute *);
 int kmip_encode_attributes(KMIP *, const Attributes *);
 int kmip_encode_template_attribute(KMIP *, const TemplateAttribute *);
 int kmip_encode_protocol_version(KMIP *, const ProtocolVersion *);
+int kmip_encode_protection_storage_masks(KMIP *, const ProtectionStorageMasks *);
 int kmip_encode_cryptographic_parameters(KMIP *, const CryptographicParameters *);
 int kmip_encode_encryption_key_information(KMIP *, const EncryptionKeyInformation *);
 int kmip_encode_mac_signature_key_information(KMIP *, const MACSignatureKeyInformation *);
@@ -1457,6 +1492,7 @@ int kmip_decode_protocol_version(KMIP *, ProtocolVersion *);
 int kmip_decode_transparent_symmetric_key(KMIP *, TransparentSymmetricKey *);
 int kmip_decode_key_material(KMIP *, enum key_format_type, void **);
 int kmip_decode_key_value(KMIP *, enum key_format_type, KeyValue *);
+int kmip_decode_protection_storage_masks(KMIP *, ProtectionStorageMasks *);
 int kmip_decode_cryptographic_parameters(KMIP *, CryptographicParameters *);
 int kmip_decode_encryption_key_information(KMIP *, EncryptionKeyInformation *);
 int kmip_decode_mac_signature_key_information(KMIP *, MACSignatureKeyInformation *);
