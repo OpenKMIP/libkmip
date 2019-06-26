@@ -903,12 +903,17 @@ typedef struct nonce
 
 typedef struct create_request_payload
 {
+    /* KMIP 1.0 */
     enum object_type object_type;
     TemplateAttribute *template_attribute;
+    /* KMIP 2.0 */
+    Attributes *attributes;
+    ProtectionStorageMasks *protection_storage_masks;
 } CreateRequestPayload;
 
 typedef struct create_response_payload
 {
+    /* KMIP 1.0 */
     enum object_type object_type;
     TextString *unique_identifier;
     TemplateAttribute *template_attribute;
@@ -1087,6 +1092,13 @@ do                                                      \
     }                                                   \
 } while(0)
 
+#define HANDLE_FAILURE(A, B)                        \
+do                                                  \
+{                                                   \
+    kmip_push_error_frame((A), __func__, __LINE__); \
+    return((B));                                    \
+} while(0)
+
 #define TAG_TYPE(A, B) (((A) << 8) | (uint8)(B))
 
 #define CHECK_TAG_TYPE(A, B, C, D)                      \
@@ -1155,6 +1167,14 @@ do                                                      \
         kmip_push_error_frame((A), __func__, __LINE__); \
         return(KMIP_MEMORY_ALLOC_FAILED);               \
     }                                                   \
+} while(0)
+
+#define HANDLE_FAILED_ALLOC(A, B, C)                \
+do                                                  \
+{                                                   \
+    kmip_set_alloc_error_message((A), (B), (C));    \
+    kmip_push_error_frame((A), __func__, __LINE__); \
+    return(KMIP_MEMORY_ALLOC_FAILED);               \
 } while(0)
 
 #define CHECK_ENCODE_ARGS(A, B)   \
