@@ -4058,6 +4058,8 @@ kmip_print_create_request_payload(int indent, CreateRequestPayload *value)
         printf("\n");
         
         kmip_print_template_attribute(indent + 2, value->template_attribute);
+        kmip_print_attributes(indent + 2, value->attributes);
+        kmip_print_protection_storage_masks(indent + 2, value->protection_storage_masks);
     }
 }
 
@@ -5035,6 +5037,20 @@ kmip_free_create_request_payload(KMIP *ctx, CreateRequestPayload *value)
             kmip_free_template_attribute(ctx, value->template_attribute);
             ctx->free_func(ctx->state, value->template_attribute);
             value->template_attribute = NULL;
+        }
+
+        if(value->attributes != NULL)
+        {
+            kmip_free_attributes(ctx, value->attributes);
+            ctx->free_func(ctx->state, value->attributes);
+            value->attributes = NULL;
+        }
+
+        if(value->protection_storage_masks != NULL)
+        {
+            kmip_free_protection_storage_masks(ctx, value->protection_storage_masks);
+            ctx->free_func(ctx->state, value->protection_storage_masks);
+            value->protection_storage_masks = NULL;
         }
         
         value->object_type = 0;
@@ -6670,6 +6686,32 @@ kmip_compare_create_request_payload(const CreateRequestPayload *a, const CreateR
             }
             
             if(kmip_compare_template_attribute(a->template_attribute, b->template_attribute) == KMIP_FALSE)
+            {
+                return(KMIP_FALSE);
+            }
+        }
+
+        if(a->attributes != b->attributes)
+        {
+            if((a->attributes == NULL) || (b->attributes == NULL))
+            {
+                return(KMIP_FALSE);
+            }
+
+            if(kmip_compare_attributes(a->attributes, b->attributes) == KMIP_FALSE)
+            {
+                return(KMIP_FALSE);
+            }
+        }
+
+        if(a->protection_storage_masks != b->protection_storage_masks)
+        {
+            if((a->protection_storage_masks == NULL) || (b->protection_storage_masks == NULL))
+            {
+                return(KMIP_FALSE);
+            }
+
+            if(kmip_compare_protection_storage_masks(a->protection_storage_masks, b->protection_storage_masks) == KMIP_FALSE)
             {
                 return(KMIP_FALSE);
             }
@@ -8893,6 +8935,8 @@ kmip_encode_key_wrapping_specification(KMIP *ctx, const KeyWrappingSpecification
 int
 kmip_encode_create_request_payload(KMIP *ctx, const CreateRequestPayload *value)
 {
+    CHECK_ENCODE_ARGS(ctx, value);
+
     int result = 0;
     result = kmip_encode_int32_be(ctx, TAG_TYPE(KMIP_TAG_REQUEST_PAYLOAD, KMIP_TYPE_STRUCTURE));
     CHECK_RESULT(ctx, result);
@@ -8902,9 +8946,23 @@ kmip_encode_create_request_payload(KMIP *ctx, const CreateRequestPayload *value)
     
     result = kmip_encode_enum(ctx, KMIP_TAG_OBJECT_TYPE, value->object_type);
     CHECK_RESULT(ctx, result);
-    
-    result = kmip_encode_template_attribute(ctx, value->template_attribute);
-    CHECK_RESULT(ctx, result);
+
+    if(ctx->version < KMIP_2_0)
+    {
+        result = kmip_encode_template_attribute(ctx, value->template_attribute);
+        CHECK_RESULT(ctx, result);
+    }
+    else
+    {
+        result = kmip_encode_attributes(ctx, value->attributes);
+        CHECK_RESULT(ctx, result);
+
+        if(value->protection_storage_masks != NULL)
+        {
+            result = kmip_encode_protection_storage_masks(ctx, value->protection_storage_masks);
+            CHECK_RESULT(ctx, result);
+        }
+    }
     
     uint8 *curr_index = ctx->index;
     ctx->index = length_index;
@@ -8919,6 +8977,8 @@ kmip_encode_create_request_payload(KMIP *ctx, const CreateRequestPayload *value)
 int
 kmip_encode_create_response_payload(KMIP *ctx, const CreateResponsePayload *value)
 {
+    CHECK_ENCODE_ARGS(ctx, value);
+
     int result = 0;
     result = kmip_encode_int32_be(ctx, TAG_TYPE(KMIP_TAG_RESPONSE_PAYLOAD, KMIP_TYPE_STRUCTURE));
     CHECK_RESULT(ctx, result);
@@ -8931,11 +8991,14 @@ kmip_encode_create_response_payload(KMIP *ctx, const CreateResponsePayload *valu
     
     result = kmip_encode_text_string(ctx, KMIP_TAG_UNIQUE_IDENTIFIER, value->unique_identifier);
     CHECK_RESULT(ctx, result);
-    
-    if(value->template_attribute != NULL)
+
+    if(ctx->version < KMIP_2_0)
     {
-        result = kmip_encode_template_attribute(ctx, value->template_attribute);
-        CHECK_RESULT(ctx, result);
+        if(value->template_attribute != NULL)
+        {
+            result = kmip_encode_template_attribute(ctx, value->template_attribute);
+            CHECK_RESULT(ctx, result);
+        }
     }
     
     uint8 *curr_index = ctx->index;
@@ -10992,6 +11055,7 @@ kmip_decode_key_wrapping_specification(KMIP *ctx, KeyWrappingSpecification *valu
 int
 kmip_decode_create_request_payload(KMIP *ctx, CreateRequestPayload *value)
 {
+    CHECK_DECODE_ARGS(ctx, value);
     CHECK_BUFFER_FULL(ctx, 8);
     
     int result = 0;
@@ -11007,11 +11071,65 @@ kmip_decode_create_request_payload(KMIP *ctx, CreateRequestPayload *value)
     result = kmip_decode_enum(ctx, KMIP_TAG_OBJECT_TYPE, &value->object_type);
     CHECK_RESULT(ctx, result);
     CHECK_ENUM(ctx, KMIP_TAG_OBJECT_TYPE, value->object_type);
-    
-    value->template_attribute = ctx->calloc_func(ctx->state, 1, sizeof(TemplateAttribute));
-    CHECK_NEW_MEMORY(ctx, value->template_attribute, sizeof(TemplateAttribute), "TemplateAttribute structure");
-    result = kmip_decode_template_attribute(ctx, value->template_attribute);
-    CHECK_RESULT(ctx, result);
+
+    if(ctx->version < KMIP_2_0)
+    {
+        value->template_attribute = ctx->calloc_func(ctx->state, 1, sizeof(TemplateAttribute));
+        if(value->template_attribute == NULL)
+        {
+            HANDLE_FAILED_ALLOC(ctx, sizeof(TemplateAttribute), "TemplateAttribute");
+        }
+        result = kmip_decode_template_attribute(ctx, value->template_attribute);
+        if(result != KMIP_OK)
+        {
+            kmip_free_template_attribute(ctx, value->template_attribute);
+            ctx->free_func(ctx, value->template_attribute);
+            value->template_attribute = NULL;
+            HANDLE_FAILURE(ctx, result);
+        }
+    }
+    else
+    {
+        value->attributes = ctx->calloc_func(ctx->state, 1, sizeof(Attributes));
+        if(value->attributes == NULL)
+        {
+            HANDLE_FAILED_ALLOC(ctx, sizeof(Attributes), "Attributes");
+        }
+        result = kmip_decode_attributes(ctx, value->attributes);
+        if(result != KMIP_OK)
+        {
+            kmip_free_attributes(ctx, value->attributes);
+            ctx->free_func(ctx, value->attributes);
+            value->attributes = NULL;
+
+            HANDLE_FAILURE(ctx, result);
+        }
+
+        if(kmip_is_tag_next(ctx, KMIP_TAG_PROTECTION_STORAGE_MASKS))
+        {
+            value->protection_storage_masks = ctx->calloc_func(ctx->state, 1, sizeof(ProtectionStorageMasks));
+            if(value->protection_storage_masks == NULL)
+            {
+                kmip_free_attributes(ctx, value->attributes);
+                ctx->free_func(ctx, value->attributes);
+                value->attributes = NULL;
+
+                HANDLE_FAILED_ALLOC(ctx, sizeof(ProtectionStorageMasks), "ProtectionStorageMasks");
+            }
+            result = kmip_decode_protection_storage_masks(ctx, value->protection_storage_masks);
+            if(result != KMIP_OK)
+            {
+                kmip_free_attributes(ctx, value->attributes);
+                kmip_free_protection_storage_masks(ctx, value->protection_storage_masks);
+                ctx->free_func(ctx, value->attributes);
+                ctx->free_func(ctx, value->protection_storage_masks);
+                value->attributes = NULL;
+                value->protection_storage_masks = NULL;
+
+                HANDLE_FAILURE(ctx, result);
+            }
+        }
+    }
     
     return(KMIP_OK);
 }
@@ -11019,6 +11137,7 @@ kmip_decode_create_request_payload(KMIP *ctx, CreateRequestPayload *value)
 int
 kmip_decode_create_response_payload(KMIP *ctx, CreateResponsePayload *value)
 {
+    CHECK_DECODE_ARGS(ctx, value);
     CHECK_BUFFER_FULL(ctx, 8);
     
     int result = 0;
@@ -11041,15 +11160,18 @@ kmip_decode_create_response_payload(KMIP *ctx, CreateResponsePayload *value)
     result = kmip_decode_text_string(ctx, KMIP_TAG_UNIQUE_IDENTIFIER, value->unique_identifier);
     CHECK_RESULT(ctx, result);
     
-    if(kmip_is_tag_next(ctx, KMIP_TAG_TEMPLATE_ATTRIBUTE))
+    if(ctx->version < KMIP_2_0)
     {
-        value->template_attribute = ctx->calloc_func(ctx->state, 1, sizeof(TemplateAttribute));
-        CHECK_NEW_MEMORY(ctx, value->template_attribute, sizeof(TemplateAttribute), "TemplateAttribute structure");
-        
-        result = kmip_decode_template_attribute(ctx, value->template_attribute);
-        CHECK_RESULT(ctx, result);
+        if(kmip_is_tag_next(ctx, KMIP_TAG_TEMPLATE_ATTRIBUTE))
+        {
+            value->template_attribute = ctx->calloc_func(ctx->state, 1, sizeof(TemplateAttribute));
+            CHECK_NEW_MEMORY(ctx, value->template_attribute, sizeof(TemplateAttribute), "TemplateAttribute structure");
+            
+            result = kmip_decode_template_attribute(ctx, value->template_attribute);
+            CHECK_RESULT(ctx, result);
+        }
     }
-    
+
     return(KMIP_OK);
 }
 

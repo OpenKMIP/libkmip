@@ -4812,6 +4812,20 @@ test_encode_create_request_payload(TestTracker *tracker)
 {
     TRACK_TEST(tracker);
 
+    /* This encoding matches the following set of values:
+    *  Request Payload
+    *      Object Type - Symmetric Key
+    *      Template Attribute
+    *          Attribute
+    *              Attribute Name - Cryptographic Algorithm
+    *              Attribute Value - AES
+    *          Attribute
+    *              Attribute Name - Cryptographic Length
+    *              Attribute Value - 128
+    *          Attribute
+    *              Attribute Name - Cryptographic Usage Mask
+    *              Attribute Value - Encrypt | Decrypt
+    */
     uint8 expected[200] = {
         0x42, 0x00, 0x79, 0x01, 0x00, 0x00, 0x00, 0xC0, 
         0x42, 0x00, 0x57, 0x05, 0x00, 0x00, 0x00, 0x04, 
@@ -4871,6 +4885,101 @@ test_encode_create_request_payload(TestTracker *tracker)
     crp.template_attribute = &ta;
     
     int result = kmip_encode_create_request_payload(&ctx, &crp);
+    result = report_encoding_test_result(
+        tracker,
+        &ctx,
+        expected,
+        observed,
+        result,
+        __func__);
+    kmip_destroy(&ctx);
+    return(result);
+}
+
+int
+test_encode_create_request_payload_kmip_2_0(TestTracker *tracker)
+{
+    TRACK_TEST(tracker);
+
+    /* This encoding matches the following set of values:
+    *  Request Payload
+    *      Object Type - Symmetric Key
+    *      Attributes
+    *          Cryptographic Algorithm - AES
+    *          Cryptographic Length - 128
+    *          Cryptographic Usage Mask - Encrypt | Decrypt
+    *      Protection Storage Masks
+    *          Protection Storage Mask - Software | On System
+    *          Protection Storage Mask - Off System | Off Premises
+    */
+    uint8 expected[120] = {
+        0x42, 0x00, 0x79, 0x01, 0x00, 0x00, 0x00, 0x70, 
+        0x42, 0x00, 0x57, 0x05, 0x00, 0x00, 0x00, 0x04, 
+        0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00,
+        0x42, 0x01, 0x25, 0x01, 0x00, 0x00, 0x00, 0x30,
+        0x42, 0x00, 0x28, 0x05, 0x00, 0x00, 0x00, 0x04,
+        0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x00,
+        0x42, 0x00, 0x2A, 0x02, 0x00, 0x00, 0x00, 0x04,
+        0x00, 0x00, 0x00, 0x80, 0x00, 0x00, 0x00, 0x00,
+        0x42, 0x00, 0x2C, 0x02, 0x00, 0x00, 0x00, 0x04,
+        0x00, 0x00, 0x00, 0x0C, 0x00, 0x00, 0x00, 0x00,
+        0x42, 0x01, 0x5F, 0x01, 0x00, 0x00, 0x00, 0x20,
+        0x42, 0x01, 0x5E, 0x02, 0x00, 0x00, 0x00, 0x04,
+        0x00, 0x00, 0x00, 0x09, 0x00, 0x00, 0x00, 0x00,
+        0x42, 0x01, 0x5E, 0x02, 0x00, 0x00, 0x00, 0x04,
+        0x00, 0x00, 0x02, 0x10, 0x00, 0x00, 0x00, 0x00
+    };
+    
+    uint8 observed[120] = {0};
+    struct kmip ctx = {0};
+    kmip_init(&ctx, observed, ARRAY_LENGTH(observed), KMIP_2_0);
+    
+    Attribute a[3] = {0};
+    for(int i = 0; i < 3; i++)
+    {
+        kmip_init_attribute(&a[i]);
+    }
+    
+    enum cryptographic_algorithm algorithm = KMIP_CRYPTOALG_AES;
+    a[0].type = KMIP_ATTR_CRYPTOGRAPHIC_ALGORITHM;
+    a[0].value = &algorithm;
+    
+    int32 length = 128;
+    a[1].type = KMIP_ATTR_CRYPTOGRAPHIC_LENGTH;
+    a[1].value = &length;
+    
+    int32 mask = KMIP_CRYPTOMASK_ENCRYPT | KMIP_CRYPTOMASK_DECRYPT;
+    a[2].type = KMIP_ATTR_CRYPTOGRAPHIC_USAGE_MASK;
+    a[2].value = &mask;
+    
+    Attributes attributes = {0};
+    LinkedList list = {0};
+    LinkedListItem item_1, item_2, item_3 = {0};
+    item_1.data = &a[0];
+    item_2.data = &a[1];
+    item_3.data = &a[2];
+    kmip_linked_list_enqueue(&list, &item_1);
+    kmip_linked_list_enqueue(&list, &item_2);
+    kmip_linked_list_enqueue(&list, &item_3);
+    attributes.attribute_list = &list;
+
+    ProtectionStorageMasks psm = {0};
+    LinkedList masks = {0};
+    LinkedListItem mask_1, mask_2 = {0};
+    int32 m1 = KMIP_PROTECT_SOFTWARE | KMIP_PROTECT_ON_SYSTEM;
+    int32 m2 = KMIP_PROTECT_OFF_SYSTEM | KMIP_PROTECT_OFF_PREMISES;
+    mask_1.data = &m1;
+    mask_2.data = &m2;
+    kmip_linked_list_enqueue(&masks, &mask_1);
+    kmip_linked_list_enqueue(&masks, &mask_2);
+    psm.masks = &masks;
+
+    CreateRequestPayload payload = {0};
+    payload.object_type = KMIP_OBJTYPE_SYMMETRIC_KEY;
+    payload.attributes = &attributes;
+    payload.protection_storage_masks = &psm;
+    
+    int result = kmip_encode_create_request_payload(&ctx, &payload);
     result = report_encoding_test_result(
         tracker,
         &ctx,
@@ -4945,6 +5054,102 @@ test_decode_create_request_payload(TestTracker *tracker)
     expected.template_attribute = &ta;
     
     struct create_request_payload observed = {0};
+    
+    int result = kmip_decode_create_request_payload(&ctx, &observed);
+    result = report_decoding_test_result(
+        tracker,
+        &ctx,
+        kmip_compare_create_request_payload(&expected, &observed),
+        result,
+        __func__);
+    kmip_free_create_request_payload(&ctx, &observed);
+    kmip_destroy(&ctx);
+    return(result);
+}
+
+int
+test_decode_create_request_payload_kmip_2_0(TestTracker *tracker)
+{
+    TRACK_TEST(tracker);
+
+    /* This encoding matches the following set of values:
+    *  Request Payload
+    *      Object Type - Symmetric Key
+    *      Attributes
+    *          Cryptographic Algorithm - AES
+    *          Cryptographic Length - 128
+    *          Cryptographic Usage Mask - Encrypt | Decrypt
+    *      Protection Storage Masks
+    *          Protection Storage Mask - Software | On System
+    *          Protection Storage Mask - Off System | Off Premises
+    */
+    uint8 encoding[120] = {
+        0x42, 0x00, 0x79, 0x01, 0x00, 0x00, 0x00, 0x70, 
+        0x42, 0x00, 0x57, 0x05, 0x00, 0x00, 0x00, 0x04, 
+        0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00,
+        0x42, 0x01, 0x25, 0x01, 0x00, 0x00, 0x00, 0x30,
+        0x42, 0x00, 0x28, 0x05, 0x00, 0x00, 0x00, 0x04,
+        0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x00,
+        0x42, 0x00, 0x2A, 0x02, 0x00, 0x00, 0x00, 0x04,
+        0x00, 0x00, 0x00, 0x80, 0x00, 0x00, 0x00, 0x00,
+        0x42, 0x00, 0x2C, 0x02, 0x00, 0x00, 0x00, 0x04,
+        0x00, 0x00, 0x00, 0x0C, 0x00, 0x00, 0x00, 0x00,
+        0x42, 0x01, 0x5F, 0x01, 0x00, 0x00, 0x00, 0x20,
+        0x42, 0x01, 0x5E, 0x02, 0x00, 0x00, 0x00, 0x04,
+        0x00, 0x00, 0x00, 0x09, 0x00, 0x00, 0x00, 0x00,
+        0x42, 0x01, 0x5E, 0x02, 0x00, 0x00, 0x00, 0x04,
+        0x00, 0x00, 0x02, 0x10, 0x00, 0x00, 0x00, 0x00
+    };
+    
+    struct kmip ctx = {0};
+    kmip_init(&ctx, encoding, ARRAY_LENGTH(encoding), KMIP_2_0);
+    
+    Attribute a[3] = {0};
+    for(int i = 0; i < 3; i++)
+    {
+        kmip_init_attribute(&a[i]);
+    }
+    
+    enum cryptographic_algorithm algorithm = KMIP_CRYPTOALG_AES;
+    a[0].type = KMIP_ATTR_CRYPTOGRAPHIC_ALGORITHM;
+    a[0].value = &algorithm;
+    
+    int32 length = 128;
+    a[1].type = KMIP_ATTR_CRYPTOGRAPHIC_LENGTH;
+    a[1].value = &length;
+    
+    int32 mask = KMIP_CRYPTOMASK_ENCRYPT | KMIP_CRYPTOMASK_DECRYPT;
+    a[2].type = KMIP_ATTR_CRYPTOGRAPHIC_USAGE_MASK;
+    a[2].value = &mask;
+    
+    Attributes attributes = {0};
+    LinkedList list = {0};
+    LinkedListItem item_1, item_2, item_3 = {0};
+    item_1.data = &a[0];
+    item_2.data = &a[1];
+    item_3.data = &a[2];
+    kmip_linked_list_enqueue(&list, &item_1);
+    kmip_linked_list_enqueue(&list, &item_2);
+    kmip_linked_list_enqueue(&list, &item_3);
+    attributes.attribute_list = &list;
+
+    ProtectionStorageMasks psm = {0};
+    LinkedList masks = {0};
+    LinkedListItem mask_1, mask_2 = {0};
+    int32 m1 = KMIP_PROTECT_SOFTWARE | KMIP_PROTECT_ON_SYSTEM;
+    int32 m2 = KMIP_PROTECT_OFF_SYSTEM | KMIP_PROTECT_OFF_PREMISES;
+    mask_1.data = &m1;
+    mask_2.data = &m2;
+    kmip_linked_list_enqueue(&masks, &mask_1);
+    kmip_linked_list_enqueue(&masks, &mask_2);
+    psm.masks = &masks;
+
+    CreateRequestPayload expected = {0};
+    expected.object_type = KMIP_OBJTYPE_SYMMETRIC_KEY;
+    expected.attributes = &attributes;
+    expected.protection_storage_masks = &psm;
+    
+    CreateRequestPayload observed = {0};
     
     int result = kmip_decode_create_request_payload(&ctx, &observed);
     result = report_decoding_test_result(
@@ -9949,6 +10154,7 @@ run_tests(void)
     test_decode_attribute_v2_cryptographic_usage_mask(&tracker);
     test_decode_attribute_v2_state(&tracker);
     test_decode_attribute_v2_unsupported_attribute(&tracker);
+    test_decode_create_request_payload_kmip_2_0(&tracker);
 
     printf("\n");
     test_encode_protection_storage_masks(&tracker);
@@ -9962,6 +10168,7 @@ run_tests(void)
     test_encode_attribute_v2_cryptographic_usage_mask(&tracker);
     test_encode_attribute_v2_state(&tracker);
     test_encode_attribute_v2_unsupported_attribute(&tracker);
+    test_encode_create_request_payload_kmip_2_0(&tracker);
 
     printf("\nSummary\n");
     printf("================\n");
