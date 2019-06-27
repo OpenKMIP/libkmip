@@ -14,6 +14,7 @@
  * under the License.
  */
 
+#include <openssl/err.h>
 #include <openssl/ssl.h>
 #include <stdio.h>
 #include <string.h>
@@ -100,46 +101,38 @@ use_low_level_api(const char *server_address,
     
     printf("\n");
     printf("Loading the client certificate: %s\n", client_certificate);
-    int result = SSL_CTX_use_certificate_file(
-        ctx,
-        client_certificate,
-        SSL_FILETYPE_PEM);
-    if(result != 1)
+    if(SSL_CTX_use_certificate_file(ctx, client_certificate, SSL_FILETYPE_PEM) != 1)
     {
-        printf("Loading the client certificate failed (error: %d)\n", result);
+        fprintf(stderr, "Loading the client certificate failed\n");
+        ERR_print_errors_fp(stderr);
         SSL_CTX_free(ctx);
-        return(result);
+        return(-1);
     }
     
     printf("Loading the client key: %s\n", client_key);
-    result = SSL_CTX_use_PrivateKey_file(
-        ctx,
-        client_key,
-        SSL_FILETYPE_PEM);
-    if(result != 1)
+    if(SSL_CTX_use_PrivateKey_file(ctx, client_key, SSL_FILETYPE_PEM) != 1)
     {
-        printf("Loading the client key failed (error: %d)\n", result);
+        fprintf(stderr, "Loading the client key failed\n");
+        ERR_print_errors_fp(stderr);
         SSL_CTX_free(ctx);
-        return(result);
+        return(-1);
     }
     
     printf("Loading the CA certificate: %s\n", ca_certificate);
-    result = SSL_CTX_load_verify_locations(
-        ctx, 
-        ca_certificate,
-        NULL);
-    if(result != 1)
+    if(SSL_CTX_load_verify_locations(ctx, ca_certificate, NULL) != 1)
     {
-        printf("Loading the CA certificate failed (error: %d)\n", result);
+        fprintf(stderr, "Loading the CA certificate failed\n");
+        ERR_print_errors_fp(stderr);
         SSL_CTX_free(ctx);
-        return(result);
+        return(-1);
     }
     
     BIO *bio = NULL;
     bio = BIO_new_ssl_connect(ctx);
     if(bio == NULL)
     {
-        printf("BIO_new_ssl_connect failed\n");
+        fprintf(stderr, "BIO_new_ssl_connect failed\n");
+        ERR_print_errors_fp(stderr);
         SSL_CTX_free(ctx);
         return(-1);
     }
@@ -148,13 +141,13 @@ use_low_level_api(const char *server_address,
     SSL_set_mode(ssl, SSL_MODE_AUTO_RETRY);
     BIO_set_conn_hostname(bio, server_address);
     BIO_set_conn_port(bio, server_port);
-    result = BIO_do_connect(bio);
-    if(result != 1)
+    if(BIO_do_connect(bio) != 1)
     {
-        printf("BIO_do_connect failed (error: %d)\n", result);
+        fprintf(stderr, "BIO_do_connect failed\n");
+        ERR_print_errors_fp(stderr);
         BIO_free_all(bio);
         SSL_CTX_free(ctx);
-        return(result);
+        return(-1);
     }
     
     printf("\n");
@@ -167,9 +160,7 @@ use_low_level_api(const char *server_address,
     size_t buffer_block_size = 1024;
     size_t buffer_total_size = buffer_blocks * buffer_block_size;
     
-    uint8 *encoding = kmip_context.calloc_func(
-        kmip_context.state, buffer_blocks,
-        buffer_block_size);
+    uint8 *encoding = kmip_context.calloc_func(kmip_context.state, buffer_blocks, buffer_block_size);
     if(encoding == NULL)
     {
         kmip_destroy(&kmip_context);
@@ -238,9 +229,7 @@ use_low_level_api(const char *server_address,
         buffer_blocks += 1;
         buffer_total_size = buffer_blocks * buffer_block_size;
         
-        encoding = kmip_context.calloc_func(
-            kmip_context.state, buffer_blocks,
-            buffer_block_size);
+        encoding = kmip_context.calloc_func(kmip_context.state, buffer_blocks, buffer_block_size);
         if(encoding == NULL)
         {
             kmip_destroy(&kmip_context);
@@ -249,10 +238,7 @@ use_low_level_api(const char *server_address,
             return(KMIP_MEMORY_ALLOC_FAILED);
         }
         
-        kmip_set_buffer(
-            &kmip_context,
-            encoding,
-            buffer_total_size);
+        kmip_set_buffer(&kmip_context, encoding, buffer_total_size);
         encode_result = kmip_encode_request_message(&kmip_context, &rm);
     }
     
@@ -273,10 +259,7 @@ use_low_level_api(const char *server_address,
     char *response = NULL;
     int response_size = 0;
     
-    result = kmip_bio_send_request_encoding(
-        &kmip_context, bio,
-        (char *)encoding, buffer_total_size,
-        &response, &response_size);
+    int result = kmip_bio_send_request_encoding(&kmip_context, bio, (char *)encoding, kmip_context.index - kmip_context.buffer, &response, &response_size);
     
     BIO_free_all(bio);
     SSL_CTX_free(ctx);
@@ -321,8 +304,7 @@ use_low_level_api(const char *server_address,
     
     kmip_print_response_message(&resp_m);
     printf("\n");
-    
-    enum result_status result_status = KMIP_STATUS_OPERATION_FAILED;
+
     if(resp_m.batch_count != 1 || resp_m.batch_items == NULL)
     {
         kmip_free_response_message(&kmip_context, &resp_m);
@@ -334,7 +316,7 @@ use_low_level_api(const char *server_address,
     }
     
     ResponseBatchItem req = resp_m.batch_items[0];
-    result_status = req.result_status;
+    enum result_status result_status = req.result_status;
     
     printf("The KMIP operation was executed with no errors.\n");
     printf("Result: ");
@@ -376,10 +358,7 @@ main(int argc, char **argv)
     char *ca_certificate = NULL;
     int help = 0;
     
-    int error = parse_arguments(argc, argv,
-                                &server_address, &server_port,
-                                &client_certificate, &client_key, &ca_certificate,
-                                &help);
+    int error = parse_arguments(argc, argv, &server_address, &server_port, &client_certificate, &client_key, &ca_certificate, &help);
     if(error)
     {
         return(error);
@@ -390,8 +369,7 @@ main(int argc, char **argv)
         return(0);
     }
     
-    use_low_level_api(server_address, server_port,
-                      client_certificate, client_key, ca_certificate);
+    use_low_level_api(server_address, server_port, client_certificate, client_key, ca_certificate);
     
     return(0);
 }

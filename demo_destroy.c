@@ -14,6 +14,7 @@
  * under the License.
  */
 
+#include <openssl/err.h>
 #include <openssl/ssl.h>
 #include <stdio.h>
 #include <string.h>
@@ -106,37 +107,38 @@ use_high_level_api(const char *server_address,
     
     printf("\n");
     printf("Loading the client certificate: %s\n", client_certificate);
-    int result = SSL_CTX_use_certificate_file(ctx, client_certificate, SSL_FILETYPE_PEM);
-    if(result != 1)
+    if(SSL_CTX_use_certificate_file(ctx, client_certificate, SSL_FILETYPE_PEM) != 1)
     {
-        printf("Loading the client certificate failed (error: %d)\n", result);
+        fprintf(stderr, "Loading the client certificate failed\n");
+        ERR_print_errors_fp(stderr);
         SSL_CTX_free(ctx);
-        return(result);
+        return(-1);
     }
     
     printf("Loading the client key: %s\n", client_key);
-    result = SSL_CTX_use_PrivateKey_file(ctx, client_key, SSL_FILETYPE_PEM);
-    if(result != 1)
+    if(SSL_CTX_use_PrivateKey_file(ctx, client_key, SSL_FILETYPE_PEM) != 1)
     {
-        printf("Loading the client key failed (error: %d)\n", result);
+        fprintf(stderr, "Loading the client key failed\n");
+        ERR_print_errors_fp(stderr);
         SSL_CTX_free(ctx);
-        return(result);
+        return(-1);
     }
     
     printf("Loading the CA certificate: %s\n", ca_certificate);
-    result = SSL_CTX_load_verify_locations(ctx, ca_certificate, NULL);
-    if(result != 1)
+    if(SSL_CTX_load_verify_locations(ctx, ca_certificate, NULL) != 1)
     {
-        printf("Loading the CA file failed (error: %d)\n", result);
+        fprintf(stderr, "Loading the CA file failed\n");
+        ERR_print_errors_fp(stderr);
         SSL_CTX_free(ctx);
-        return(result);
+        return(-1);
     }
     
     BIO *bio = NULL;
     bio = BIO_new_ssl_connect(ctx);
     if(bio == NULL)
     {
-        printf("BIO_new_ssl_connect failed\n");
+        fprintf(stderr, "BIO_new_ssl_connect failed\n");
+        ERR_print_errors_fp(stderr);
         SSL_CTX_free(ctx);
         return(-1);
     }
@@ -145,17 +147,17 @@ use_high_level_api(const char *server_address,
     SSL_set_mode(ssl, SSL_MODE_AUTO_RETRY);
     BIO_set_conn_hostname(bio, server_address);
     BIO_set_conn_port(bio, server_port);
-    result = BIO_do_connect(bio);
-    if(result != 1)
+    if(BIO_do_connect(bio) != 1)
     {
-        printf("BIO_do_connect failed (error: %d)\n", result);
+        fprintf(stderr, "BIO_do_connect failed\n");
+        ERR_print_errors_fp(stderr);
         BIO_free_all(bio);
         SSL_CTX_free(ctx);
-        return(result);
+        return(-1);
     }
     
     /* Send the request message. */
-    result = kmip_bio_destroy_symmetric_key(bio, id, kmip_strnlen_s(id, 50));
+    int result = kmip_bio_destroy_symmetric_key(bio, id, kmip_strnlen_s(id, 50));
     
     BIO_free_all(bio);
     SSL_CTX_free(ctx);
@@ -167,7 +169,7 @@ use_high_level_api(const char *server_address,
         printf("An error occurred while deleting object: %s\n", id);
         printf("Error Code: %d\n", result);
     }
-    else if(result >= 0)
+    else
     {
         printf("The KMIP operation was executed with no errors.\n");
         printf("Result: ");
@@ -189,11 +191,7 @@ main(int argc, char **argv)
     char *id = NULL;
     int help = 0;
     
-    int error = parse_arguments(
-        argc, argv,
-        &server_address, &server_port,
-        &client_certificate, &client_key, &ca_certificate, &id,
-        &help);
+    int error = parse_arguments(argc, argv, &server_address, &server_port, &client_certificate, &client_key, &ca_certificate, &id, &help);
     if(error)
     {
         return(error);
@@ -204,8 +202,6 @@ main(int argc, char **argv)
         return(0);
     }
     
-    int result = use_high_level_api(server_address, server_port,
-                                    client_certificate, client_key, ca_certificate,
-                                    id);
+    int result = use_high_level_api(server_address, server_port, client_certificate, client_key, ca_certificate, id);
     return(result);
 }
