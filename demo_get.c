@@ -14,6 +14,7 @@
  * under the License.
  */
 
+#include <openssl/err.h>
 #include <openssl/ssl.h>
 #include <stdio.h>
 #include <string.h>
@@ -142,30 +143,30 @@ use_mid_level_api(char *server_address,
     
     printf("\n");
     printf("Loading the client certificate: %s\n", client_certificate);
-    int result = SSL_CTX_use_certificate_file(ctx, client_certificate, SSL_FILETYPE_PEM);
-    if(result != 1)
+    if(SSL_CTX_use_certificate_file(ctx, client_certificate, SSL_FILETYPE_PEM) != 1)
     {
-        printf("Loading the client certificate failed (error: %d)\n", result);
+        fprintf(stderr, "Loading the client certificate failed\n");
+        ERR_print_errors_fp(stderr);
         SSL_CTX_free(ctx);
-        return(result);
+        return(-1);
     }
     
     printf("Loading the client key: %s\n", client_key);
-    result = SSL_CTX_use_PrivateKey_file(ctx, client_key, SSL_FILETYPE_PEM);
-    if(result != 1)
+    if(SSL_CTX_use_PrivateKey_file(ctx, client_key, SSL_FILETYPE_PEM) != 1)
     {
-        printf("Loading the client key failed (error: %d)\n", result);
+        fprintf(stderr, "Loading the client key failed\n");
+        ERR_print_errors_fp(stderr);
         SSL_CTX_free(ctx);
-        return(result);
+        return(-1);
     }
     
     printf("Loading the CA certificate: %s\n", ca_certificate);
-    result = SSL_CTX_load_verify_locations(ctx, ca_certificate, NULL);
-    if(result != 1)
+    if(SSL_CTX_load_verify_locations(ctx, ca_certificate, NULL) != 1)
     {
-        printf("Loading the CA file failed (error: %d)\n", result);
+        fprintf(stderr, "Loading the CA file failed\n");
+        ERR_print_errors_fp(stderr);
         SSL_CTX_free(ctx);
-        return(result);
+        return(-1);
     }
     
     BIO *bio = NULL;
@@ -181,14 +182,14 @@ use_mid_level_api(char *server_address,
     SSL_set_mode(ssl, SSL_MODE_AUTO_RETRY);
     BIO_set_conn_hostname(bio, server_address);
     BIO_set_conn_port(bio, server_port);
-    result = BIO_do_connect(bio);
-    
-    if(result != 1)
+
+    if(BIO_do_connect(bio) != 1)
     {
-        printf("BIO_do_connect failed (error: %d)\n", result);
+        fprintf(stderr, "BIO_do_connect failed\n");
+        ERR_print_errors_fp(stderr);
         BIO_free_all(bio);
         SSL_CTX_free(ctx);
-        return(result);
+        return(-1);
     }
     
     printf("\n");
@@ -222,7 +223,7 @@ use_mid_level_api(char *server_address,
     credential.credential_type = KMIP_CRED_USERNAME_AND_PASSWORD;
     credential.credential_value = &upc;
     
-    result = kmip_add_credential(&kmip_context, &credential);
+    int result = kmip_add_credential(&kmip_context, &credential);
     
     if(result != KMIP_OK)
     {
@@ -233,10 +234,7 @@ use_mid_level_api(char *server_address,
         return(result);
     }
     
-    result = kmip_bio_get_symmetric_key_with_context(
-        &kmip_context, bio,
-        id, id_size,
-        &key, &key_size);
+    result = kmip_bio_get_symmetric_key_with_context(&kmip_context, bio, id, id_size, &key, &key_size);
     
     BIO_free_all(bio);
     SSL_CTX_free(ctx);
@@ -297,13 +295,7 @@ main(int argc, char **argv)
     char *id = NULL;
     int help = 0;
     
-    int error = parse_arguments(
-        argc, argv,
-        &server_address, &server_port,
-        &client_certificate, &client_key, &ca_certificate,
-        &username, &password,
-        &id,
-        &help);
+    int error = parse_arguments(argc, argv, &server_address, &server_port, &client_certificate, &client_key, &ca_certificate, &username, &password, &id, &help);
     if(error)
     {
         return(error);
@@ -314,9 +306,6 @@ main(int argc, char **argv)
         return(0);
     }
     
-    int result = use_mid_level_api(server_address, server_port,
-                                   client_certificate, client_key, ca_certificate,
-                                   username, password,
-                                   id);
+    int result = use_mid_level_api(server_address, server_port, client_certificate, client_key, ca_certificate, username, password, id);
     return(result);
 }
