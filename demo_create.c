@@ -209,6 +209,7 @@ use_low_level_api(const char *server_address,
     crp.template_attribute = &ta;
     
     RequestBatchItem rbi = {0};
+    kmip_init_request_batch_item(&rbi);
     rbi.operation = KMIP_OP_CREATE;
     rbi.request_payload = &crp;
     
