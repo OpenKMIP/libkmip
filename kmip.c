@@ -1682,6 +1682,21 @@ kmip_init_response_header(ResponseHeader *value)
     value->server_correlation_value = NULL;
 }
 
+void
+kmip_init_request_batch_item(RequestBatchItem *value)
+{
+    if(value == NULL)
+    {
+        return;
+    }
+
+    value->operation = 0;
+    value->unique_batch_item_id = NULL;
+    value->request_payload = NULL;
+
+    value->ephemeral = KMIP_UNSET;
+}
+
 /*
 Printing Functions
 */
@@ -4314,7 +4329,11 @@ kmip_print_request_batch_item(int indent, RequestBatchItem *value)
         printf("%*sOperation: ", indent + 2, "");
         kmip_print_operation_enum(value->operation);
         printf("\n");
-        
+
+        printf("%*sEphemeral: ", indent + 2, "");
+        kmip_print_bool(value->ephemeral);
+        printf("\n");
+
         kmip_print_byte_string(
             indent + 2,
             "Unique Batch Item ID",
@@ -5238,6 +5257,7 @@ kmip_free_request_batch_item(KMIP *ctx, RequestBatchItem *value)
         }
         
         value->operation = 0;
+        value->ephemeral = 0;
     }
     
     return;
@@ -6950,6 +6970,11 @@ kmip_compare_request_batch_item(const RequestBatchItem *a, const RequestBatchIte
         }
         
         if(a->operation != b->operation)
+        {
+            return(KMIP_FALSE);
+        }
+
+        if(a->ephemeral != b->ephemeral)
         {
             return(KMIP_FALSE);
         }
@@ -9544,6 +9569,8 @@ kmip_encode_response_header(KMIP *ctx, const ResponseHeader *value)
 int
 kmip_encode_request_batch_item(KMIP *ctx, const RequestBatchItem *value)
 {
+    CHECK_ENCODE_ARGS(ctx, value);
+
     int result = 0;
     result = kmip_encode_int32_be(ctx, TAG_TYPE(KMIP_TAG_BATCH_ITEM, KMIP_TYPE_STRUCTURE));
     CHECK_RESULT(ctx, result);
@@ -9553,7 +9580,16 @@ kmip_encode_request_batch_item(KMIP *ctx, const RequestBatchItem *value)
     
     result = kmip_encode_enum(ctx, KMIP_TAG_OPERATION, value->operation);
     CHECK_RESULT(ctx, result);
-    
+
+    if(ctx->version >= KMIP_2_0)
+    {
+        if(value->ephemeral != KMIP_UNSET)
+        {
+            result=kmip_encode_bool(ctx, KMIP_TAG_EPHEMERAL, value->ephemeral);
+            CHECK_RESULT(ctx, result);
+        }
+    }
+
     if(value->unique_batch_item_id != NULL)
     {
         result = kmip_encode_byte_string(ctx, KMIP_TAG_UNIQUE_BATCH_ITEM_ID, value->unique_batch_item_id);
@@ -11343,6 +11379,7 @@ kmip_decode_destroy_response_payload(KMIP *ctx, DestroyResponsePayload *value)
 int
 kmip_decode_request_batch_item(KMIP *ctx, RequestBatchItem *value)
 {
+    CHECK_DECODE_ARGS(ctx, value);
     CHECK_BUFFER_FULL(ctx, 8);
     
     int result = 0;
@@ -11358,7 +11395,16 @@ kmip_decode_request_batch_item(KMIP *ctx, RequestBatchItem *value)
     result = kmip_decode_enum(ctx, KMIP_TAG_OPERATION, &value->operation);
     CHECK_RESULT(ctx, result);
     CHECK_ENUM(ctx, KMIP_TAG_OPERATION, value->operation);
-    
+
+    if(ctx->version >= KMIP_2_0)
+    {
+        if(kmip_is_tag_next(ctx, KMIP_TAG_EPHEMERAL))
+        {
+            result = kmip_decode_bool(ctx, KMIP_TAG_EPHEMERAL, &value->ephemeral);
+            CHECK_RESULT(ctx, result);
+        }
+    }
+
     if(kmip_is_tag_next(ctx, KMIP_TAG_UNIQUE_BATCH_ITEM_ID))
     {
         value->unique_batch_item_id = ctx->calloc_func(ctx->state, 1, sizeof(ByteString));
@@ -11973,6 +12019,7 @@ kmip_decode_request_message(KMIP *ctx, RequestMessage *value)
         
         for(size_t i = 0; i < value->batch_count; i++)
         {
+            kmip_init_request_batch_item(&value->batch_items[i]);
             result = kmip_decode_request_batch_item(ctx, &value->batch_items[i]);
             CHECK_RESULT(ctx, result);
         }

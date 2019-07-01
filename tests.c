@@ -1168,6 +1168,38 @@ test_check_enum_value_protection_storage_masks(TestTracker *tracker)
 }
 
 int
+test_init_request_batch_item(TestTracker *tracker)
+{
+    TRACK_TEST(tracker);
+
+    kmip_init_request_batch_item(NULL);
+
+    RequestBatchItem rbi = {0};
+
+    if(rbi.operation != 0)
+        TEST_FAILED(tracker, __func__, __LINE__);
+    if(rbi.unique_batch_item_id != NULL)
+        TEST_FAILED(tracker, __func__, __LINE__);
+    if(rbi.request_payload != NULL)
+        TEST_FAILED(tracker, __func__, __LINE__);
+    if(rbi.ephemeral != 0)
+        TEST_FAILED(tracker, __func__, __LINE__);
+
+    kmip_init_request_batch_item(&rbi);
+
+    if(rbi.operation != 0)
+        TEST_FAILED(tracker, __func__, __LINE__);
+    if(rbi.unique_batch_item_id != NULL)
+        TEST_FAILED(tracker, __func__, __LINE__);
+    if(rbi.request_payload != NULL)
+        TEST_FAILED(tracker, __func__, __LINE__);
+    if(rbi.ephemeral != KMIP_UNSET)
+        TEST_FAILED(tracker, __func__, __LINE__);
+
+    TEST_PASSED(tracker, __func__);
+}
+
+int
 test_print_attributes(TestTracker *tracker)
 {
     TRACK_TEST(tracker);
@@ -6423,6 +6455,7 @@ test_encode_request_batch_item_get_payload(TestTracker *tracker)
     grp.unique_identifier = &uuid;
     
     struct request_batch_item rbi = {0};
+    kmip_init_request_batch_item(&rbi);
     rbi.operation = KMIP_OP_GET;
     rbi.request_payload = &grp;
     
@@ -6434,6 +6467,56 @@ test_encode_request_batch_item_get_payload(TestTracker *tracker)
         observed,
         result,
         __func__);
+    kmip_destroy(&ctx);
+    return(result);
+}
+
+int
+test_encode_request_batch_item_get_payload_kmip_2_0(TestTracker *tracker)
+{
+    TRACK_TEST(tracker);
+
+    /* This encoding matches the following set of values:
+    *  Batch Item
+    *      Operation - Get
+    *      Ephemeral - False
+    *      Request Payload
+    *          Unique Identifier - 49a1ca88-6bea-4fb2-b450-7e58802c3038
+    */
+    uint8 expected[96] = {
+        0x42, 0x00, 0x0F, 0x01, 0x00, 0x00, 0x00, 0x58,
+        0x42, 0x00, 0x5C, 0x05, 0x00, 0x00, 0x00, 0x04,
+        0x00, 0x00, 0x00, 0x0A, 0x00, 0x00, 0x00, 0x00,
+        0x42, 0x01, 0x54, 0x06, 0x00, 0x00, 0x00, 0x08,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x42, 0x00, 0x79, 0x01, 0x00, 0x00, 0x00, 0x30,
+        0x42, 0x00, 0x94, 0x07, 0x00, 0x00, 0x00, 0x24,
+        0x34, 0x39, 0x61, 0x31, 0x63, 0x61, 0x38, 0x38,
+        0x2D, 0x36, 0x62, 0x65, 0x61, 0x2D, 0x34, 0x66,
+        0x62, 0x32, 0x2D, 0x62, 0x34, 0x35, 0x30, 0x2D,
+        0x37, 0x65, 0x35, 0x38, 0x38, 0x30, 0x32, 0x63,
+        0x33, 0x30, 0x33, 0x38, 0x00, 0x00, 0x00, 0x00
+    };
+
+    uint8 observed[96] = {0};
+    KMIP ctx = {0};
+    kmip_init(&ctx, observed, ARRAY_LENGTH(observed), KMIP_2_0);
+
+    TextString uuid = {0};
+    uuid.value = "49a1ca88-6bea-4fb2-b450-7e58802c3038";
+    uuid.size = 36;
+
+    GetRequestPayload grp = {0};
+    grp.unique_identifier = &uuid;
+
+    RequestBatchItem rbi = {0};
+    kmip_init_request_batch_item(&rbi);
+    rbi.operation = KMIP_OP_GET;
+    rbi.ephemeral = KMIP_FALSE;
+    rbi.request_payload = &grp;
+
+    int result = kmip_encode_request_batch_item(&ctx, &rbi);
+    result = report_encoding_test_result(tracker, &ctx, expected, observed, result, __func__);
     kmip_destroy(&ctx);
     return(result);
 }
@@ -6467,10 +6550,12 @@ test_decode_request_batch_item_get_payload(TestTracker *tracker)
     grp.unique_identifier = &uuid;
     
     struct request_batch_item expected = {0};
+    kmip_init_request_batch_item(&expected);
     expected.operation = KMIP_OP_GET;
     expected.request_payload = &grp;
     
     struct request_batch_item observed = {0};
+    kmip_init_request_batch_item(&observed);
     
     int result = kmip_decode_request_batch_item(&ctx, &observed);
     result = report_decoding_test_result(
@@ -6479,6 +6564,66 @@ test_decode_request_batch_item_get_payload(TestTracker *tracker)
         kmip_compare_request_batch_item(&expected, &observed),
         result,
         __func__);
+    kmip_free_request_batch_item(&ctx, &observed);
+    kmip_destroy(&ctx);
+    return(result);
+}
+
+int
+test_decode_request_batch_item_get_payload_kmip_2_0(TestTracker *tracker)
+{
+    TRACK_TEST(tracker);
+
+    /* This encoding matches the following set of values:
+    *  Batch Item
+    *      Operation - Get
+    *      Ephemeral - False
+    *      Request Payload
+    *          Unique Identifier - 49a1ca88-6bea-4fb2-b450-7e58802c3038
+    */
+    uint8 encoding[96] = {
+        0x42, 0x00, 0x0F, 0x01, 0x00, 0x00, 0x00, 0x58,
+        0x42, 0x00, 0x5C, 0x05, 0x00, 0x00, 0x00, 0x04,
+        0x00, 0x00, 0x00, 0x0A, 0x00, 0x00, 0x00, 0x00,
+        0x42, 0x01, 0x54, 0x06, 0x00, 0x00, 0x00, 0x08,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x42, 0x00, 0x79, 0x01, 0x00, 0x00, 0x00, 0x30,
+        0x42, 0x00, 0x94, 0x07, 0x00, 0x00, 0x00, 0x24,
+        0x34, 0x39, 0x61, 0x31, 0x63, 0x61, 0x38, 0x38,
+        0x2D, 0x36, 0x62, 0x65, 0x61, 0x2D, 0x34, 0x66,
+        0x62, 0x32, 0x2D, 0x62, 0x34, 0x35, 0x30, 0x2D,
+        0x37, 0x65, 0x35, 0x38, 0x38, 0x30, 0x32, 0x63,
+        0x33, 0x30, 0x33, 0x38, 0x00, 0x00, 0x00, 0x00
+    };
+
+    KMIP ctx = {0};
+    kmip_init(&ctx, encoding, ARRAY_LENGTH(encoding), KMIP_2_0);
+
+    TextString uuid = {0};
+    uuid.value = "49a1ca88-6bea-4fb2-b450-7e58802c3038";
+    uuid.size = 36;
+
+    GetRequestPayload grp = {0};
+    grp.unique_identifier = &uuid;
+
+    RequestBatchItem expected = {0};
+    kmip_init_request_batch_item(&expected);
+    expected.operation = KMIP_OP_GET;
+    expected.ephemeral = KMIP_FALSE;
+    expected.request_payload = &grp;
+
+    RequestBatchItem observed = {0};
+    kmip_init_request_batch_item(&observed);
+
+    int result = kmip_decode_request_batch_item(&ctx, &observed);
+    int comparison = kmip_compare_request_batch_item(&expected, &observed);
+    if(!comparison)
+    {
+        kmip_print_request_batch_item(1, &expected);
+        kmip_print_request_batch_item(1, &observed);
+    }
+    result = report_decoding_test_result(tracker, &ctx, comparison, result, __func__);
+
     kmip_free_request_batch_item(&ctx, &observed);
     kmip_destroy(&ctx);
     return(result);
@@ -6709,6 +6854,7 @@ test_encode_request_message_get(TestTracker *tracker)
     grp.unique_identifier = &uuid;
     
     struct request_batch_item rbi = {0};
+    kmip_init_request_batch_item(&rbi);
     rbi.operation = KMIP_OP_GET;
     rbi.request_payload = &grp;
     
@@ -6777,6 +6923,7 @@ test_decode_request_message_get(TestTracker *tracker)
     grp.unique_identifier = &uuid;
     
     struct request_batch_item rbi = {0};
+    kmip_init_request_batch_item(&rbi);
     rbi.operation = KMIP_OP_GET;
     rbi.request_payload = &grp;
     
@@ -6788,12 +6935,14 @@ test_decode_request_message_get(TestTracker *tracker)
     struct request_message observed = {0};
     
     int result = kmip_decode_request_message(&ctx, &observed);
-    result = report_decoding_test_result(
-        tracker,
-        &ctx,
-        kmip_compare_request_message(&expected, &observed),
-        result,
-        __func__);
+    int comparison = kmip_compare_request_message(&expected, &observed);
+    if(!comparison)
+    {
+        kmip_print_request_message(&expected);
+        kmip_print_request_message(&observed);
+    }
+    result = report_decoding_test_result(tracker, &ctx, comparison, result, __func__);
+
     kmip_free_request_message(&ctx, &observed);
     kmip_destroy(&ctx);
     return(result);
@@ -9530,6 +9679,7 @@ test_kmip_1_1_test_suite_3_1_1_0_a(TestTracker *tracker)
     crp.template_attribute = &ta;
     
     struct request_batch_item rbi = {0};
+    kmip_init_request_batch_item(&rbi);
     rbi.operation = KMIP_OP_CREATE;
     rbi.request_payload = &crp;
     
@@ -9679,6 +9829,7 @@ test_kmip_1_1_test_suite_3_1_1_1_a(TestTracker *tracker)
     drp.unique_identifier = &uuid;
     
     struct request_batch_item rbi = {0};
+    kmip_init_request_batch_item(&rbi);
     rbi.operation = KMIP_OP_DESTROY;
     rbi.request_payload = &drp;
     
@@ -9825,6 +9976,7 @@ test_kmip_1_1_test_suite_3_1_3_2_a(TestTracker *tracker)
     grp.unique_identifier = &uuid;
     
     struct request_batch_item rbi = {0};
+    kmip_init_request_batch_item(&rbi);
     rbi.operation = KMIP_OP_GET;
     rbi.request_payload = &grp;
     
@@ -9979,6 +10131,7 @@ run_tests(void)
     test_is_attribute_tag(&tracker);
     test_get_enum_string_index(&tracker);
     test_check_enum_value_protection_storage_masks(&tracker);
+    test_init_request_batch_item(&tracker);
 
     printf("\nKMIP 1.0 Feature Tests\n");
     printf("----------------------\n");
@@ -10155,6 +10308,7 @@ run_tests(void)
     test_decode_attribute_v2_state(&tracker);
     test_decode_attribute_v2_unsupported_attribute(&tracker);
     test_decode_create_request_payload_kmip_2_0(&tracker);
+    test_decode_request_batch_item_get_payload_kmip_2_0(&tracker);
 
     printf("\n");
     test_encode_protection_storage_masks(&tracker);
@@ -10169,6 +10323,7 @@ run_tests(void)
     test_encode_attribute_v2_state(&tracker);
     test_encode_attribute_v2_unsupported_attribute(&tracker);
     test_encode_create_request_payload_kmip_2_0(&tracker);
+    test_encode_request_batch_item_get_payload_kmip_2_0(&tracker);
 
     printf("\nSummary\n");
     printf("================\n");

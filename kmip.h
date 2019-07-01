@@ -653,6 +653,7 @@ enum tag
     KMIP_TAG_SERVER_CORRELATION_VALUE         = 0x420106,
     /* KMIP 2.0 */
     KMIP_TAG_ATTRIBUTES                       = 0x420125,
+    KMIP_TAG_EPHEMERAL                        = 0x420154,
     KMIP_TAG_PROTECTION_STORAGE_MASK          = 0x42015E,
     KMIP_TAG_PROTECTION_STORAGE_MASKS         = 0x42015F,
     KMIP_TAG_COMMON_PROTECTION_STORAGE_MASKS  = 0x420163,
@@ -1028,9 +1029,12 @@ typedef struct response_header
 
 typedef struct request_batch_item
 {
+    /* KMIP 1.0 */
     enum operation operation;
     ByteString *unique_batch_item_id;
     void *request_payload;
+    /* KMIP 2.0 */
+    bool32 ephemeral;
     /* NOTE (ph) Omitting the message extension field for now. */
 } RequestBatchItem;
 
@@ -1268,6 +1272,7 @@ void kmip_init_cryptographic_parameters(CryptographicParameters *);
 void kmip_init_key_block(KeyBlock *);
 void kmip_init_request_header(RequestHeader *);
 void kmip_init_response_header(ResponseHeader *);
+void kmip_init_request_batch_item(RequestBatchItem *);
 
 /*
 Printing Functions

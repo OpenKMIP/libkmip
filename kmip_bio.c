@@ -70,6 +70,7 @@ int kmip_bio_create_symmetric_key(BIO *bio,
     crp.template_attribute = template_attribute;
     
     RequestBatchItem rbi = {0};
+    kmip_init_request_batch_item(&rbi);
     rbi.operation = KMIP_OP_CREATE;
     rbi.request_payload = &crp;
     
@@ -279,6 +280,7 @@ int kmip_bio_destroy_symmetric_key(BIO *bio, char *uuid, int uuid_size)
     drp.unique_identifier = &id;
     
     RequestBatchItem rbi = {0};
+    kmip_init_request_batch_item(&rbi);
     rbi.operation = KMIP_OP_DESTROY;
     rbi.request_payload = &drp;
     
@@ -482,6 +484,7 @@ int kmip_bio_get_symmetric_key(BIO *bio,
     grp.unique_identifier = &uuid;
     
     RequestBatchItem rbi = {0};
+    kmip_init_request_batch_item(&rbi);
     rbi.operation = KMIP_OP_GET;
     rbi.request_payload = &grp;
     
@@ -712,6 +715,7 @@ int kmip_bio_create_symmetric_key_with_context(KMIP *ctx, BIO *bio,
     crp.template_attribute = template_attribute;
     
     RequestBatchItem rbi = {0};
+    kmip_init_request_batch_item(&rbi);
     rbi.operation = KMIP_OP_CREATE;
     rbi.request_payload = &crp;
     
@@ -927,6 +931,7 @@ int kmip_bio_get_symmetric_key_with_context(KMIP *ctx, BIO *bio,
     grp.unique_identifier = &id;
     
     RequestBatchItem rbi = {0};
+    kmip_init_request_batch_item(&rbi);
     rbi.operation = KMIP_OP_GET;
     rbi.request_payload = &grp;
     
@@ -1164,6 +1169,7 @@ int kmip_bio_destroy_symmetric_key_with_context(KMIP *ctx, BIO *bio,
     drp.unique_identifier = &id;
     
     RequestBatchItem rbi = {0};
+    kmip_init_request_batch_item(&rbi);
     rbi.operation = KMIP_OP_DESTROY;
     rbi.request_payload = &drp;
     
