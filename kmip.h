@@ -654,6 +654,7 @@ enum tag
     /* KMIP 2.0 */
     KMIP_TAG_ATTRIBUTES                       = 0x420125,
     KMIP_TAG_EPHEMERAL                        = 0x420154,
+    KMIP_TAG_SERVER_HASHED_PASSWORD           = 0x420155,
     KMIP_TAG_PROTECTION_STORAGE_MASK          = 0x42015E,
     KMIP_TAG_PROTECTION_STORAGE_MASKS         = 0x42015F,
     KMIP_TAG_COMMON_PROTECTION_STORAGE_MASKS  = 0x420163,
@@ -1025,6 +1026,8 @@ typedef struct response_header
     /* KMIP 1.4 */
     TextString *client_correlation_value;
     TextString *server_correlation_value;
+    /* KMIP 2.0 */
+    ByteString *server_hashed_password;
 } ResponseHeader;
 
 typedef struct request_batch_item
