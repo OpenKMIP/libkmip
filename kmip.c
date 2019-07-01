@@ -1680,6 +1680,8 @@ kmip_init_response_header(ResponseHeader *value)
     
     value->client_correlation_value = NULL;
     value->server_correlation_value = NULL;
+
+    value->server_hashed_password = NULL;
 }
 
 void
@@ -4445,6 +4447,9 @@ kmip_print_response_header(int indent, ResponseHeader *value)
         kmip_print_protocol_version(indent + 2, value->protocol_version);
         printf("%*sTime Stamp: %lu\n", indent + 2, "", value->time_stamp);
         kmip_print_nonce(indent + 2, value->nonce);
+
+        kmip_print_byte_string(indent + 2, "Server Hashed Password", value->server_hashed_password);
+
         printf(
             "%*sAttestation Types: %zu\n",
             indent + 2,
@@ -5605,7 +5610,14 @@ kmip_free_response_header(KMIP *ctx, ResponseHeader *value)
             ctx->free_func(ctx->state, value->nonce);
             value->nonce = NULL;
         }
-        
+
+        if(value->server_hashed_password != NULL)
+        {
+            kmip_free_byte_string(ctx, value->server_hashed_password);
+            ctx->free_func(ctx->state, value->server_hashed_password);
+            value->server_hashed_password = NULL;
+        }
+
         if(value->attestation_types != NULL)
         {
             ctx->memset_func(
@@ -7650,7 +7662,16 @@ kmip_compare_response_header(const ResponseHeader *a, const ResponseHeader *b)
                 return(KMIP_FALSE);
             }
         }
-        
+
+        if(a->server_hashed_password != b->server_hashed_password)
+        {
+            if((a->server_hashed_password == NULL) || (b->server_hashed_password == NULL))
+                return(KMIP_FALSE);
+
+            if(kmip_compare_byte_string(a->server_hashed_password, b->server_hashed_password) == KMIP_FALSE)
+                return(KMIP_FALSE);
+        }
+
         if(a->attestation_types != b->attestation_types)
         {
             if((a->attestation_types == NULL) || (b->attestation_types == NULL))
@@ -9530,7 +9551,16 @@ kmip_encode_response_header(KMIP *ctx, const ResponseHeader *value)
             result = kmip_encode_nonce(ctx, value->nonce);
             CHECK_RESULT(ctx, result);
         }
-        
+
+        if(ctx->version >= KMIP_2_0)
+        {
+            if(value->server_hashed_password != NULL)
+            {
+                result = kmip_encode_byte_string(ctx, KMIP_TAG_SERVER_HASHED_PASSWORD, value->server_hashed_password);
+                CHECK_RESULT(ctx, result);
+            }
+        }
+
         for(size_t i = 0; i < value->attestation_type_count; i++)
         {
             result = kmip_encode_enum(ctx, KMIP_TAG_ATTESTATION_TYPE, value->attestation_types[i]);
@@ -11947,7 +11977,19 @@ kmip_decode_response_header(KMIP *ctx, ResponseHeader *value)
             result = kmip_decode_nonce(ctx, value->nonce);
             CHECK_RESULT(ctx, result);
         }
-        
+
+        if(ctx->version >= KMIP_2_0)
+        {
+            if(kmip_is_tag_next(ctx, KMIP_TAG_SERVER_HASHED_PASSWORD))
+            {
+                value->server_hashed_password = ctx->calloc_func(ctx->state, 1, sizeof(ByteString));
+                CHECK_NEW_MEMORY(ctx, value->server_hashed_password, sizeof(ByteString), "ByteString");
+
+                result = kmip_decode_byte_string(ctx, KMIP_TAG_SERVER_HASHED_PASSWORD, value->server_hashed_password);
+                CHECK_RESULT(ctx, result);
+            }
+        }
+
         value->attestation_type_count = kmip_get_num_items_next(ctx, KMIP_TAG_ATTESTATION_TYPE);
         if(value->attestation_type_count > 0)
         {
