@@ -1168,6 +1168,65 @@ test_check_enum_value_protection_storage_masks(TestTracker *tracker)
 }
 
 int
+test_init_protocol_version(TestTracker *tracker)
+{
+    TRACK_TEST(tracker);
+
+    kmip_init_protocol_version(NULL, KMIP_1_0);
+
+    ProtocolVersion pv = {0};
+
+    if(pv.major != 0)
+        TEST_FAILED(tracker, __func__, __LINE__);
+    if(pv.minor != 0)
+        TEST_FAILED(tracker, __func__, __LINE__);
+
+    kmip_init_protocol_version(&pv, KMIP_1_0);
+
+    if(pv.major != 1)
+        TEST_FAILED(tracker, __func__, __LINE__);
+    if(pv.minor != 0)
+        TEST_FAILED(tracker, __func__, __LINE__);
+
+    kmip_init_protocol_version(&pv, KMIP_1_1);
+
+    if(pv.major != 1)
+        TEST_FAILED(tracker, __func__, __LINE__);
+    if(pv.minor != 1)
+        TEST_FAILED(tracker, __func__, __LINE__);
+
+    kmip_init_protocol_version(&pv, KMIP_1_2);
+
+    if(pv.major != 1)
+        TEST_FAILED(tracker, __func__, __LINE__);
+    if(pv.minor != 2)
+        TEST_FAILED(tracker, __func__, __LINE__);
+
+    kmip_init_protocol_version(&pv, KMIP_1_3);
+
+    if(pv.major != 1)
+        TEST_FAILED(tracker, __func__, __LINE__);
+    if(pv.minor != 3)
+        TEST_FAILED(tracker, __func__, __LINE__);
+
+    kmip_init_protocol_version(&pv, KMIP_1_4);
+
+    if(pv.major != 1)
+        TEST_FAILED(tracker, __func__, __LINE__);
+    if(pv.minor != 4)
+        TEST_FAILED(tracker, __func__, __LINE__);
+
+    kmip_init_protocol_version(&pv, KMIP_2_0);
+
+    if(pv.major != 2)
+        TEST_FAILED(tracker, __func__, __LINE__);
+    if(pv.minor != 0)
+        TEST_FAILED(tracker, __func__, __LINE__);
+
+    TEST_PASSED(tracker, __func__);
+}
+
+int
 test_init_request_batch_item(TestTracker *tracker)
 {
     TRACK_TEST(tracker);
@@ -10379,6 +10438,7 @@ run_tests(void)
     test_is_attribute_tag(&tracker);
     test_get_enum_string_index(&tracker);
     test_check_enum_value_protection_storage_masks(&tracker);
+    test_init_protocol_version(&tracker);
     test_init_request_batch_item(&tracker);
 
     printf("\nKMIP 1.0 Feature Tests\n");
