@@ -1549,30 +1549,47 @@ kmip_init_protocol_version(ProtocolVersion *value, enum kmip_version kmip_versio
     
     switch(kmip_version)
     {
+        case KMIP_2_0:
+        {
+            value->major = 2;
+            value->minor = 0;
+        };
+        break;
+
         case KMIP_1_4:
-        value->major = 1;
-        value->minor = 4;
+        {
+            value->major = 1;
+            value->minor = 4;
+        };
         break;
         
         case KMIP_1_3:
-        value->major = 1;
-        value->minor = 3;
+        {
+            value->major = 1;
+            value->minor = 3;
+        };
         break;
         
         case KMIP_1_2:
-        value->major = 1;
-        value->minor = 2;
+        {
+            value->major = 1;
+            value->minor = 2;
+        };
         break;
         
         case KMIP_1_1:
-        value->major = 1;
-        value->minor = 1;
+        {
+            value->major = 1;
+            value->minor = 1;
+        };
         break;
         
         case KMIP_1_0:
         default:
-        value->major = 1;
-        value->minor = 0;
+        {
+            value->major = 1;
+            value->minor = 0;
+        };
         break;
     };
 }
