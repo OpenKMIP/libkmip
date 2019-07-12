@@ -9187,8 +9187,30 @@ kmip_encode_create_request_payload(KMIP *ctx, const CreateRequestPayload *value)
     }
     else
     {
-        result = kmip_encode_attributes(ctx, value->attributes);
-        CHECK_RESULT(ctx, result);
+        if(value->attributes)
+        {
+            result = kmip_encode_attributes(ctx, value->attributes);
+            CHECK_RESULT(ctx, result);
+        }
+        else if(value->template_attribute)
+        {
+            Attributes *attributes = ctx->calloc_func(ctx->state, 1, sizeof(Attributes));
+            LinkedList *list = ctx->calloc_func(ctx->state, 1, sizeof(LinkedList));
+            attributes->attribute_list = list;
+            for(size_t i = 0; i < value->template_attribute->attribute_count; i++)
+            {
+                LinkedListItem *item = ctx->calloc_func(ctx->state, 1, sizeof(LinkedListItem));
+                item->data = kmip_deep_copy_attribute(ctx, &value->template_attribute->attributes[i]);
+                kmip_linked_list_enqueue(list, item);
+            }
+
+            result = kmip_encode_attributes(ctx, attributes);
+
+            kmip_free_attributes(ctx, attributes);
+            ctx->free_func(ctx->state, attributes);
+
+            CHECK_RESULT(ctx, result);
+        }
 
         if(value->protection_storage_masks != NULL)
         {

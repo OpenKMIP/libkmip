@@ -24,9 +24,7 @@ int kmip_bio_create_symmetric_key(BIO *bio,
                                   char **id, int *id_size)
 {
     if(bio == NULL || template_attribute == NULL || id == NULL || id_size == NULL)
-    {
         return(KMIP_ARG_INVALID);
-    }
     
     /* Set up the KMIP context and the initial encoding buffer. */
     KMIP ctx = {0};
@@ -158,9 +156,7 @@ int kmip_bio_create_symmetric_key(BIO *bio,
     kmip_set_buffer(&ctx, NULL, 0);
     uint8 *extended = ctx.realloc_func(ctx.state, encoding, buffer_total_size + length);
     if(encoding != extended)
-    {
         encoding = extended;
-    }
     ctx.memset_func(encoding + buffer_total_size, 0, length);
     
     buffer_block_size += length;
@@ -212,9 +208,7 @@ int kmip_bio_create_symmetric_key(BIO *bio,
         unique_identifier->size + 1);
     *id_size = unique_identifier->size;
     for(int i = 0; i < *id_size; i++)
-    {
         result_id[i] = unique_identifier->value[i];
-    }
     *id = result_id;
     
     /* Clean up the response message, the encoding buffer, and the KMIP */
@@ -682,12 +676,9 @@ int kmip_bio_create_symmetric_key_with_context(KMIP *ctx, BIO *bio,
     size_t buffer_block_size = 1024;
     size_t buffer_total_size = buffer_blocks * buffer_block_size;
     
-    uint8 *encoding = ctx->calloc_func(ctx->state, buffer_blocks,
-                                       buffer_block_size);
+    uint8 *encoding = ctx->calloc_func(ctx->state, buffer_blocks, buffer_block_size);
     if(encoding == NULL)
-    {
         return(KMIP_MEMORY_ALLOC_FAILED);
-    }
     kmip_set_buffer(ctx, encoding, buffer_total_size);
     
     /* Build the request message. */
@@ -705,7 +696,7 @@ int kmip_bio_create_symmetric_key_with_context(KMIP *ctx, BIO *bio,
     CreateRequestPayload crp = {0};
     crp.object_type = KMIP_OBJTYPE_SYMMETRIC_KEY;
     crp.template_attribute = template_attribute;
-    
+
     RequestBatchItem rbi = {0};
     kmip_init_request_batch_item(&rbi);
     rbi.operation = KMIP_OP_CREATE;
@@ -741,8 +732,7 @@ int kmip_bio_create_symmetric_key_with_context(KMIP *ctx, BIO *bio,
         buffer_blocks += 1;
         buffer_total_size = buffer_blocks * buffer_block_size;
         
-        encoding = ctx->calloc_func(ctx->state, buffer_blocks,
-                                    buffer_block_size);
+        encoding = ctx->calloc_func(ctx->state, buffer_blocks, buffer_block_size);
         if(encoding == NULL)
         {
             kmip_set_buffer(ctx, NULL, 0);
@@ -786,9 +776,7 @@ int kmip_bio_create_symmetric_key_with_context(KMIP *ctx, BIO *bio,
     
     encoding = ctx->calloc_func(ctx->state, buffer_blocks, buffer_block_size);
     if(encoding == NULL)
-    {
         return(KMIP_MEMORY_ALLOC_FAILED);
-    }
     
     int recv = BIO_read(bio, encoding, buffer_total_size);
     if((size_t)recv != buffer_total_size)

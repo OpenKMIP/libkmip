@@ -44,29 +44,17 @@ parse_arguments(int argc, char **argv,
     for(int i = 1; i < argc; i++)
     {
         if(strncmp(argv[i], "-a", 2) == 0)
-        {
             *server_address = argv[++i];
-        }
         else if(strncmp(argv[i], "-c", 2) == 0)
-        {
             *client_certificate = argv[++i];
-        }
         else if(strncmp(argv[i], "-h", 2) == 0)
-        {
             *print_usage = 1;
-        }
         else if(strncmp(argv[i], "-k", 2) == 0)
-        {
             *client_key = argv[++i];
-        }
         else if(strncmp(argv[i], "-p", 2) == 0)
-        {
             *server_port = argv[++i];
-        }
         else if(strncmp(argv[i], "-r", 2) == 0)
-        {
             *ca_certificate = argv[++i];
-        }
         else
         {
             printf("Invalid option: '%s'\n", argv[i]);
@@ -165,9 +153,7 @@ use_low_level_api(const char *server_address,
     /* Build the request message. */
     Attribute a[3] = {0};
     for(int i = 0; i < 3; i++)
-    {
         kmip_init_attribute(&a[i]);
-    }
     
     enum cryptographic_algorithm algorithm = KMIP_CRYPTOALG_AES;
     a[0].type = KMIP_ATTR_CRYPTOGRAPHIC_ALGORITHM;
@@ -199,7 +185,7 @@ use_low_level_api(const char *server_address,
     CreateRequestPayload crp = {0};
     crp.object_type = KMIP_OBJTYPE_SYMMETRIC_KEY;
     crp.template_attribute = &ta;
-    
+
     RequestBatchItem rbi = {0};
     kmip_init_request_batch_item(&rbi);
     rbi.operation = KMIP_OP_CREATE;
@@ -209,7 +195,7 @@ use_low_level_api(const char *server_address,
     rm.request_header = &rh;
     rm.batch_items = &rbi;
     rm.batch_count = 1;
-    
+
     /* Encode the request message. Dynamically resize the encoding buffer */
     /* if it's not big enough. Once encoding succeeds, send the request   */
     /* message.                                                           */
@@ -225,6 +211,9 @@ use_low_level_api(const char *server_address,
         encoding = kmip_context.calloc_func(kmip_context.state, buffer_blocks, buffer_block_size);
         if(encoding == NULL)
         {
+            printf("Failure: Could not automatically enlarge the encoding ");
+            printf("buffer for the Create request.\n");
+
             kmip_destroy(&kmip_context);
             BIO_free_all(bio);
             SSL_CTX_free(ctx);
@@ -237,6 +226,15 @@ use_low_level_api(const char *server_address,
     
     if(encode_result != KMIP_OK)
     {
+        printf("An error occurred while encoding the Create request.\n");
+        printf("Error Code: %d\n", encode_result);
+        printf("Error Name: ");
+        kmip_print_error_string(encode_result);
+        printf("\n");
+        printf("Context Error: %s\n", kmip_context.error_message);
+        printf("Stack trace:\n");
+        kmip_print_stack_trace(&kmip_context);
+
         kmip_free_buffer(&kmip_context, encoding, buffer_total_size);
         encoding = NULL;
         kmip_set_buffer(&kmip_context, NULL, 0);
@@ -260,7 +258,7 @@ use_low_level_api(const char *server_address,
     printf("\n");
     if(result < 0)
     {
-        printf("An error occurred while creating the symmetric key.");
+        printf("An error occurred while creating the symmetric key.\n");
         printf("Error Code: %d\n", result);
         printf("Error Name: ");
         kmip_print_error_string(result);
@@ -287,6 +285,15 @@ use_low_level_api(const char *server_address,
     int decode_result = kmip_decode_response_message(&kmip_context, &resp_m);
     if(decode_result != KMIP_OK)
     {
+        printf("An error occurred while decoding the Create response.\n");
+        printf("Error Code: %d\n", decode_result);
+        printf("Error Name: ");
+        kmip_print_error_string(decode_result);
+        printf("\n");
+        printf("Context Error: %s\n", kmip_context.error_message);
+        printf("Stack trace:\n");
+        kmip_print_stack_trace(&kmip_context);
+
         kmip_free_response_message(&kmip_context, &resp_m);
         kmip_free_buffer(&kmip_context, response, response_size);
         response = NULL;
@@ -300,6 +307,7 @@ use_low_level_api(const char *server_address,
 
     if(resp_m.batch_count != 1 || resp_m.batch_items == NULL)
     {
+        printf("Expected to find one batch item in the Create response.\n");
         kmip_free_response_message(&kmip_context, &resp_m);
         kmip_free_buffer(&kmip_context, response, response_size);
         response = NULL;
@@ -324,9 +332,7 @@ use_low_level_api(const char *server_address,
             TextString *uuid = pld->unique_identifier;
             
             if(uuid != NULL)
-            {
                 printf("Symmetric Key ID: %.*s\n", (int)uuid->size, uuid->value);
-            }
         }
     }
     
@@ -353,9 +359,7 @@ main(int argc, char **argv)
     
     int error = parse_arguments(argc, argv, &server_address, &server_port, &client_certificate, &client_key, &ca_certificate, &help);
     if(error)
-    {
         return(error);
-    }
     if(help)
     {
         print_help(argv[0]);
@@ -363,6 +367,5 @@ main(int argc, char **argv)
     }
     
     use_low_level_api(server_address, server_port, client_certificate, client_key, ca_certificate);
-    
     return(0);
 }
