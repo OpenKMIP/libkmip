@@ -151,6 +151,14 @@ kmip_free(void *state, void *ptr)
     return;
 }
 
+/* TODO (ph) Consider replacing this with memcpy_s, ala memset_s. */
+void *
+kmip_memcpy(void *state, void *destination, const void *source, size_t size)
+{
+    (void)state;
+    return(memcpy(destination, source, size));
+}
+
 /*
 Enumeration Utilities
 */
@@ -1182,6 +1190,8 @@ kmip_init(KMIP *ctx, void *buffer, size_t buffer_size, enum kmip_version v)
     {
         ctx->free_func = &kmip_free;
     }
+    if(ctx->memcpy_func == NULL)
+        ctx->memcpy_func = &kmip_memcpy;
     
     ctx->max_message_size = 8192;
     ctx->error_message_size = 200;
@@ -1308,6 +1318,7 @@ kmip_destroy(KMIP *ctx)
     ctx->realloc_func = NULL;
     ctx->memset_func = NULL;
     ctx->free_func = NULL;
+    ctx->memcpy_func = NULL;
     ctx->state = NULL;
 }
 
@@ -5742,6 +5753,144 @@ kmip_free_response_message(KMIP *ctx, ResponseMessage *value)
     }
     
     return;
+}
+
+/*
+Copying Functions
+*/
+
+int32 *
+kmip_deep_copy_int32(KMIP *ctx, const int32 *value)
+{
+    if(ctx == NULL || value == NULL)
+        return(NULL);
+
+    int32 *copy = ctx->calloc_func(ctx, 1, sizeof(int32));
+    if(copy == NULL)
+        return(NULL);
+
+    copy = ctx->memcpy_func(ctx->state, copy, value, sizeof(int32));
+
+    return(copy);
+}
+
+TextString *
+kmip_deep_copy_text_string(KMIP *ctx, const TextString *value)
+{
+    if(ctx == NULL || value == NULL)
+        return(NULL);
+
+    TextString *copy = ctx->calloc_func(ctx->state, 1, sizeof(TextString));
+    if(copy == NULL)
+        return(NULL);
+
+    copy->size = value->size;
+    if(value->value != NULL)
+    {
+        copy->value = ctx->calloc_func(ctx->state, 1, value->size);
+        if(copy->value == NULL && value->value != NULL)
+        {
+            ctx->free_func(ctx->state, copy);
+            return(NULL);
+        }
+        copy->value = ctx->memcpy_func(ctx->state, copy->value, value->value, value->size);
+    }
+    else
+        copy->value = NULL;
+
+    return(copy);
+}
+
+Name *
+kmip_deep_copy_name(KMIP *ctx, const Name *value)
+{
+    if(ctx == NULL || value == NULL)
+        return(NULL);
+
+    Name *copy = ctx->calloc_func(ctx->state, 1, sizeof(Name));
+    if(copy == NULL)
+        return(NULL);
+
+    copy->type = value->type;
+    if(value->value != NULL)
+    {
+        copy->value = kmip_deep_copy_text_string(ctx, value->value);
+        if(copy->value == NULL)
+        {
+            ctx->free_func(ctx->state, copy);
+            return(NULL);
+        }
+    }
+    else
+        copy->value = NULL;
+
+    return(copy);
+}
+
+Attribute *
+kmip_deep_copy_attribute(KMIP *ctx, const Attribute *value)
+{
+    if(ctx == NULL || value == NULL)
+        return(NULL);
+
+    Attribute *copy = ctx->calloc_func(ctx->state, 1, sizeof(Attribute));
+    if(copy == NULL)
+        return(NULL);
+
+    copy->type = value->type;
+    copy->index = value->index;
+
+    if(value->value == NULL)
+    {
+        copy->value = NULL;
+        return(copy);
+    }
+
+    switch(value->type)
+    {
+        case KMIP_ATTR_UNIQUE_IDENTIFIER:
+        case KMIP_ATTR_OPERATION_POLICY_NAME:
+        {
+            copy->value = kmip_deep_copy_text_string(ctx, (TextString *)value->value);
+            if(copy->value == NULL)
+            {
+                ctx->free_func(ctx->state, copy);
+                return(NULL);
+            }
+        } break;
+
+        case KMIP_ATTR_NAME:
+        {
+            copy->value = kmip_deep_copy_name(ctx, (Name *)value->value);
+            if(copy->value == NULL)
+            {
+                ctx->free_func(ctx->state, copy);
+                return(NULL);
+            }
+        } break;
+
+        case KMIP_ATTR_OBJECT_TYPE:
+        case KMIP_ATTR_CRYPTOGRAPHIC_ALGORITHM:
+        case KMIP_ATTR_CRYPTOGRAPHIC_LENGTH:
+        case KMIP_ATTR_CRYPTOGRAPHIC_USAGE_MASK:
+        case KMIP_ATTR_STATE:
+        {
+            copy->value = kmip_deep_copy_int32(ctx, (int32 *)value->value);
+            if(copy->value == NULL)
+            {
+                ctx->free_func(ctx->state, copy);
+                return(NULL);
+            }
+        } break;
+
+        default:
+        {
+            ctx->free_func(ctx->state, copy);
+            return(NULL);
+        } break;
+    };
+
+    return(copy);
 }
 
 /*

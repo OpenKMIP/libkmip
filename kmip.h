@@ -743,6 +743,7 @@ typedef struct kmip
     void *(*calloc_func)(void *state, size_t num, size_t size);
     void *(*realloc_func)(void *state, void *ptr, size_t size);
     void (*free_func)(void *state, void *ptr);
+    void *(*memcpy_func)(void *state, void *destination, const void* source, size_t size);
     void *(*memset_func)(void *ptr, int value, size_t size);
     void *state;
 } KMIP;
@@ -1226,6 +1227,7 @@ Memory Handlers
 void *kmip_calloc(void *, size_t, size_t);
 void *kmip_realloc(void *, void *, size_t);
 void kmip_free(void *, void *);
+void *kmip_memcpy(void *, void *, const void *, size_t);
 
 /*
 Enumeration Utilities
@@ -1385,6 +1387,15 @@ void kmip_free_request_header(KMIP *, RequestHeader *);
 void kmip_free_response_header(KMIP *, ResponseHeader *);
 void kmip_free_request_message(KMIP *, RequestMessage *);
 void kmip_free_response_message(KMIP *, ResponseMessage *);
+
+/*
+Copying Functions
+*/
+
+int32 * kmip_deep_copy_int32(KMIP *, const int32 *);
+TextString * kmip_deep_copy_text_string(KMIP *, const TextString *);
+Name * kmip_deep_copy_name(KMIP *, const Name *);
+Attribute * kmip_deep_copy_attribute(KMIP *, const Attribute *);
 
 /*
 Comparison Functions

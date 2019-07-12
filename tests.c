@@ -1300,6 +1300,394 @@ test_compare_attributes(TestTracker *tracker)
 }
 
 int
+test_deep_copy_int32(TestTracker *tracker)
+{
+    TRACK_TEST(tracker);
+
+    int32 expected = 42;
+    int32 *observed = NULL;
+
+    observed = kmip_deep_copy_int32(NULL, NULL);
+    if(observed != NULL)
+        TEST_FAILED(tracker, __func__, __LINE__);
+
+    KMIP ctx = {0};
+    kmip_init(&ctx, NULL, 0, KMIP_1_0);
+
+    observed = kmip_deep_copy_int32(&ctx, NULL);
+    if(observed != NULL)
+    {
+        kmip_destroy(&ctx);
+        TEST_FAILED(tracker, __func__, __LINE__);
+    }
+
+    observed = kmip_deep_copy_int32(&ctx, &expected);
+    if(observed == NULL)
+    {
+        kmip_destroy(&ctx);
+        TEST_FAILED(tracker, __func__, __LINE__);
+    }
+    if(*observed != expected)
+    {
+        kmip_print_integer(expected);
+        kmip_print_integer(*observed);
+        ctx.free_func(ctx.state, observed);
+        kmip_destroy(&ctx);
+        TEST_FAILED(tracker, __func__, __LINE__);
+    }
+
+    ctx.free_func(ctx.state, observed);
+    kmip_destroy(&ctx);
+
+    TEST_PASSED(tracker, __func__);
+}
+
+int
+test_deep_copy_text_string(TestTracker *tracker)
+{
+    TRACK_TEST(tracker);
+
+    TextString expected = {0};
+    expected.value = "example";
+    expected.size = 7;
+    TextString *observed = NULL;
+
+    observed = kmip_deep_copy_text_string(NULL, NULL);
+    if(observed != NULL)
+        TEST_FAILED(tracker, __func__, __LINE__);
+
+    KMIP ctx = {0};
+    kmip_init(&ctx, NULL, 0, KMIP_1_0);
+
+    observed = kmip_deep_copy_text_string(&ctx, NULL);
+    if(observed != NULL)
+    {
+        kmip_destroy(&ctx);
+        TEST_FAILED(tracker, __func__, __LINE__);
+    }
+
+    observed = kmip_deep_copy_text_string(&ctx, &expected);
+    if(observed == NULL)
+    {
+        kmip_destroy(&ctx);
+        TEST_FAILED(tracker, __func__, __LINE__);
+    }
+    if(!kmip_compare_text_string(&expected, observed))
+    {
+        kmip_print_text_string(1, "Name Value", &expected);
+        kmip_print_text_string(1, "Name Value", observed);
+        kmip_free_text_string(&ctx, observed);
+        ctx.free_func(ctx.state, observed);
+        kmip_destroy(&ctx);
+        TEST_FAILED(tracker, __func__, __LINE__);
+    }
+
+    kmip_free_text_string(&ctx, observed);
+    ctx.free_func(ctx.state, observed);
+    kmip_destroy(&ctx);
+
+    TEST_PASSED(tracker, __func__);
+}
+
+int
+test_deep_copy_name(TestTracker *tracker)
+{
+    TRACK_TEST(tracker);
+
+    TextString value = {0};
+    value.value = "example";
+    value.size = 7;
+    Name expected = {0};
+    expected.value = &value;
+    expected.type = KMIP_NAME_UNINTERPRETED_TEXT_STRING;
+    Name *observed = NULL;
+
+    observed = kmip_deep_copy_name(NULL, NULL);
+    if(observed != NULL)
+        TEST_FAILED(tracker, __func__, __LINE__);
+
+    KMIP ctx = {0};
+    kmip_init(&ctx, NULL, 0, KMIP_1_0);
+
+    observed = kmip_deep_copy_name(&ctx, NULL);
+    if(observed != NULL)
+    {
+        kmip_destroy(&ctx);
+        TEST_FAILED(tracker, __func__, __LINE__);
+    }
+
+    observed = kmip_deep_copy_name(&ctx, &expected);
+    if(observed == NULL)
+    {
+        kmip_destroy(&ctx);
+        TEST_FAILED(tracker, __func__, __LINE__);
+    }
+    if(!kmip_compare_name(&expected, observed))
+    {
+        kmip_print_name(1, &expected);
+        kmip_print_name(1, observed);
+        kmip_free_name(&ctx, observed);
+        ctx.free_func(ctx.state, observed);
+        kmip_destroy(&ctx);
+        TEST_FAILED(tracker, __func__, __LINE__);
+    }
+
+    kmip_free_name(&ctx, observed);
+    ctx.free_func(ctx.state, observed);
+    kmip_destroy(&ctx);
+
+    TEST_PASSED(tracker, __func__);
+}
+
+int
+test_deep_copy_attribute(TestTracker *tracker)
+{
+    TRACK_TEST(tracker);
+
+    Attribute expected = {0};
+    kmip_init_attribute(&expected);
+    Attribute *observed = NULL;
+
+    observed = kmip_deep_copy_attribute(NULL, NULL);
+    if(observed != NULL)
+        TEST_FAILED(tracker, __func__, __LINE__);
+
+    KMIP ctx = {0};
+    kmip_init(&ctx, NULL, 0, KMIP_1_0);
+
+    observed = kmip_deep_copy_attribute(&ctx, NULL);
+    if(observed != NULL)
+    {
+        kmip_destroy(&ctx);
+        TEST_FAILED(tracker, __func__, __LINE__);
+    }
+
+    /* Test deep copying an "empty" attribute. */
+    observed = kmip_deep_copy_attribute(&ctx, &expected);
+    if(observed == NULL)
+    {
+        kmip_destroy(&ctx);
+        TEST_FAILED(tracker, __func__, __LINE__);
+    }
+    if(!kmip_compare_attribute(&expected, observed))
+    {
+        kmip_print_attribute(1, &expected);
+        kmip_print_attribute(1, observed);
+        kmip_free_attribute(&ctx, observed);
+        ctx.free_func(ctx.state, observed);
+        kmip_destroy(&ctx);
+        TEST_FAILED(tracker, __func__, __LINE__);
+    }
+
+    kmip_free_attribute(&ctx, observed);
+    ctx.free_func(ctx.state, observed);
+
+    /* Test deep copying a Unique Identifier attribute. */
+    TextString uuid = {0};
+    uuid.value = "49a1ca88-6bea-4fb2-b450-7e58802c3038";
+    uuid.size = 36;
+    expected.type = KMIP_ATTR_UNIQUE_IDENTIFIER;
+    expected.value = &uuid;
+
+    observed = kmip_deep_copy_attribute(&ctx, &expected);
+    if(observed == NULL)
+    {
+        kmip_destroy(&ctx);
+        TEST_FAILED(tracker, __func__, __LINE__);
+    }
+    if(!kmip_compare_attribute(&expected, observed))
+    {
+        kmip_print_attribute(1, &expected);
+        kmip_print_attribute(1, observed);
+        kmip_free_attribute(&ctx, observed);
+        ctx.free_func(ctx.state, observed);
+        kmip_destroy(&ctx);
+        TEST_FAILED(tracker, __func__, __LINE__);
+    }
+
+    kmip_free_attribute(&ctx, observed);
+    ctx.free_func(ctx.state, observed);
+
+    /* Test deep copying an Operation Policy Name attribute. */
+    TextString policy = {0};
+    policy.value = "default";
+    policy.size = 7;
+    expected.type = KMIP_ATTR_OPERATION_POLICY_NAME;
+    expected.value = &policy;
+
+    observed = kmip_deep_copy_attribute(&ctx, &expected);
+    if(observed == NULL)
+    {
+        kmip_destroy(&ctx);
+        TEST_FAILED(tracker, __func__, __LINE__);
+    }
+    if(!kmip_compare_attribute(&expected, observed))
+    {
+        kmip_print_attribute(1, &expected);
+        kmip_print_attribute(1, observed);
+        kmip_free_attribute(&ctx, observed);
+        ctx.free_func(ctx.state, observed);
+        kmip_destroy(&ctx);
+        TEST_FAILED(tracker, __func__, __LINE__);
+    }
+
+    kmip_free_attribute(&ctx, observed);
+    ctx.free_func(ctx.state, observed);
+
+    /* Test deep copying a Name attribute. */
+    TextString name_value = {0};
+    name_value.value = "example";
+    name_value.size = 7;
+    Name name = {0};
+    name.value = &name_value;
+    name.type = KMIP_NAME_UNINTERPRETED_TEXT_STRING;
+    expected.type = KMIP_ATTR_NAME;
+    expected.value = &name;
+
+    observed = kmip_deep_copy_attribute(&ctx, &expected);
+    if(observed == NULL)
+    {
+        kmip_destroy(&ctx);
+        TEST_FAILED(tracker, __func__, __LINE__);
+    }
+    if(!kmip_compare_attribute(&expected, observed))
+    {
+        kmip_print_attribute(1, &expected);
+        kmip_print_attribute(1, observed);
+        kmip_free_attribute(&ctx, observed);
+        ctx.free_func(ctx.state, observed);
+        kmip_destroy(&ctx);
+        TEST_FAILED(tracker, __func__, __LINE__);
+    }
+
+    kmip_free_attribute(&ctx, observed);
+    ctx.free_func(ctx.state, observed);
+
+    /* Test deep copying an Object Type attribute. */
+    enum object_type object_type = KMIP_OBJTYPE_SYMMETRIC_KEY;
+    expected.type = KMIP_ATTR_OBJECT_TYPE;
+    expected.value = &object_type;
+
+    observed = kmip_deep_copy_attribute(&ctx, &expected);
+    if(observed == NULL)
+    {
+        kmip_destroy(&ctx);
+        TEST_FAILED(tracker, __func__, __LINE__);
+    }
+    if(!kmip_compare_attribute(&expected, observed))
+    {
+        kmip_print_attribute(1, &expected);
+        kmip_print_attribute(1, observed);
+        kmip_free_attribute(&ctx, observed);
+        ctx.free_func(ctx.state, observed);
+        kmip_destroy(&ctx);
+        TEST_FAILED(tracker, __func__, __LINE__);
+    }
+
+    kmip_free_attribute(&ctx, observed);
+    ctx.free_func(ctx.state, observed);
+
+    /* Test deep copying a Cryptographic Algorithm attribute. */
+    enum cryptographic_algorithm cryptographic_algorithm = KMIP_CRYPTOALG_AES;
+    expected.type = KMIP_ATTR_CRYPTOGRAPHIC_ALGORITHM;
+    expected.value = &cryptographic_algorithm;
+
+    observed = kmip_deep_copy_attribute(&ctx, &expected);
+    if(observed == NULL)
+    {
+        kmip_destroy(&ctx);
+        TEST_FAILED(tracker, __func__, __LINE__);
+    }
+    if(!kmip_compare_attribute(&expected, observed))
+    {
+        kmip_print_attribute(1, &expected);
+        kmip_print_attribute(1, observed);
+        kmip_free_attribute(&ctx, observed);
+        ctx.free_func(ctx.state, observed);
+        kmip_destroy(&ctx);
+        TEST_FAILED(tracker, __func__, __LINE__);
+    }
+
+    kmip_free_attribute(&ctx, observed);
+    ctx.free_func(ctx.state, observed);
+
+    /* Test deep copying a Cryptographic Length attribute. */
+    int32 cryptographic_length = 256;
+    expected.type = KMIP_ATTR_CRYPTOGRAPHIC_LENGTH;
+    expected.value = &cryptographic_length;
+
+    observed = kmip_deep_copy_attribute(&ctx, &expected);
+    if(observed == NULL)
+    {
+        kmip_destroy(&ctx);
+        TEST_FAILED(tracker, __func__, __LINE__);
+    }
+    if(!kmip_compare_attribute(&expected, observed))
+    {
+        kmip_print_attribute(1, &expected);
+        kmip_print_attribute(1, observed);
+        kmip_free_attribute(&ctx, observed);
+        ctx.free_func(ctx.state, observed);
+        kmip_destroy(&ctx);
+        TEST_FAILED(tracker, __func__, __LINE__);
+    }
+
+    kmip_free_attribute(&ctx, observed);
+    ctx.free_func(ctx.state, observed);
+
+    /* Test deep copying a Cryptographic Usage Mask attribute. */
+    int32 cryptographic_usage_mask = KMIP_CRYPTOMASK_ENCRYPT | KMIP_CRYPTOMASK_DECRYPT;
+    expected.type = KMIP_ATTR_CRYPTOGRAPHIC_USAGE_MASK;
+    expected.value = &cryptographic_usage_mask;
+
+    observed = kmip_deep_copy_attribute(&ctx, &expected);
+    if(observed == NULL)
+    {
+        kmip_destroy(&ctx);
+        TEST_FAILED(tracker, __func__, __LINE__);
+    }
+    if(!kmip_compare_attribute(&expected, observed))
+    {
+        kmip_print_attribute(1, &expected);
+        kmip_print_attribute(1, observed);
+        kmip_free_attribute(&ctx, observed);
+        ctx.free_func(ctx.state, observed);
+        kmip_destroy(&ctx);
+        TEST_FAILED(tracker, __func__, __LINE__);
+    }
+
+    kmip_free_attribute(&ctx, observed);
+    ctx.free_func(ctx.state, observed);
+
+    /* Test deep copying a State attribute. */
+    enum state state = KMIP_STATE_ACTIVE;
+    expected.type = KMIP_ATTR_STATE;
+    expected.value = &state;
+
+    observed = kmip_deep_copy_attribute(&ctx, &expected);
+    if(observed == NULL)
+    {
+        kmip_destroy(&ctx);
+        TEST_FAILED(tracker, __func__, __LINE__);
+    }
+    if(!kmip_compare_attribute(&expected, observed))
+    {
+        kmip_print_attribute(1, &expected);
+        kmip_print_attribute(1, observed);
+        kmip_free_attribute(&ctx, observed);
+        ctx.free_func(ctx.state, observed);
+        kmip_destroy(&ctx);
+        TEST_FAILED(tracker, __func__, __LINE__);
+    }
+
+    kmip_free_attribute(&ctx, observed);
+    ctx.free_func(ctx.state, observed);
+    kmip_destroy(&ctx);
+
+    TEST_PASSED(tracker, __func__);
+}
+
+int
 test_decode_int8_be(TestTracker *tracker)
 {
     TRACK_TEST(tracker);
@@ -10432,6 +10820,10 @@ run_tests(void)
     test_check_enum_value_protection_storage_masks(&tracker);
     test_init_protocol_version(&tracker);
     test_init_request_batch_item(&tracker);
+    test_deep_copy_int32(&tracker);
+    test_deep_copy_text_string(&tracker);
+    test_deep_copy_name(&tracker);
+    test_deep_copy_attribute(&tracker);
 
     printf("\nKMIP 1.0 Feature Tests\n");
     printf("----------------------\n");
