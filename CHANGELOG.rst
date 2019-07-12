@@ -2,6 +2,21 @@
 Changelog
 =========
 
+.. _v0.2:
+
+0.2 - July 12, 2019
+~~~~~~~~~~~~~~~~~~~
+
+* Add the BSD 3-clause license to the library
+* Add KMIP 2.0 attributes
+* Add deep copy utilities for all attribute types
+* Upgrade Create support to enable KMIP 2.0 encodings
+* Upgrade the unit test suite to use intelligent test tracking
+* Upgrade the linked list to support enqueue and double linkage
+* Fix an implicit infinite loop in the test suite application
+* Fix a usage issue when passing no args to the demo applications
+* Fix Travis CI config to redirect OpenSSL install logs to a file 
+
 .. _v0.1:
 
 0.1 - November 15, 2018
