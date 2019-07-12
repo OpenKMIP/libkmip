@@ -1749,79 +1749,108 @@ kmip_print_stack_trace(KMIP *ctx)
 void
 kmip_print_error_string(int value)
 {
+    /* TODO (ph) Move this to a static string array. */
     switch(value)
     {
         case 0:
-        printf("KMIP_OK");
-        break;
+        {
+            printf("KMIP_OK");
+        } break;
         
         case -1:
-        printf("KMIP_NOT_IMPLEMENTED");
-        break;
+        {
+            printf("KMIP_NOT_IMPLEMENTED");
+        } break;
         
         case -2:
-        printf("KMIP_ERROR_BUFFER_FULL");
-        break;
+        {
+            printf("KMIP_ERROR_BUFFER_FULL");
+        } break;
         
         case -3:
-        printf("KMIP_ERROR_ATTR_UNSUPPORTED");
-        break;
+        {
+            printf("KMIP_ERROR_ATTR_UNSUPPORTED");
+        } break;
         
         case -4:
-        printf("KMIP_TAG_MISMATCH");
-        break;
+        {
+            printf("KMIP_TAG_MISMATCH");
+        } break;
         
         case -5:
-        printf("KMIP_TYPE_MISMATCH");
-        break;
+        {
+            printf("KMIP_TYPE_MISMATCH");
+        } break;
         
         case -6:
-        printf("KMIP_LENGTH_MISMATCH");
-        break;
+        {
+            printf("KMIP_LENGTH_MISMATCH");
+        } break;
         
         case -7:
-        printf("KMIP_PADDING_MISMATCH");
-        break;
+        {
+            printf("KMIP_PADDING_MISMATCH");
+        } break;
         
         case -8:
-        printf("KMIP_BOOLEAN_MISMATCH");
-        break;
+        {
+            printf("KMIP_BOOLEAN_MISMATCH");
+        } break;
         
         case -9:
-        printf("KMIP_ENUM_MISMATCH");
-        break;
+        {
+            printf("KMIP_ENUM_MISMATCH");
+        } break;
         
         case -10:
-        printf("KMIP_ENUM_UNSUPPORTED");
-        break;
+        {
+            printf("KMIP_ENUM_UNSUPPORTED");
+        } break;
         
         case -11:
-        printf("KMIP_INVALID_FOR_VERSION");
-        break;
+        {
+            printf("KMIP_INVALID_FOR_VERSION");
+        } break;
         
         case -12:
-        printf("KMIP_MEMORY_ALLOC_FAILED");
-        break;
+        {
+            printf("KMIP_MEMORY_ALLOC_FAILED");
+        } break;
 
         case -13:
-        printf("KMIP_IO_FAILURE");
-        break;
+        {
+            printf("KMIP_IO_FAILURE");
+        } break;
 
         case -14:
-        printf("KMIP_EXCEED_MAX_MESSAGE_SIZE");
-        break;
+        {
+            printf("KMIP_EXCEED_MAX_MESSAGE_SIZE");
+        } break;
 
         case -15:
-        printf("KMIP_MALFORMED_RESPONSE");
-        break;
+        {
+            printf("KMIP_MALFORMED_RESPONSE");
+        } break;
 
         case -16:
-        printf("KMIP_OBJECT_MISMATCH");
-        break;
-        
+        {
+            printf("KMIP_OBJECT_MISMATCH");
+        } break;
+
+        case -17:
+        {
+            printf("KMIP_ARG_INVALID");
+        } break;
+
+        case -18:
+        {
+            printf("KMIP_ERROR_BUFFER_UNDERFULL");
+        } break;
+
         default:
-        printf("Unknown");
-        break;
+        {
+            printf("Unrecognized Error Code");
+        } break;
     };
     
     return;
