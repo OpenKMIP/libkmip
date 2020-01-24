@@ -1543,6 +1543,18 @@ Initialization Functions
 */
 
 void
+kmip_init_application_specific_information(ApplicationSpecificInformation *value)
+{
+    if(value == NULL)
+    {
+        return;
+    }
+
+    value->application_namespace = NULL;
+    value->application_data = NULL;
+}
+
+void
 kmip_init_protocol_version(ProtocolVersion *value, enum kmip_version kmip_version)
 {
     if(value == NULL)
@@ -2754,6 +2766,12 @@ kmip_print_attribute_type_enum(enum attribute_type value)
     
     switch(value)
     {
+        case KMIP_ATTR_APPLICATION_SPECIFIC_INFORMATION:
+        {
+            printf("Application Specific Information");
+        }
+        break;
+
         case KMIP_ATTR_UNIQUE_IDENTIFIER:
         printf("Unique Identifier");
         break;
@@ -3756,6 +3774,18 @@ kmip_print_nonce(int indent, Nonce *value)
 }
 
 void
+kmip_print_application_specific_information(int indent, ApplicationSpecificInformation *value)
+{
+    printf("%*sApplication Specific Information @ %p\n", indent, "", (void *)value);
+
+    if(value != NULL)
+    {
+        kmip_print_text_string(indent + 2, "Application Namespace", value->application_namespace);
+        kmip_print_text_string(indent + 2, "Application Data", value->application_data);
+    }
+}
+
+void
 kmip_print_cryptographic_parameters(int indent, CryptographicParameters *value)
 {
     printf("%*sCryptographic Parameters @ %p\n", indent, "", (void *)value);
@@ -3894,6 +3924,13 @@ kmip_print_attribute_value(int indent, enum attribute_type type, void *value)
     
     switch(type)
     {
+        case KMIP_ATTR_APPLICATION_SPECIFIC_INFORMATION:
+        {
+            printf("\n");
+            kmip_print_application_specific_information(indent + 2, value);
+        }
+        break;
+
         case KMIP_ATTR_UNIQUE_IDENTIFIER:
         printf("\n");
         kmip_print_text_string(indent + 2, "Unique Identifier", value);
@@ -4669,6 +4706,12 @@ kmip_free_attribute(KMIP *ctx, Attribute *value)
         {
             switch(value->type)
             {
+                case KMIP_ATTR_APPLICATION_SPECIFIC_INFORMATION:
+                {
+                    kmip_free_application_specific_information(ctx, value->value);
+                }
+                break;
+
                 case KMIP_ATTR_UNIQUE_IDENTIFIER:
                 kmip_free_text_string(ctx, value->value);
                 break;
@@ -4866,6 +4909,31 @@ kmip_free_key_value(KMIP *ctx, enum key_format_type format, KeyValue *value)
         value->attribute_count = 0;
     }
     
+    return;
+}
+
+void
+kmip_free_application_specific_information(KMIP *ctx, ApplicationSpecificInformation *value)
+{
+    if(value != NULL)
+    {
+        if(value->application_namespace != NULL)
+        {
+            kmip_free_text_string(ctx, value->application_namespace);
+
+            ctx->free_func(ctx->state, value->application_namespace);
+            value->application_namespace = NULL;
+        }
+
+        if(value->application_data != NULL)
+        {
+            kmip_free_text_string(ctx, value->application_data);
+
+            ctx->free_func(ctx->state, value->application_data);
+            value->application_data = NULL;
+        }
+    }
+
     return;
 }
 
@@ -5827,6 +5895,52 @@ kmip_deep_copy_name(KMIP *ctx, const Name *value)
     return(copy);
 }
 
+ApplicationSpecificInformation *
+kmip_deep_copy_application_specific_information(KMIP *ctx, const ApplicationSpecificInformation *value)
+{
+    if(ctx == NULL || value == NULL)
+    {
+        return(NULL);
+    }
+
+    ApplicationSpecificInformation *copy = ctx->calloc_func(ctx->state, 1, sizeof(ApplicationSpecificInformation));
+    if(copy == NULL)
+    {
+        return(NULL);
+    }
+
+    if(value->application_namespace != NULL)
+    {
+        copy->application_namespace = kmip_deep_copy_text_string(ctx, value->application_namespace);
+        if(copy->application_namespace == NULL)
+        {
+            ctx->free_func(ctx->state, copy);
+            return(NULL);
+        }
+    }
+    else
+    {
+        copy->application_namespace = NULL;
+    }
+
+    if(value->application_data != NULL)
+    {
+        copy->application_data = kmip_deep_copy_text_string(ctx, value->application_data);
+        if(copy->application_data == NULL)
+        {
+            kmip_free_application_specific_information(ctx, copy);
+            ctx->free_func(ctx->state, copy);
+            return(NULL);
+        }
+    }
+    else
+    {
+        copy->application_data = NULL;
+    }
+
+    return(copy);
+}
+
 Attribute *
 kmip_deep_copy_attribute(KMIP *ctx, const Attribute *value)
 {
@@ -6078,6 +6192,17 @@ kmip_compare_attribute(const Attribute *a, const Attribute *b)
             
             switch(a->type)
             {
+                case KMIP_ATTR_APPLICATION_SPECIFIC_INFORMATION:
+                {
+                    return(
+                        kmip_compare_application_specific_information(
+                            (ApplicationSpecificInformation*)a->value,
+                            (ApplicationSpecificInformation*)b->value
+                        )
+                    );
+                }
+                break;
+
                 case KMIP_ATTR_UNIQUE_IDENTIFIER:
                 return(kmip_compare_text_string((TextString *)a->value, (TextString *)b->value));
                 break;
@@ -6382,6 +6507,46 @@ kmip_compare_key_value(enum key_format_type format, const KeyValue *a, const Key
         }
     }
     
+    return(KMIP_TRUE);
+}
+
+int
+kmip_compare_application_specific_information(const ApplicationSpecificInformation *a, const ApplicationSpecificInformation *b)
+{
+    if(a != b)
+    {
+        if((a == NULL) || (b == NULL))
+        {
+            return(KMIP_FALSE);
+        }
+
+        if(a->application_namespace != b->application_namespace)
+        {
+            if((a->application_namespace == NULL) || (b->application_namespace == NULL))
+            {
+                return(KMIP_FALSE);
+            }
+
+            if(kmip_compare_text_string(a->application_namespace, b->application_namespace) == KMIP_FALSE)
+            {
+                return(KMIP_FALSE);
+            }
+        }
+
+        if(a->application_data != b->application_data)
+        {
+            if((a->application_data == NULL) || (b->application_data == NULL))
+            {
+                return(KMIP_FALSE);
+            }
+
+            if(kmip_compare_text_string(a->application_data, b->application_data) == KMIP_FALSE)
+            {
+                return(KMIP_FALSE);
+            }
+        }
+    }
+
     return(KMIP_TRUE);
 }
 
@@ -8282,6 +8447,13 @@ kmip_encode_attribute_name(KMIP *ctx, enum attribute_type value)
         attribute_name.value = "State";
         attribute_name.size = 5;
         break;
+
+        case KMIP_ATTR_APPLICATION_SPECIFIC_INFORMATION:
+        {
+            attribute_name.value = "Application Specific Information";
+            attribute_name.size = 32;
+        }
+        break;
         
         default:
         kmip_push_error_frame(ctx, __func__, __LINE__);
@@ -8324,6 +8496,20 @@ kmip_encode_attribute_v1(KMIP *ctx, const Attribute *value)
     
     switch(value->type)
     {
+        case KMIP_ATTR_APPLICATION_SPECIFIC_INFORMATION:
+        {
+            result = kmip_encode_application_specific_information(ctx, (ApplicationSpecificInformation*)value->value);
+            CHECK_RESULT(ctx, result);
+
+            curr_index = ctx->index;
+            ctx->index = tag_index;
+
+            result = kmip_encode_int32_be(ctx, TAG_TYPE(KMIP_TAG_ATTRIBUTE_VALUE, KMIP_TYPE_STRUCTURE));
+
+            ctx->index = curr_index;
+        }
+        break;
+
         case KMIP_ATTR_UNIQUE_IDENTIFIER:
         result = kmip_encode_text_string(ctx, t, (TextString*)value->value);
         break;
@@ -8393,6 +8579,15 @@ kmip_encode_attribute_v2(KMIP *ctx, const Attribute *value)
 
     switch(value->type)
     {
+        case KMIP_ATTR_APPLICATION_SPECIFIC_INFORMATION:
+        {
+            result = kmip_encode_application_specific_information(
+                ctx,
+                (ApplicationSpecificInformation*)value->value
+            );
+        }
+        break;
+
         case KMIP_ATTR_UNIQUE_IDENTIFIER:
         {
             result = kmip_encode_text_string(
@@ -8591,6 +8786,51 @@ kmip_encode_protocol_version(KMIP *ctx, const ProtocolVersion *value)
     
     ctx->index = curr_index;
     
+    return(KMIP_OK);
+}
+
+int
+kmip_encode_application_specific_information(KMIP *ctx, const ApplicationSpecificInformation *value)
+{
+    int result = 0;
+    result = kmip_encode_int32_be(ctx, TAG_TYPE(KMIP_TAG_APPLICATION_SPECIFIC_INFORMATION, KMIP_TYPE_STRUCTURE));
+    CHECK_RESULT(ctx, result);
+
+    uint8 *length_index = ctx->index;
+    uint8 *value_index = ctx->index += 4;
+
+    if(value->application_namespace != NULL)
+    {
+        result = kmip_encode_text_string(ctx, KMIP_TAG_APPLICATION_NAMESPACE, value->application_namespace);
+        CHECK_RESULT(ctx, result);
+    }
+    else
+    {
+        kmip_set_error_message(ctx, "The ApplicationSpecificInformation structure is missing the application name field.");
+        kmip_push_error_frame(ctx, __func__, __LINE__);
+        return(KMIP_INVALID_FIELD);
+    }
+
+    if(value->application_data != NULL)
+    {
+        result = kmip_encode_text_string(ctx, KMIP_TAG_APPLICATION_DATA, value->application_data);
+        CHECK_RESULT(ctx, result);
+    }
+    else
+    {
+        if(ctx->version < KMIP_1_3)
+        {
+            kmip_set_error_message(ctx, "The ApplicationSpecificInformation structure is missing the application data field.");
+            kmip_push_error_frame(ctx, __func__, __LINE__);
+            return(KMIP_INVALID_FIELD);
+        }
+    }
+
+    uint8 *curr_index = ctx->index;
+    ctx->index = length_index;
+    kmip_encode_int32_be(ctx, curr_index - value_index);
+    ctx->index = curr_index;
+
     return(KMIP_OK);
 }
 
@@ -10287,7 +10527,11 @@ kmip_decode_attribute_name(KMIP *ctx, enum attribute_type *value)
     result = kmip_decode_text_string(ctx, t, &n);
     CHECK_RESULT(ctx, result);
     
-    if((n.size == 17) && (strncmp(n.value, "Unique Identifier", 17) == 0))
+    if((n.size == 32) && (strncmp(n.value, "Application Specific Information", 32) == 0))
+    {
+        *value = KMIP_ATTR_APPLICATION_SPECIFIC_INFORMATION;
+    }
+    else if((n.size == 17) && (strncmp(n.value, "Unique Identifier", 17) == 0))
     {
         *value = KMIP_ATTR_UNIQUE_IDENTIFIER;
     }
@@ -10404,6 +10648,38 @@ kmip_decode_attribute_v1(KMIP *ctx, Attribute *value)
     
     switch(value->type)
     {
+        case KMIP_ATTR_APPLICATION_SPECIFIC_INFORMATION:
+        {
+            /* TODO (ph) Like encoding, this is messy. Better solution? */
+            if(kmip_is_tag_type_next(ctx, KMIP_TAG_ATTRIBUTE_VALUE, KMIP_TYPE_STRUCTURE))
+            {
+                /* NOTE (ph) Decoding structures will fail if the structure tag */
+                /* is not present in the encoding. Temporarily swap the tags, */
+                /* decode the structure, and then swap the tags back to */
+                /* preserve the encoding. The tag/type check above guarantees */
+                /* space exists for this to succeed. */
+                kmip_encode_int32_be(ctx, TAG_TYPE(KMIP_TAG_APPLICATION_SPECIFIC_INFORMATION, KMIP_TYPE_STRUCTURE));
+                ctx->index = tag_index;
+                value->value = ctx->calloc_func(ctx->state, 1, sizeof(ApplicationSpecificInformation));
+                CHECK_NEW_MEMORY(ctx, value->value, sizeof(ApplicationSpecificInformation), "ApplicationSpecificInformation structure");
+                result = kmip_decode_application_specific_information(ctx, (ApplicationSpecificInformation*)value->value);
+
+                curr_index = ctx->index;
+                ctx->index = tag_index;
+
+                kmip_encode_int32_be(ctx, TAG_TYPE(KMIP_TAG_ATTRIBUTE_VALUE, KMIP_TYPE_STRUCTURE));
+                ctx->index = curr_index;
+            }
+            else
+            {
+                result = KMIP_TAG_MISMATCH;
+            }
+
+            CHECK_RESULT(ctx, result);
+
+        }
+        break;
+
         case KMIP_ATTR_UNIQUE_IDENTIFIER:
         value->value = ctx->calloc_func(ctx->state, 1, sizeof(TextString));
         CHECK_NEW_MEMORY(ctx, value->value, sizeof(TextString), "UniqueIdentifier text string");
@@ -10412,34 +10688,34 @@ kmip_decode_attribute_v1(KMIP *ctx, Attribute *value)
         break;
         
         case KMIP_ATTR_NAME:
-        /* TODO (ph) Like encoding, this is messy. Better solution? */
-        value->value = ctx->calloc_func(ctx->state, 1, sizeof(Name));
-        CHECK_NEW_MEMORY(ctx, value->value, sizeof(Name), "Name structure");
-        
-        if(kmip_is_tag_type_next(ctx, KMIP_TAG_ATTRIBUTE_VALUE, KMIP_TYPE_STRUCTURE))
         {
-            /* NOTE (ph) Decoding name structures will fail if the name tag */
-            /* is not present in the encoding. Temporarily swap the tags, */
-            /* decode the name structure, and then swap the tags back to */
-            /* preserve the encoding. The tag/type check above guarantees */
-            /* space exists for this to succeed. */
-            kmip_encode_int32_be(ctx, TAG_TYPE(KMIP_TAG_NAME, KMIP_TYPE_STRUCTURE));
-            ctx->index = tag_index;
-            
-            result = kmip_decode_name(ctx, (Name*)value->value);
-            
-            curr_index = ctx->index;
-            ctx->index = tag_index;
-            
-            kmip_encode_int32_be(ctx, TAG_TYPE(KMIP_TAG_ATTRIBUTE_VALUE, KMIP_TYPE_STRUCTURE));
-            ctx->index = curr_index;
+            /* TODO (ph) Like encoding, this is messy. Better solution? */
+            if(kmip_is_tag_type_next(ctx, KMIP_TAG_ATTRIBUTE_VALUE, KMIP_TYPE_STRUCTURE))
+            {
+                /* NOTE (ph) Decoding structures will fail if the structure tag */
+                /* is not present in the encoding. Temporarily swap the tags, */
+                /* decode the structure, and then swap the tags back to */
+                /* preserve the encoding. The tag/type check above guarantees */
+                /* space exists for this to succeed. */
+                kmip_encode_int32_be(ctx, TAG_TYPE(KMIP_TAG_NAME, KMIP_TYPE_STRUCTURE));
+                ctx->index = tag_index;
+                value->value = ctx->calloc_func(ctx->state, 1, sizeof(Name));
+                CHECK_NEW_MEMORY(ctx, value->value, sizeof(Name), "Name structure");
+                result = kmip_decode_name(ctx, (Name*)value->value);
+
+                curr_index = ctx->index;
+                ctx->index = tag_index;
+
+                kmip_encode_int32_be(ctx, TAG_TYPE(KMIP_TAG_ATTRIBUTE_VALUE, KMIP_TYPE_STRUCTURE));
+                ctx->index = curr_index;
+            }
+            else
+            {
+                result = KMIP_TAG_MISMATCH;
+            }
+
+            CHECK_RESULT(ctx, result);
         }
-        else
-        {
-            result = KMIP_TAG_MISMATCH;
-        }
-        
-        CHECK_RESULT(ctx, result);
         break;
         
         case KMIP_ATTR_OBJECT_TYPE:
@@ -10596,6 +10872,17 @@ kmip_decode_attribute_v2(KMIP *ctx, Attribute *value)
             CHECK_RESULT(ctx, result);
 
             CHECK_ENUM(ctx, KMIP_TAG_STATE, *(int32 *)value->value);
+        }
+        break;
+
+        case KMIP_TAG_APPLICATION_SPECIFIC_INFORMATION:
+        {
+            value->type = KMIP_ATTR_APPLICATION_SPECIFIC_INFORMATION;
+            value->value = ctx->calloc_func(ctx->state, 1, sizeof(ApplicationSpecificInformation));
+            CHECK_NEW_MEMORY(ctx, value->value, sizeof(ApplicationSpecificInformation), "ApplicationSpecificInformation structure");
+
+            result = kmip_decode_application_specific_information(ctx, value->value);
+            CHECK_RESULT(ctx, result);
         }
         break;
 
@@ -10845,6 +11132,59 @@ kmip_decode_key_value(KMIP *ctx, enum key_format_type format, KeyValue *value)
         }
     }
     
+    return(KMIP_OK);
+}
+
+int
+kmip_decode_application_specific_information(KMIP *ctx, ApplicationSpecificInformation *value)
+{
+    CHECK_BUFFER_FULL(ctx, 8);
+
+    kmip_init_application_specific_information(value);
+
+    int result = 0;
+    int32 tag_type = 0;
+    uint32 length = 0;
+
+    kmip_decode_int32_be(ctx, &tag_type);
+    CHECK_TAG_TYPE(ctx, tag_type, KMIP_TAG_APPLICATION_SPECIFIC_INFORMATION, KMIP_TYPE_STRUCTURE);
+
+    kmip_decode_int32_be(ctx, &length);
+    CHECK_BUFFER_FULL(ctx, length);
+
+    if(kmip_is_tag_next(ctx, KMIP_TAG_APPLICATION_NAMESPACE))
+    {
+        value->application_namespace = ctx->calloc_func(ctx->state, 1, sizeof(TextString));
+        CHECK_NEW_MEMORY(ctx, value->application_namespace, sizeof(TextString), "Application Namespace text string");
+
+        result = kmip_decode_text_string(ctx, KMIP_TAG_APPLICATION_NAMESPACE, value->application_namespace);
+        CHECK_RESULT(ctx, result);
+    }
+    else
+    {
+        kmip_set_error_message(ctx, "The ApplicationSpecificInformation encoding is missing the application name field.");
+        kmip_push_error_frame(ctx, __func__, __LINE__);
+        return(KMIP_INVALID_ENCODING);
+    }
+
+    if(kmip_is_tag_next(ctx, KMIP_TAG_APPLICATION_DATA))
+    {
+        value->application_data = ctx->calloc_func(ctx->state, 1, sizeof(TextString));
+        CHECK_NEW_MEMORY(ctx, value->application_data, sizeof(TextString), "Application Data text string");
+
+        result = kmip_decode_text_string(ctx, KMIP_TAG_APPLICATION_DATA, value->application_data);
+        CHECK_RESULT(ctx, result);
+    }
+    else
+    {
+        if(ctx->version < KMIP_1_3)
+        {
+            kmip_set_error_message(ctx, "The ApplicationSpecificInformation encoding is missing the application data field.");
+            kmip_push_error_frame(ctx, __func__, __LINE__);
+            return(KMIP_INVALID_ENCODING);
+        }
+    }
+
     return(KMIP_OK);
 }
 
