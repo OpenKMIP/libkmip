@@ -2409,6 +2409,233 @@ test_decode_protection_storage_masks(TestTracker *tracker)
 }
 
 int
+test_encode_attribute_application_specific_information(TestTracker *tracker)
+{
+    TRACK_TEST(tracker);
+
+    uint8 expected[96] = {
+        0x42, 0x00, 0x08, 0x01, 0x00, 0x00, 0x00, 0x58,
+        0x42, 0x00, 0x0A, 0x07, 0x00, 0x00, 0x00, 0x20,
+        0x41, 0x70, 0x70, 0x6C, 0x69, 0x63, 0x61, 0x74,
+        0x69, 0x6F, 0x6E, 0x20, 0x53, 0x70, 0x65, 0x63,
+        0x69, 0x66, 0x69, 0x63, 0x20, 0x49, 0x6E, 0x66,
+        0x6F, 0x72, 0x6D, 0x61, 0x74, 0x69, 0x6F, 0x6E,
+        0x42, 0x00, 0x0B, 0x01, 0x00, 0x00, 0x00, 0x28,
+        0x42, 0x00, 0x03, 0x07, 0x00, 0x00, 0x00, 0x03,
+        0x73, 0x73, 0x6C, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x42, 0x00, 0x02, 0x07, 0x00, 0x00, 0x00, 0x0F,
+        0x77, 0x77, 0x77, 0x2E, 0x65, 0x78, 0x61, 0x6D,
+        0x70, 0x6C, 0x65, 0x2E, 0x63, 0x6F, 0x6D, 0x00
+    };
+
+    uint8 observed[96] = {0};
+    KMIP ctx = {0};
+    kmip_init(&ctx, observed, ARRAY_LENGTH(observed), KMIP_1_0);
+
+    TextString namespace = {0};
+    namespace.value = "ssl";
+    namespace.size = 3;
+
+    TextString data = {0};
+    data.value = "www.example.com";
+    data.size = 15;
+
+    ApplicationSpecificInformation asi = {0};
+    asi.application_namespace = &namespace;
+    asi.application_data = &data;
+
+    Attribute attr = {0};
+    kmip_init_attribute(&attr);
+
+    attr.type = KMIP_ATTR_APPLICATION_SPECIFIC_INFORMATION;
+    attr.value = &asi;
+
+    int result = kmip_encode_attribute(&ctx, &attr);
+    result = report_encoding_test_result(
+        tracker,
+        &ctx,
+        expected,
+        observed,
+        result,
+        __func__);
+    kmip_destroy(&ctx);
+    return(result);
+}
+
+int
+test_encode_attribute_application_specific_information_invalid_field(TestTracker *tracker)
+{
+    TRACK_TEST(tracker);
+
+    uint8 observed[96] = {0};
+    KMIP ctx = {0};
+    kmip_init(&ctx, observed, ARRAY_LENGTH(observed), KMIP_1_0);
+
+    TextString namespace = {0};
+    namespace.value = "ssl";
+    namespace.size = 3;
+
+    TextString data = {0};
+    data.value = "www.example.com";
+    data.size = 15;
+
+    ApplicationSpecificInformation asi_a = {0};
+    asi_a.application_data = &data;
+
+    Attribute attr_a = {0};
+    kmip_init_attribute(&attr_a);
+
+    attr_a.type = KMIP_ATTR_APPLICATION_SPECIFIC_INFORMATION;
+    attr_a.value = &asi_a;
+
+    int result = kmip_encode_attribute(&ctx, &attr_a);
+    if(result != KMIP_INVALID_FIELD)
+    {
+        TEST_FAILED(tracker, __func__, __LINE__);
+    }
+
+    kmip_destroy(&ctx);
+    kmip_init(&ctx, observed, ARRAY_LENGTH(observed), KMIP_1_0);
+
+    ApplicationSpecificInformation asi_b = {0};
+    asi_b.application_namespace = &namespace;
+
+    Attribute attr_b = {0};
+    kmip_init_attribute(&attr_b);
+
+    attr_b.type = KMIP_ATTR_APPLICATION_SPECIFIC_INFORMATION;
+    attr_b.value = &asi_b;
+
+    result = kmip_encode_attribute(&ctx, &attr_b);
+    if(result != KMIP_INVALID_FIELD)
+    {
+        TEST_FAILED(tracker, __func__, __LINE__);
+    }
+
+    kmip_destroy(&ctx);
+
+    TEST_PASSED(tracker, __func__);
+}
+
+int
+test_decode_attribute_application_specific_information(TestTracker *tracker)
+{
+    TRACK_TEST(tracker);
+
+    uint8 encoding[96] = {
+        0x42, 0x00, 0x08, 0x01, 0x00, 0x00, 0x00, 0x58,
+        0x42, 0x00, 0x0A, 0x07, 0x00, 0x00, 0x00, 0x20,
+        0x41, 0x70, 0x70, 0x6C, 0x69, 0x63, 0x61, 0x74,
+        0x69, 0x6F, 0x6E, 0x20, 0x53, 0x70, 0x65, 0x63,
+        0x69, 0x66, 0x69, 0x63, 0x20, 0x49, 0x6E, 0x66,
+        0x6F, 0x72, 0x6D, 0x61, 0x74, 0x69, 0x6F, 0x6E,
+        0x42, 0x00, 0x0B, 0x01, 0x00, 0x00, 0x00, 0x28,
+        0x42, 0x00, 0x03, 0x07, 0x00, 0x00, 0x00, 0x03,
+        0x73, 0x73, 0x6C, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x42, 0x00, 0x02, 0x07, 0x00, 0x00, 0x00, 0x0F,
+        0x77, 0x77, 0x77, 0x2E, 0x65, 0x78, 0x61, 0x6D,
+        0x70, 0x6C, 0x65, 0x2E, 0x63, 0x6F, 0x6D, 0x00
+    };
+
+    KMIP ctx = {0};
+    kmip_init(&ctx, encoding, ARRAY_LENGTH(encoding), KMIP_1_0);
+
+    TextString namespace = {0};
+    namespace.value = "ssl";
+    namespace.size = 3;
+
+    TextString data = {0};
+    data.value = "www.example.com";
+    data.size = 15;
+
+    ApplicationSpecificInformation asi = {0};
+    asi.application_namespace = &namespace;
+    asi.application_data = &data;
+
+    Attribute expected = {0};
+    kmip_init_attribute(&expected);
+    expected.type = KMIP_ATTR_APPLICATION_SPECIFIC_INFORMATION;
+    expected.value = &asi;
+    Attribute observed = {0};
+    kmip_init_attribute(&observed);
+
+    int result = kmip_decode_attribute(&ctx, &observed);
+    int comparison = kmip_compare_attribute(&expected, &observed);
+    if(!comparison)
+    {
+        printf("Expected:\n");
+        kmip_print_attribute(2, &expected);
+        printf("Observed:\n");
+        kmip_print_attribute(2, &observed);
+    }
+    result = report_decoding_test_result(tracker, &ctx, comparison, result, __func__);
+
+    kmip_free_attribute(&ctx, &observed);
+    kmip_destroy(&ctx);
+    return(result);
+}
+
+int
+test_decode_attribute_application_specific_information_invalid_encoding(TestTracker *tracker)
+{
+    TRACK_TEST(tracker);
+
+    uint8 encoding_no_namespace[80] = {
+        0x42, 0x00, 0x08, 0x01, 0x00, 0x00, 0x00, 0x18,
+        0x42, 0x00, 0x0A, 0x07, 0x00, 0x00, 0x00, 0x20,
+        0x41, 0x70, 0x70, 0x6C, 0x69, 0x63, 0x61, 0x74,
+        0x69, 0x6F, 0x6E, 0x20, 0x53, 0x70, 0x65, 0x63,
+        0x69, 0x66, 0x69, 0x63, 0x20, 0x49, 0x6E, 0x66,
+        0x6F, 0x72, 0x6D, 0x61, 0x74, 0x69, 0x6F, 0x6E,
+        0x42, 0x00, 0x0B, 0x01, 0x00, 0x00, 0x00, 0x18,
+        0x42, 0x00, 0x02, 0x07, 0x00, 0x00, 0x00, 0x0F,
+        0x77, 0x77, 0x77, 0x2E, 0x65, 0x78, 0x61, 0x6D,
+        0x70, 0x6C, 0x65, 0x2E, 0x63, 0x6F, 0x6D, 0x00
+    };
+
+    KMIP ctx = {0};
+    kmip_init(&ctx, encoding_no_namespace, ARRAY_LENGTH(encoding_no_namespace), KMIP_1_0);
+
+    Attribute observed = {0};
+    kmip_init_attribute(&observed);
+
+    int result = kmip_decode_attribute(&ctx, &observed);
+    if(result != KMIP_INVALID_ENCODING)
+    {
+        TEST_FAILED(tracker, __func__, __LINE__);
+    }
+
+    kmip_free_attribute(&ctx, &observed);
+    kmip_destroy(&ctx);
+
+    uint8 encoding_no_data[72] = {
+        0x42, 0x00, 0x08, 0x01, 0x00, 0x00, 0x00, 0x40,
+        0x42, 0x00, 0x0A, 0x07, 0x00, 0x00, 0x00, 0x20,
+        0x41, 0x70, 0x70, 0x6C, 0x69, 0x63, 0x61, 0x74,
+        0x69, 0x6F, 0x6E, 0x20, 0x53, 0x70, 0x65, 0x63,
+        0x69, 0x66, 0x69, 0x63, 0x20, 0x49, 0x6E, 0x66,
+        0x6F, 0x72, 0x6D, 0x61, 0x74, 0x69, 0x6F, 0x6E,
+        0x42, 0x00, 0x0B, 0x01, 0x00, 0x00, 0x00, 0x10,
+        0x42, 0x00, 0x03, 0x07, 0x00, 0x00, 0x00, 0x03,
+        0x73, 0x73, 0x6C, 0x00, 0x00, 0x00, 0x00, 0x00
+    };
+
+    kmip_init(&ctx, encoding_no_data, ARRAY_LENGTH(encoding_no_data), KMIP_1_0);
+    kmip_init_attribute(&observed);
+
+    result = kmip_decode_attribute(&ctx, &observed);
+    if(result != KMIP_INVALID_ENCODING)
+    {
+        TEST_FAILED(tracker, __func__, __LINE__);
+    }
+
+    kmip_free_attribute(&ctx, &observed);
+    kmip_destroy(&ctx);
+
+    TEST_PASSED(tracker, __func__);
+}
+
+int
 test_encode_attribute_unique_identifier(TestTracker *tracker)
 {
     TRACK_TEST(tracker);
@@ -7690,6 +7917,110 @@ test_encode_attributes_with_invalid_kmip_version(TestTracker *tracker)
 }
 
 int
+test_encode_attribute_v2_application_specific_information(TestTracker *tracker)
+{
+    TRACK_TEST(tracker);
+
+    /* This encoding matches the following value:
+    *  Application Specific Information
+    *    Application Namespace - ssl
+    *    Application Data - www.example.com
+    */
+    uint8 expected[48] = {
+        0x42, 0x00, 0x04, 0x01, 0x00, 0x00, 0x00, 0x28,
+        0x42, 0x00, 0x03, 0x07, 0x00, 0x00, 0x00, 0x03,
+        0x73, 0x73, 0x6C, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x42, 0x00, 0x02, 0x07, 0x00, 0x00, 0x00, 0x0F,
+        0x77, 0x77, 0x77, 0x2E, 0x65, 0x78, 0x61, 0x6D,
+        0x70, 0x6C, 0x65, 0x2E, 0x63, 0x6F, 0x6D, 0x00
+    };
+
+    uint8 observed[48] = {0};
+    KMIP ctx = {0};
+    kmip_init(&ctx, observed, ARRAY_LENGTH(observed), KMIP_2_0);
+
+    Attribute attribute = {0};
+    kmip_init_attribute(&attribute);
+
+    TextString namespace = {0};
+    namespace.value = "ssl";
+    namespace.size = 3;
+
+    TextString data = {0};
+    data.value = "www.example.com";
+    data.size = 15;
+
+    ApplicationSpecificInformation asi = {0};
+    asi.application_namespace = &namespace;
+    asi.application_data = &data;
+
+    attribute.type = KMIP_ATTR_APPLICATION_SPECIFIC_INFORMATION;
+    attribute.value = &asi;
+
+    int result = kmip_encode_attribute_v2(&ctx, &attribute);
+    result = report_encoding_test_result(tracker, &ctx, expected, observed, result, __func__);
+
+    kmip_destroy(&ctx);
+
+    return(result);
+}
+
+int
+test_encode_attribute_v2_application_specific_information_invalid_field(TestTracker *tracker)
+{
+    TRACK_TEST(tracker);
+
+    uint8 observed[96] = {0};
+    KMIP ctx = {0};
+    kmip_init(&ctx, observed, ARRAY_LENGTH(observed), KMIP_2_0);
+
+    TextString namespace = {0};
+    namespace.value = "ssl";
+    namespace.size = 3;
+
+    TextString data = {0};
+    data.value = "www.example.com";
+    data.size = 15;
+
+    ApplicationSpecificInformation asi_a = {0};
+    asi_a.application_data = &data;
+
+    Attribute attr_a = {0};
+    kmip_init_attribute(&attr_a);
+
+    attr_a.type = KMIP_ATTR_APPLICATION_SPECIFIC_INFORMATION;
+    attr_a.value = &asi_a;
+
+    int result = kmip_encode_attribute(&ctx, &attr_a);
+    if(result != KMIP_INVALID_FIELD)
+    {
+        TEST_FAILED(tracker, __func__, __LINE__);
+    }
+
+    kmip_destroy(&ctx);
+    kmip_init(&ctx, observed, ARRAY_LENGTH(observed), KMIP_2_0);
+
+    ApplicationSpecificInformation asi_b = {0};
+    asi_b.application_namespace = &namespace;
+
+    Attribute attr_b = {0};
+    kmip_init_attribute(&attr_b);
+
+    attr_b.type = KMIP_ATTR_APPLICATION_SPECIFIC_INFORMATION;
+    attr_b.value = &asi_b;
+
+    result = kmip_encode_attribute(&ctx, &attr_b);
+    if(result != KMIP_OK)
+    {
+        TEST_FAILED(tracker, __func__, __LINE__);
+    }
+
+    kmip_destroy(&ctx);
+
+    TEST_PASSED(tracker, __func__);
+}
+
+int
 test_encode_attribute_v2_unique_identifier(TestTracker *tracker)
 {
     TRACK_TEST(tracker);
@@ -8026,6 +8357,112 @@ test_decode_attributes_with_invalid_kmip_version(TestTracker *tracker)
 
     result = report_result(tracker, result, KMIP_INVALID_FOR_VERSION, __func__);
     return(result);
+}
+
+int
+test_decode_attribute_v2_application_specific_information(TestTracker *tracker)
+{
+    TRACK_TEST(tracker);
+
+    /* This encoding matches the following value:
+    *  Application Specific Information
+    *    Application Namespace - ssl
+    *    Application Data - www.example.com
+    */
+    uint8 encoding[48] = {
+        0x42, 0x00, 0x04, 0x01, 0x00, 0x00, 0x00, 0x28,
+        0x42, 0x00, 0x03, 0x07, 0x00, 0x00, 0x00, 0x03,
+        0x73, 0x73, 0x6C, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x42, 0x00, 0x02, 0x07, 0x00, 0x00, 0x00, 0x0F,
+        0x77, 0x77, 0x77, 0x2E, 0x65, 0x78, 0x61, 0x6D,
+        0x70, 0x6C, 0x65, 0x2E, 0x63, 0x6F, 0x6D, 0x00
+    };
+
+    KMIP ctx = {0};
+    kmip_init(&ctx, encoding, ARRAY_LENGTH(encoding), KMIP_2_0);
+
+    TextString namespace = {0};
+    namespace.value = "ssl";
+    namespace.size = 3;
+
+    TextString data = {0};
+    data.value = "www.example.com";
+    data.size = 15;
+
+    ApplicationSpecificInformation asi = {0};
+    asi.application_namespace = &namespace;
+    asi.application_data = &data;
+
+    Attribute expected = {0};
+    kmip_init_attribute(&expected);
+    expected.type = KMIP_ATTR_APPLICATION_SPECIFIC_INFORMATION;
+    expected.value = &asi;
+
+    Attribute observed = {0};
+    kmip_init_attribute(&observed);
+
+    int result = kmip_decode_attribute(&ctx, &observed);
+    int comparison = kmip_compare_attribute(&expected, &observed);
+    if(!comparison)
+    {
+        printf("Expected:\n");
+        kmip_print_attribute(2, &expected);
+        printf("Observed:\n");
+        kmip_print_attribute(2, &observed);
+    }
+    result = report_decoding_test_result(tracker, &ctx, comparison, result, __func__);
+
+    kmip_free_attribute(&ctx, &observed);
+    kmip_destroy(&ctx);
+    return(result);
+}
+
+int
+test_decode_attribute_v2_application_specific_information_invalid_encoding(TestTracker *tracker)
+{
+    TRACK_TEST(tracker);
+
+    uint8 encoding_no_namespace[32] = {
+        0x42, 0x00, 0x04, 0x01, 0x00, 0x00, 0x00, 0x18,
+        0x42, 0x00, 0x02, 0x07, 0x00, 0x00, 0x00, 0x0F,
+        0x77, 0x77, 0x77, 0x2E, 0x65, 0x78, 0x61, 0x6D,
+        0x70, 0x6C, 0x65, 0x2E, 0x63, 0x6F, 0x6D, 0x00
+    };
+
+    KMIP ctx = {0};
+    kmip_init(&ctx, encoding_no_namespace, ARRAY_LENGTH(encoding_no_namespace), KMIP_2_0);
+
+    Attribute observed = {0};
+    kmip_init_attribute(&observed);
+
+    int result = kmip_decode_attribute(&ctx, &observed);
+    if(result != KMIP_INVALID_ENCODING)
+    {
+        TEST_FAILED(tracker, __func__, __LINE__);
+    }
+
+    kmip_free_attribute(&ctx, &observed);
+    kmip_destroy(&ctx);
+
+    uint8 encoding_no_data[24] = {
+        0x42, 0x00, 0x04, 0x01, 0x00, 0x00, 0x00, 0x10,
+        0x42, 0x00, 0x03, 0x07, 0x00, 0x00, 0x00, 0x03,
+        0x73, 0x73, 0x6C, 0x00, 0x00, 0x00, 0x00, 0x00
+    };
+
+    kmip_init(&ctx, encoding_no_data, ARRAY_LENGTH(encoding_no_data), KMIP_2_0);
+    kmip_init_attribute(&observed);
+
+    result = kmip_decode_attribute(&ctx, &observed);
+    if(result != KMIP_OK)
+    {
+        TEST_FAILED(tracker, __func__, __LINE__);
+    }
+
+    kmip_free_attribute(&ctx, &observed);
+    kmip_destroy(&ctx);
+
+    TEST_PASSED(tracker, __func__);
 }
 
 int
@@ -10848,6 +11285,8 @@ run_tests(void)
     test_decode_date_time(&tracker);
     test_decode_interval(&tracker);
     test_decode_name(&tracker);
+    test_decode_attribute_application_specific_information(&tracker);
+    test_decode_attribute_application_specific_information_invalid_encoding(&tracker);
     test_decode_attribute_unique_identifier(&tracker);
     test_decode_attribute_name(&tracker);
     test_decode_attribute_object_type(&tracker);
@@ -10899,6 +11338,8 @@ run_tests(void)
     test_encode_date_time(&tracker);
     test_encode_interval(&tracker);
     test_encode_name(&tracker);
+    test_encode_attribute_application_specific_information(&tracker);
+    test_encode_attribute_application_specific_information_invalid_field(&tracker);
     test_encode_attribute_unique_identifier(&tracker);
     test_encode_attribute_name(&tracker);
     test_encode_attribute_object_type(&tracker);
@@ -10991,6 +11432,8 @@ run_tests(void)
     test_decode_protection_storage_masks(&tracker);
     test_decode_attributes(&tracker);
     test_decode_attributes_with_invalid_kmip_version(&tracker);
+    test_decode_attribute_v2_application_specific_information(&tracker);
+    test_decode_attribute_v2_application_specific_information_invalid_encoding(&tracker);
     test_decode_attribute_v2_unique_identifier(&tracker);
     test_decode_attribute_v2_name(&tracker);
     test_decode_attribute_v2_object_type(&tracker);
@@ -11007,6 +11450,8 @@ run_tests(void)
     test_encode_protection_storage_masks(&tracker);
     test_encode_attributes(&tracker);
     test_encode_attributes_with_invalid_kmip_version(&tracker);
+    test_encode_attribute_v2_application_specific_information(&tracker);
+    test_encode_attribute_v2_application_specific_information_invalid_field(&tracker);
     test_encode_attribute_v2_unique_identifier(&tracker);
     test_encode_attribute_v2_name(&tracker);
     test_encode_attribute_v2_object_type(&tracker);

@@ -56,6 +56,8 @@ typedef double real64;
 #define KMIP_OBJECT_MISMATCH         (-16)
 #define KMIP_ARG_INVALID             (-17)
 #define KMIP_ERROR_BUFFER_UNDERFULL  (-18)
+#define KMIP_INVALID_ENCODING        (-19)
+#define KMIP_INVALID_FIELD           (-20)
 
 /*
 Enumerations
@@ -72,14 +74,15 @@ enum attestation_type
 enum attribute_type
 {
     /* KMIP 1.0 */
-    KMIP_ATTR_UNIQUE_IDENTIFIER         = 0,
-    KMIP_ATTR_NAME                      = 1,
-    KMIP_ATTR_OBJECT_TYPE               = 2,
-    KMIP_ATTR_CRYPTOGRAPHIC_ALGORITHM   = 3,
-    KMIP_ATTR_CRYPTOGRAPHIC_LENGTH      = 4,
-    KMIP_ATTR_OPERATION_POLICY_NAME     = 5,
-    KMIP_ATTR_CRYPTOGRAPHIC_USAGE_MASK  = 6,
-    KMIP_ATTR_STATE                     = 7
+    KMIP_ATTR_UNIQUE_IDENTIFIER                = 0,
+    KMIP_ATTR_NAME                             = 1,
+    KMIP_ATTR_OBJECT_TYPE                      = 2,
+    KMIP_ATTR_CRYPTOGRAPHIC_ALGORITHM          = 3,
+    KMIP_ATTR_CRYPTOGRAPHIC_LENGTH             = 4,
+    KMIP_ATTR_OPERATION_POLICY_NAME            = 5,
+    KMIP_ATTR_CRYPTOGRAPHIC_USAGE_MASK         = 6,
+    KMIP_ATTR_STATE                            = 7,
+    KMIP_ATTR_APPLICATION_SPECIFIC_INFORMATION = 8
 };
 
 enum batch_error_continuation_option
@@ -547,6 +550,9 @@ enum tag
     KMIP_TAG_TYPE                             = 0x000001,
     KMIP_TAG_DEFAULT                          = 0x420000,
     /* KMIP 1.0 */
+    KMIP_TAG_APPLICATION_DATA                 = 0x420002,
+    KMIP_TAG_APPLICATION_NAMESPACE            = 0x420003,
+    KMIP_TAG_APPLICATION_SPECIFIC_INFORMATION = 0x420004,
     KMIP_TAG_ASYNCHRONOUS_CORRELATION_VALUE   = 0x420006,
     KMIP_TAG_ASYNCHRONOUS_INDICATOR           = 0x420007,
     KMIP_TAG_ATTRIBUTE                        = 0x420008,
@@ -747,6 +753,12 @@ typedef struct kmip
     void *(*memset_func)(void *ptr, int value, size_t size);
     void *state;
 } KMIP;
+
+typedef struct application_specific_information
+{
+    TextString *application_namespace;
+    TextString *application_data;
+} ApplicationSpecificInformation;
 
 typedef struct attribute
 {
@@ -1263,6 +1275,7 @@ int kmip_is_attribute_tag(uint32);
 Initialization Functions
 */
 
+void kmip_init_application_specific_information(ApplicationSpecificInformation *);
 void kmip_init_protocol_version(ProtocolVersion *, enum kmip_version);
 void kmip_init_attribute(Attribute *);
 void kmip_init_cryptographic_parameters(CryptographicParameters *);
@@ -1309,6 +1322,7 @@ void kmip_print_name(int, Name *);
 void kmip_print_nonce(int, Nonce *);
 void kmip_print_protection_storage_masks_enum(int, int32);
 void kmip_print_protection_storage_masks(int, ProtectionStorageMasks *);
+void kmip_print_application_specific_information(int, ApplicationSpecificInformation *);
 void kmip_print_cryptographic_parameters(int, CryptographicParameters *);
 void kmip_print_encryption_key_information(int, EncryptionKeyInformation *);
 void kmip_print_mac_signature_key_information(int, MACSignatureKeyInformation *);
@@ -1359,6 +1373,7 @@ void kmip_free_transparent_symmetric_key(KMIP *, TransparentSymmetricKey *);
 void kmip_free_key_material(KMIP *, enum key_format_type, void **);
 void kmip_free_key_value(KMIP *, enum key_format_type, KeyValue *);
 void kmip_free_protection_storage_masks(KMIP *, ProtectionStorageMasks *);
+void kmip_free_application_specific_information(KMIP *, ApplicationSpecificInformation *);
 void kmip_free_cryptographic_parameters(KMIP *, CryptographicParameters *);
 void kmip_free_encryption_key_information(KMIP *, EncryptionKeyInformation *);
 void kmip_free_mac_signature_key_information(KMIP *, MACSignatureKeyInformation *);
@@ -1395,6 +1410,7 @@ Copying Functions
 int32 * kmip_deep_copy_int32(KMIP *, const int32 *);
 TextString * kmip_deep_copy_text_string(KMIP *, const TextString *);
 Name * kmip_deep_copy_name(KMIP *, const Name *);
+ApplicationSpecificInformation * kmip_deep_copy_application_specific_information(KMIP *, const ApplicationSpecificInformation *);
 Attribute * kmip_deep_copy_attribute(KMIP *, const Attribute *);
 
 /*
@@ -1412,6 +1428,7 @@ int kmip_compare_transparent_symmetric_key(const TransparentSymmetricKey *, cons
 int kmip_compare_key_material(enum key_format_type, void **, void **);
 int kmip_compare_key_value(enum key_format_type, const KeyValue *, const KeyValue *);
 int kmip_compare_protection_storage_masks(const ProtectionStorageMasks *, const ProtectionStorageMasks *);
+int kmip_compare_application_specific_information(const ApplicationSpecificInformation *, const ApplicationSpecificInformation *);
 int kmip_compare_cryptographic_parameters(const CryptographicParameters *, const CryptographicParameters *);
 int kmip_compare_encryption_key_information(const EncryptionKeyInformation *, const EncryptionKeyInformation *);
 int kmip_compare_mac_signature_key_information(const MACSignatureKeyInformation *, const MACSignatureKeyInformation *);
@@ -1465,6 +1482,7 @@ int kmip_encode_attributes(KMIP *, const Attributes *);
 int kmip_encode_template_attribute(KMIP *, const TemplateAttribute *);
 int kmip_encode_protocol_version(KMIP *, const ProtocolVersion *);
 int kmip_encode_protection_storage_masks(KMIP *, const ProtectionStorageMasks *);
+int kmip_encode_application_specific_information(KMIP *, const ApplicationSpecificInformation *);
 int kmip_encode_cryptographic_parameters(KMIP *, const CryptographicParameters *);
 int kmip_encode_encryption_key_information(KMIP *, const EncryptionKeyInformation *);
 int kmip_encode_mac_signature_key_information(KMIP *, const MACSignatureKeyInformation *);
@@ -1524,6 +1542,7 @@ int kmip_decode_transparent_symmetric_key(KMIP *, TransparentSymmetricKey *);
 int kmip_decode_key_material(KMIP *, enum key_format_type, void **);
 int kmip_decode_key_value(KMIP *, enum key_format_type, KeyValue *);
 int kmip_decode_protection_storage_masks(KMIP *, ProtectionStorageMasks *);
+int kmip_decode_application_specific_information(KMIP *, ApplicationSpecificInformation *);
 int kmip_decode_cryptographic_parameters(KMIP *, CryptographicParameters *);
 int kmip_decode_encryption_key_information(KMIP *, EncryptionKeyInformation *);
 int kmip_decode_mac_signature_key_information(KMIP *, MACSignatureKeyInformation *);
