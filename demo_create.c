@@ -229,11 +229,11 @@ use_low_level_api(const char *server_address,
         printf("An error occurred while encoding the Create request.\n");
         printf("Error Code: %d\n", encode_result);
         printf("Error Name: ");
-        kmip_print_error_string(encode_result);
+        kmip_print_error_string(stderr, encode_result);
         printf("\n");
         printf("Context Error: %s\n", kmip_context.error_message);
         printf("Stack trace:\n");
-        kmip_print_stack_trace(&kmip_context);
+        kmip_print_stack_trace(stderr, &kmip_context);
 
         kmip_free_buffer(&kmip_context, encoding, buffer_total_size);
         encoding = NULL;
@@ -244,7 +244,7 @@ use_low_level_api(const char *server_address,
         return(encode_result);
     }
     
-    kmip_print_request_message(&rm);
+    kmip_print_request_message(stdout, &rm);
     printf("\n");
     
     char *response = NULL;
@@ -261,11 +261,11 @@ use_low_level_api(const char *server_address,
         printf("An error occurred while creating the symmetric key.\n");
         printf("Error Code: %d\n", result);
         printf("Error Name: ");
-        kmip_print_error_string(result);
+        kmip_print_error_string(stderr, result);
         printf("\n");
         printf("Context Error: %s\n", kmip_context.error_message);
         printf("Stack trace:\n");
-        kmip_print_stack_trace(&kmip_context);
+        kmip_print_stack_trace(stderr, &kmip_context);
         
         kmip_free_buffer(&kmip_context, encoding, buffer_total_size);
         kmip_free_buffer(&kmip_context, response, response_size);
@@ -288,11 +288,11 @@ use_low_level_api(const char *server_address,
         printf("An error occurred while decoding the Create response.\n");
         printf("Error Code: %d\n", decode_result);
         printf("Error Name: ");
-        kmip_print_error_string(decode_result);
+        kmip_print_error_string(stderr, decode_result);
         printf("\n");
         printf("Context Error: %s\n", kmip_context.error_message);
         printf("Stack trace:\n");
-        kmip_print_stack_trace(&kmip_context);
+        kmip_print_stack_trace(stderr, &kmip_context);
 
         kmip_free_response_message(&kmip_context, &resp_m);
         kmip_free_buffer(&kmip_context, response, response_size);
@@ -302,7 +302,7 @@ use_low_level_api(const char *server_address,
         return(decode_result);
     }
     
-    kmip_print_response_message(&resp_m);
+    kmip_print_response_message(stdout, &resp_m);
     printf("\n");
 
     if(resp_m.batch_count != 1 || resp_m.batch_items == NULL)
@@ -321,7 +321,7 @@ use_low_level_api(const char *server_address,
     
     printf("The KMIP operation was executed with no errors.\n");
     printf("Result: ");
-    kmip_print_result_status_enum(result);
+    kmip_print_result_status_enum(stdout, result);
     printf(" (%d)\n\n", result);
     
     if(result == KMIP_STATUS_SUCCESS)

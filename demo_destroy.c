@@ -165,7 +165,7 @@ use_high_level_api(const char *server_address,
     {
         printf("The KMIP operation was executed with no errors.\n");
         printf("Result: ");
-        kmip_print_result_status_enum(result);
+        kmip_print_result_status_enum(stdout, result);
         printf(" (%d)\n", result);
     }
     
