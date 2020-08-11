@@ -75,7 +75,7 @@ report_encoding_test_result(
         {
             printf("- context buffer is full\n");
         }
-        kmip_print_stack_trace(ctx);
+        kmip_print_stack_trace(stderr, ctx);
         tracker->tests_failed++;
         return(1);
     }
@@ -110,7 +110,7 @@ report_decoding_test_result(
         {
             printf("- context buffer is underfull\n");
         }
-        kmip_print_stack_trace(ctx);
+        kmip_print_stack_trace(stderr, ctx);
         tracker->tests_failed++;
         return(1);
     }
@@ -1329,8 +1329,8 @@ test_deep_copy_int32(TestTracker *tracker)
     }
     if(*observed != expected)
     {
-        kmip_print_integer(expected);
-        kmip_print_integer(*observed);
+        kmip_print_integer(stderr, expected);
+        kmip_print_integer(stderr, *observed);
         ctx.free_func(ctx.state, observed);
         kmip_destroy(&ctx);
         TEST_FAILED(tracker, __func__, __LINE__);
@@ -1374,8 +1374,8 @@ test_deep_copy_text_string(TestTracker *tracker)
     }
     if(!kmip_compare_text_string(&expected, observed))
     {
-        kmip_print_text_string(1, "Name Value", &expected);
-        kmip_print_text_string(1, "Name Value", observed);
+        kmip_print_text_string(stderr, 1, "Name Value", &expected);
+        kmip_print_text_string(stderr, 1, "Name Value", observed);
         kmip_free_text_string(&ctx, observed);
         ctx.free_func(ctx.state, observed);
         kmip_destroy(&ctx);
@@ -1424,8 +1424,8 @@ test_deep_copy_name(TestTracker *tracker)
     }
     if(!kmip_compare_name(&expected, observed))
     {
-        kmip_print_name(1, &expected);
-        kmip_print_name(1, observed);
+        kmip_print_name(stderr, 1, &expected);
+        kmip_print_name(stderr, 1, observed);
         kmip_free_name(&ctx, observed);
         ctx.free_func(ctx.state, observed);
         kmip_destroy(&ctx);
@@ -1471,8 +1471,8 @@ test_deep_copy_attribute(TestTracker *tracker)
     }
     if(!kmip_compare_attribute(&expected, observed))
     {
-        kmip_print_attribute(1, &expected);
-        kmip_print_attribute(1, observed);
+        kmip_print_attribute(stderr, 1, &expected);
+        kmip_print_attribute(stderr, 1, observed);
         kmip_free_attribute(&ctx, observed);
         ctx.free_func(ctx.state, observed);
         kmip_destroy(&ctx);
@@ -1497,8 +1497,8 @@ test_deep_copy_attribute(TestTracker *tracker)
     }
     if(!kmip_compare_attribute(&expected, observed))
     {
-        kmip_print_attribute(1, &expected);
-        kmip_print_attribute(1, observed);
+        kmip_print_attribute(stderr, 1, &expected);
+        kmip_print_attribute(stderr, 1, observed);
         kmip_free_attribute(&ctx, observed);
         ctx.free_func(ctx.state, observed);
         kmip_destroy(&ctx);
@@ -1523,8 +1523,8 @@ test_deep_copy_attribute(TestTracker *tracker)
     }
     if(!kmip_compare_attribute(&expected, observed))
     {
-        kmip_print_attribute(1, &expected);
-        kmip_print_attribute(1, observed);
+        kmip_print_attribute(stderr, 1, &expected);
+        kmip_print_attribute(stderr, 1, observed);
         kmip_free_attribute(&ctx, observed);
         ctx.free_func(ctx.state, observed);
         kmip_destroy(&ctx);
@@ -1552,8 +1552,8 @@ test_deep_copy_attribute(TestTracker *tracker)
     }
     if(!kmip_compare_attribute(&expected, observed))
     {
-        kmip_print_attribute(1, &expected);
-        kmip_print_attribute(1, observed);
+        kmip_print_attribute(stderr, 1, &expected);
+        kmip_print_attribute(stderr, 1, observed);
         kmip_free_attribute(&ctx, observed);
         ctx.free_func(ctx.state, observed);
         kmip_destroy(&ctx);
@@ -1576,8 +1576,8 @@ test_deep_copy_attribute(TestTracker *tracker)
     }
     if(!kmip_compare_attribute(&expected, observed))
     {
-        kmip_print_attribute(1, &expected);
-        kmip_print_attribute(1, observed);
+        kmip_print_attribute(stderr, 1, &expected);
+        kmip_print_attribute(stderr, 1, observed);
         kmip_free_attribute(&ctx, observed);
         ctx.free_func(ctx.state, observed);
         kmip_destroy(&ctx);
@@ -1600,8 +1600,8 @@ test_deep_copy_attribute(TestTracker *tracker)
     }
     if(!kmip_compare_attribute(&expected, observed))
     {
-        kmip_print_attribute(1, &expected);
-        kmip_print_attribute(1, observed);
+        kmip_print_attribute(stderr, 1, &expected);
+        kmip_print_attribute(stderr, 1, observed);
         kmip_free_attribute(&ctx, observed);
         ctx.free_func(ctx.state, observed);
         kmip_destroy(&ctx);
@@ -1624,8 +1624,8 @@ test_deep_copy_attribute(TestTracker *tracker)
     }
     if(!kmip_compare_attribute(&expected, observed))
     {
-        kmip_print_attribute(1, &expected);
-        kmip_print_attribute(1, observed);
+        kmip_print_attribute(stderr, 1, &expected);
+        kmip_print_attribute(stderr, 1, observed);
         kmip_free_attribute(&ctx, observed);
         ctx.free_func(ctx.state, observed);
         kmip_destroy(&ctx);
@@ -1648,8 +1648,8 @@ test_deep_copy_attribute(TestTracker *tracker)
     }
     if(!kmip_compare_attribute(&expected, observed))
     {
-        kmip_print_attribute(1, &expected);
-        kmip_print_attribute(1, observed);
+        kmip_print_attribute(stderr, 1, &expected);
+        kmip_print_attribute(stderr, 1, observed);
         kmip_free_attribute(&ctx, observed);
         ctx.free_func(ctx.state, observed);
         kmip_destroy(&ctx);
@@ -1672,8 +1672,8 @@ test_deep_copy_attribute(TestTracker *tracker)
     }
     if(!kmip_compare_attribute(&expected, observed))
     {
-        kmip_print_attribute(1, &expected);
-        kmip_print_attribute(1, observed);
+        kmip_print_attribute(stderr, 1, &expected);
+        kmip_print_attribute(stderr, 1, observed);
         kmip_free_attribute(&ctx, observed);
         ctx.free_func(ctx.state, observed);
         kmip_destroy(&ctx);
@@ -2397,8 +2397,8 @@ test_decode_protection_storage_masks(TestTracker *tracker)
     int comparison = kmip_compare_protection_storage_masks(&expected, &observed);
     if(!comparison)
     {
-        kmip_print_protection_storage_masks(1, &expected);
-        kmip_print_protection_storage_masks(1, &observed);
+        kmip_print_protection_storage_masks(stderr, 1, &expected);
+        kmip_print_protection_storage_masks(stderr, 1, &observed);
     }
     result = report_decoding_test_result(tracker, &ctx, comparison, result, __func__);
 
@@ -2564,9 +2564,9 @@ test_decode_attribute_application_specific_information(TestTracker *tracker)
     if(!comparison)
     {
         printf("Expected:\n");
-        kmip_print_attribute(2, &expected);
+        kmip_print_attribute(stderr, 2, &expected);
         printf("Observed:\n");
-        kmip_print_attribute(2, &observed);
+        kmip_print_attribute(stderr, 2, &observed);
     }
     result = report_decoding_test_result(tracker, &ctx, comparison, result, __func__);
 
@@ -7285,8 +7285,8 @@ test_decode_request_batch_item_get_payload_kmip_2_0(TestTracker *tracker)
     int comparison = kmip_compare_request_batch_item(&expected, &observed);
     if(!comparison)
     {
-        kmip_print_request_batch_item(1, &expected);
-        kmip_print_request_batch_item(1, &observed);
+        kmip_print_request_batch_item(stderr, 1, &expected);
+        kmip_print_request_batch_item(stderr, 1, &observed);
     }
     result = report_decoding_test_result(tracker, &ctx, comparison, result, __func__);
 
@@ -7604,8 +7604,8 @@ test_decode_request_message_get(TestTracker *tracker)
     int comparison = kmip_compare_request_message(&expected, &observed);
     if(!comparison)
     {
-        kmip_print_request_message(&expected);
-        kmip_print_request_message(&observed);
+        kmip_print_request_message(stderr, &expected);
+        kmip_print_request_message(stderr, &observed);
     }
     result = report_decoding_test_result(tracker, &ctx, comparison, result, __func__);
 
@@ -8328,8 +8328,8 @@ test_decode_attributes(TestTracker *tracker)
     int comparison = kmip_compare_attributes(&expected, &observed);
     if(!comparison)
     {
-        kmip_print_attributes(1, &expected);
-        kmip_print_attributes(1, &observed);
+        kmip_print_attributes(stderr, 1, &expected);
+        kmip_print_attributes(stderr, 1, &observed);
     }
     result = report_decoding_test_result(tracker, &ctx, comparison, result, __func__);
 
@@ -8406,9 +8406,9 @@ test_decode_attribute_v2_application_specific_information(TestTracker *tracker)
     if(!comparison)
     {
         printf("Expected:\n");
-        kmip_print_attribute(2, &expected);
+        kmip_print_attribute(stderr, 2, &expected);
         printf("Observed:\n");
-        kmip_print_attribute(2, &observed);
+        kmip_print_attribute(stderr, 2, &observed);
     }
     result = report_decoding_test_result(tracker, &ctx, comparison, result, __func__);
 
@@ -8498,8 +8498,8 @@ test_decode_attribute_v2_unique_identifier(TestTracker *tracker)
     int comparison = kmip_compare_attribute(&expected, &observed);
     if(!comparison)
     {
-        kmip_print_attribute(1, &expected);
-        kmip_print_attribute(1, &observed);
+        kmip_print_attribute(stderr, 1, &expected);
+        kmip_print_attribute(stderr, 1, &observed);
     }
     result = report_decoding_test_result(tracker, &ctx, comparison, result, __func__);
 
@@ -8548,8 +8548,8 @@ test_decode_attribute_v2_name(TestTracker *tracker)
     int comparison = kmip_compare_attribute(&expected, &observed);
     if(!comparison)
     {
-        kmip_print_attribute(1, &expected);
-        kmip_print_attribute(1, &observed);
+        kmip_print_attribute(stderr, 1, &expected);
+        kmip_print_attribute(stderr, 1, &observed);
     }
     result = report_decoding_test_result(tracker, &ctx, comparison, result, __func__);
 
@@ -8586,8 +8586,8 @@ test_decode_attribute_v2_object_type(TestTracker *tracker)
     int comparison = kmip_compare_attribute(&expected, &observed);
     if(!comparison)
     {
-        kmip_print_attribute(1, &expected);
-        kmip_print_attribute(1, &observed);
+        kmip_print_attribute(stderr, 1, &expected);
+        kmip_print_attribute(stderr, 1, &observed);
     }
     result = report_decoding_test_result(tracker, &ctx, comparison, result, __func__);
 
@@ -8624,8 +8624,8 @@ test_decode_attribute_v2_cryptographic_algorithm(TestTracker *tracker)
     int comparison = kmip_compare_attribute(&expected, &observed);
     if(!comparison)
     {
-        kmip_print_attribute(1, &expected);
-        kmip_print_attribute(1, &observed);
+        kmip_print_attribute(stderr, 1, &expected);
+        kmip_print_attribute(stderr, 1, &observed);
     }
     result = report_decoding_test_result(tracker, &ctx, comparison, result, __func__);
 
@@ -8662,8 +8662,8 @@ test_decode_attribute_v2_cryptographic_length(TestTracker *tracker)
     int comparison = kmip_compare_attribute(&expected, &observed);
     if(!comparison)
     {
-        kmip_print_attribute(1, &expected);
-        kmip_print_attribute(1, &observed);
+        kmip_print_attribute(stderr, 1, &expected);
+        kmip_print_attribute(stderr, 1, &observed);
     }
     result = report_decoding_test_result(tracker, &ctx, comparison, result, __func__);
 
@@ -8700,8 +8700,8 @@ test_decode_attribute_v2_cryptographic_usage_mask(TestTracker *tracker)
     int comparison = kmip_compare_attribute(&expected, &observed);
     if(!comparison)
     {
-        kmip_print_attribute(1, &expected);
-        kmip_print_attribute(1, &observed);
+        kmip_print_attribute(stderr, 1, &expected);
+        kmip_print_attribute(stderr, 1, &observed);
     }
     result = report_decoding_test_result(tracker, &ctx, comparison, result, __func__);
 
@@ -8738,8 +8738,8 @@ test_decode_attribute_v2_state(TestTracker *tracker)
     int comparison = kmip_compare_attribute(&expected, &observed);
     if(!comparison)
     {
-        kmip_print_attribute(1, &expected);
-        kmip_print_attribute(1, &observed);
+        kmip_print_attribute(stderr, 1, &expected);
+        kmip_print_attribute(stderr, 1, &observed);
     }
     result = report_decoding_test_result(tracker, &ctx, comparison, result, __func__);
 
@@ -10698,8 +10698,8 @@ test_decode_response_header_kmip_2_0(TestTracker *tracker)
         /* TODO (ph) Reorder these with printing result so that objects are
                      below function name.
         */
-        kmip_print_response_header(1, &expected);
-        kmip_print_response_header(1, &observed);
+        kmip_print_response_header(stderr, 1, &expected);
+        kmip_print_response_header(stderr, 1, &observed);
     }
     result = report_decoding_test_result(tracker, &ctx, comparison, result, __func__);
 
