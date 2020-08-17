@@ -3276,6 +3276,100 @@ test_decode_attribute_state(TestTracker *tracker)
 }
 
 int
+test_encode_attribute_object_group(TestTracker *tracker)
+{
+    TRACK_TEST(tracker);
+
+    /* This encoding matches the following values:
+    *  Attribute
+    *      Attribute Name - Object Group
+    *      Attribute Value - RoundRobinTestGroup
+    */
+    uint8 expected[64] = {
+        0x42, 0x00, 0x08, 0x01, 0x00, 0x00, 0x00, 0x38,
+        0x42, 0x00, 0x0A, 0x07, 0x00, 0x00, 0x00, 0x0C,
+        0x4F, 0x62, 0x6A, 0x65, 0x63, 0x74, 0x20, 0x47,
+        0x72, 0x6F, 0x75, 0x70, 0x00, 0x00, 0x00, 0x00,
+        0x42, 0x00, 0x0B, 0x07, 0x00, 0x00, 0x00, 0x13,
+        0x52, 0x6F, 0x75, 0x6E, 0x64, 0x52, 0x6F, 0x62,
+        0x69, 0x6E, 0x54, 0x65, 0x73, 0x74, 0x47, 0x72,
+        0x6F, 0x75, 0x70, 0x00, 0x00, 0x00, 0x00, 0x00
+    };
+
+    uint8 observed[64] = {0};
+    KMIP ctx = {0};
+    kmip_init(&ctx, observed, ARRAY_LENGTH(observed), KMIP_1_0);
+
+    TextString object_group = {0};
+    object_group.value = "RoundRobinTestGroup";
+    object_group.size = 19;
+
+    Attribute attr = {0};
+    kmip_init_attribute(&attr);
+
+    attr.type = KMIP_ATTR_OBJECT_GROUP;
+    attr.value = &object_group;
+
+    int result = kmip_encode_attribute(&ctx, &attr);
+    result = report_encoding_test_result(
+        tracker,
+        &ctx,
+        expected,
+        observed,
+        result,
+        __func__);
+    kmip_destroy(&ctx);
+    return(result);
+}
+
+int
+test_decode_attribute_object_group(TestTracker *tracker)
+{
+    TRACK_TEST(tracker);
+
+    /* This encoding matches the following values:
+    *  Attribute
+    *      Attribute Name - Object Group
+    *      Attribute Value - RoundRobinTestGroup
+    */
+    uint8 encoding[64] = {
+        0x42, 0x00, 0x08, 0x01, 0x00, 0x00, 0x00, 0x38,
+        0x42, 0x00, 0x0A, 0x07, 0x00, 0x00, 0x00, 0x0C,
+        0x4F, 0x62, 0x6A, 0x65, 0x63, 0x74, 0x20, 0x47,
+        0x72, 0x6F, 0x75, 0x70, 0x00, 0x00, 0x00, 0x00,
+        0x42, 0x00, 0x0B, 0x07, 0x00, 0x00, 0x00, 0x13,
+        0x52, 0x6F, 0x75, 0x6E, 0x64, 0x52, 0x6F, 0x62,
+        0x69, 0x6E, 0x54, 0x65, 0x73, 0x74, 0x47, 0x72,
+        0x6F, 0x75, 0x70, 0x00, 0x00, 0x00, 0x00, 0x00
+    };
+
+    KMIP ctx = {0};
+    kmip_init(&ctx, encoding, ARRAY_LENGTH(encoding), KMIP_1_0);
+
+    TextString object_group = {0};
+    object_group.value = "RoundRobinTestGroup";
+    object_group.size = 19;
+
+    Attribute expected = {0};
+    kmip_init_attribute(&expected);
+    expected.type = KMIP_ATTR_OBJECT_GROUP;
+    expected.value = &object_group;
+    Attribute observed = {0};
+    kmip_init_attribute(&observed);
+
+    int result = kmip_decode_attribute(&ctx, &observed);
+    result = report_decoding_test_result(
+        tracker,
+        &ctx,
+        kmip_compare_attribute(&expected, &observed),
+        result,
+        __func__);
+    kmip_free_attribute(&ctx, &observed);
+    kmip_destroy(&ctx);
+    return(result);
+}
+
+int
 test_encode_protocol_version(TestTracker *tracker)
 {
     TRACK_TEST(tracker);
@@ -8256,6 +8350,42 @@ test_encode_attribute_v2_state(TestTracker *tracker)
 }
 
 int
+test_encode_attribute_v2_object_group(TestTracker *tracker)
+{
+    TRACK_TEST(tracker);
+
+    /* This encoding matches the following value:
+    *  Object Group - RoundRobinTestGroup
+    */
+    uint8 expected[32] = {
+        0x42, 0x00, 0x56, 0x07, 0x00, 0x00, 0x00, 0x13,
+        0x52, 0x6F, 0x75, 0x6E, 0x64, 0x52, 0x6F, 0x62,
+        0x69, 0x6E, 0x54, 0x65, 0x73, 0x74, 0x47, 0x72,
+        0x6F, 0x75, 0x70, 0x00, 0x00, 0x00, 0x00, 0x00
+    };
+
+    uint8 observed[32] = {0};
+    KMIP ctx = {0};
+    kmip_init(&ctx, observed, ARRAY_LENGTH(observed), KMIP_2_0);
+
+    Attribute attribute = {0};
+    kmip_init_attribute(&attribute);
+    TextString object_group_value = {0};
+    object_group_value.value = "RoundRobinTestGroup";
+    object_group_value.size = 19;
+
+    attribute.type = KMIP_ATTR_OBJECT_GROUP;
+    attribute.value = &object_group_value;
+
+    int result = kmip_encode_attribute_v2(&ctx, &attribute);
+    result = report_encoding_test_result(tracker, &ctx, expected, observed, result, __func__);
+
+    kmip_destroy(&ctx);
+
+    return(result);
+}
+
+int
 test_encode_attribute_v2_unsupported_attribute(TestTracker *tracker)
 {
     TRACK_TEST(tracker);
@@ -8732,6 +8862,48 @@ test_decode_attribute_v2_state(TestTracker *tracker)
     enum state state = KMIP_STATE_ACTIVE;
     expected.type = KMIP_ATTR_STATE;
     expected.value = &state;
+
+    Attribute observed = {0};
+    int result = kmip_decode_attribute_v2(&ctx, &observed);
+    int comparison = kmip_compare_attribute(&expected, &observed);
+    if(!comparison)
+    {
+        kmip_print_attribute(stderr, 1, &expected);
+        kmip_print_attribute(stderr, 1, &observed);
+    }
+    result = report_decoding_test_result(tracker, &ctx, comparison, result, __func__);
+
+    kmip_free_attribute(&ctx, &observed);
+    kmip_destroy(&ctx);
+
+    return(result);
+}
+
+int
+test_decode_attribute_v2_object_group(TestTracker *tracker)
+{
+    TRACK_TEST(tracker);
+
+    /* This encoding matches the following value:
+    *  Object Group - RoundRobinTestGroup
+    */
+    uint8 encoding[32] = {
+        0x42, 0x00, 0x56, 0x07, 0x00, 0x00, 0x00, 0x13,
+        0x52, 0x6F, 0x75, 0x6E, 0x64, 0x52, 0x6F, 0x62,
+        0x69, 0x6E, 0x54, 0x65, 0x73, 0x74, 0x47, 0x72,
+        0x6F, 0x75, 0x70, 0x00, 0x00, 0x00, 0x00, 0x00
+    };
+
+    KMIP ctx = {0};
+    kmip_init(&ctx, encoding, ARRAY_LENGTH(encoding), KMIP_2_0);
+
+    Attribute expected = {0};
+    kmip_init_attribute(&expected);
+    TextString object_group = {0};
+    object_group.value = "RoundRobinTestGroup";
+    object_group.size = 19;
+    expected.type = KMIP_ATTR_OBJECT_GROUP;
+    expected.value = &object_group;
 
     Attribute observed = {0};
     int result = kmip_decode_attribute_v2(&ctx, &observed);
@@ -11295,6 +11467,7 @@ run_tests(void)
     test_decode_attribute_operation_policy_name(&tracker);
     test_decode_attribute_cryptographic_usage_mask(&tracker);
     test_decode_attribute_state(&tracker);
+    test_decode_attribute_object_group(&tracker);
     test_decode_template_attribute(&tracker);
     test_decode_protocol_version(&tracker);
     test_decode_key_material_byte_string(&tracker);
@@ -11348,6 +11521,7 @@ run_tests(void)
     test_encode_attribute_operation_policy_name(&tracker);
     test_encode_attribute_cryptographic_usage_mask(&tracker);
     test_encode_attribute_state(&tracker);
+    test_encode_attribute_object_group(&tracker);
     test_encode_protocol_version(&tracker);
     test_encode_cryptographic_parameters(&tracker);
     test_encode_encryption_key_information(&tracker);
@@ -11441,6 +11615,7 @@ run_tests(void)
     test_decode_attribute_v2_cryptographic_length(&tracker);
     test_decode_attribute_v2_cryptographic_usage_mask(&tracker);
     test_decode_attribute_v2_state(&tracker);
+    test_decode_attribute_v2_object_group(&tracker);
     test_decode_attribute_v2_unsupported_attribute(&tracker);
     test_decode_create_request_payload_kmip_2_0(&tracker);
     test_decode_request_batch_item_get_payload_kmip_2_0(&tracker);
@@ -11459,6 +11634,7 @@ run_tests(void)
     test_encode_attribute_v2_cryptographic_length(&tracker);
     test_encode_attribute_v2_cryptographic_usage_mask(&tracker);
     test_encode_attribute_v2_state(&tracker);
+    test_encode_attribute_v2_object_group(&tracker);
     test_encode_attribute_v2_unsupported_attribute(&tracker);
     test_encode_create_request_payload_kmip_2_0(&tracker);
     test_encode_request_batch_item_get_payload_kmip_2_0(&tracker);
