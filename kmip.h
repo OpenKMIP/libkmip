@@ -84,7 +84,8 @@ enum attribute_type
     KMIP_ATTR_STATE                            = 7,
     KMIP_ATTR_APPLICATION_SPECIFIC_INFORMATION = 8,
     KMIP_ATTR_OBJECT_GROUP                     = 9,
-    KMIP_ATTR_ACTIVATION_DATE                  = 10
+    KMIP_ATTR_ACTIVATION_DATE                  = 10,
+    KMIP_ATTR_DEACTIVATION_DATE                = 11
 };
 
 enum batch_error_continuation_option
@@ -575,6 +576,7 @@ enum tag
     KMIP_TAG_CRYPTOGRAPHIC_LENGTH             = 0x42002A,
     KMIP_TAG_CRYPTOGRAPHIC_PARAMETERS         = 0x42002B,
     KMIP_TAG_CRYPTOGRAPHIC_USAGE_MASK         = 0x42002C,
+    KMIP_TAG_DEACTIVATION_DATE                = 0x42002F,
     KMIP_TAG_ENCRYPTION_KEY_INFORMATION       = 0x420036,
     KMIP_TAG_HASHING_ALGORITHM                = 0x420038,
     KMIP_TAG_IV_COUNTER_NONCE                 = 0x42003D,

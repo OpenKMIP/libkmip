@@ -3494,6 +3494,94 @@ test_decode_attribute_activation_date(TestTracker *tracker)
 }
 
 int
+test_encode_attribute_deactivation_date(TestTracker *tracker)
+{
+    TRACK_TEST(tracker);
+
+    /* This encoding matches the following values:
+    *  Attribute
+    *      Attribute Name - Deactivation Date
+    *      Attribute Value - 1335514467 (Fri Apr 27 10:14:27 CEST 2012)
+    */
+    uint8 expected[56] = {
+        0x42, 0x00, 0x08, 0x01, 0x00, 0x00, 0x00, 0x30,
+        0x42, 0x00, 0x0A, 0x07, 0x00, 0x00, 0x00, 0x11,
+        0x44, 0x65, 0x61, 0x63, 0x74, 0x69, 0x76, 0x61,
+        0x74, 0x69, 0x6F, 0x6E, 0x20, 0x44, 0x61, 0x74,
+        0x65, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x42, 0x00, 0x0B, 0x09, 0x00, 0x00, 0x00, 0x08,
+        0x00, 0x00, 0x00, 0x00, 0x4F, 0x9A, 0x55, 0x63
+    };
+
+    uint8 observed[56] = {0};
+    KMIP ctx = {0};
+    kmip_init(&ctx, observed, ARRAY_LENGTH(observed), KMIP_1_0);
+
+    int64 date_time = 1335514467;
+
+    Attribute attr = {0};
+    kmip_init_attribute(&attr);
+
+    attr.type = KMIP_ATTR_DEACTIVATION_DATE;
+    attr.value = &date_time;
+
+    int result = kmip_encode_attribute(&ctx, &attr);
+    result = report_encoding_test_result(
+        tracker,
+        &ctx,
+        expected,
+        observed,
+        result,
+        __func__
+    );
+    kmip_destroy(&ctx);
+    return(result);
+}
+
+int
+test_decode_attribute_deactivation_date(TestTracker *tracker)
+{
+    TRACK_TEST(tracker);
+
+    /* This encoding matches the following values:
+    *  Attribute
+    *      Attribute Name - Deactivation Date
+    *      Attribute Value - 1335514467 (Fri Apr 27 10:14:27 CEST 2012)
+    */
+    uint8 encoding[56] = {
+        0x42, 0x00, 0x08, 0x01, 0x00, 0x00, 0x00, 0x30,
+        0x42, 0x00, 0x0A, 0x07, 0x00, 0x00, 0x00, 0x11,
+        0x44, 0x65, 0x61, 0x63, 0x74, 0x69, 0x76, 0x61,
+        0x74, 0x69, 0x6F, 0x6E, 0x20, 0x44, 0x61, 0x74,
+        0x65, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x42, 0x00, 0x0B, 0x09, 0x00, 0x00, 0x00, 0x08,
+        0x00, 0x00, 0x00, 0x00, 0x4F, 0x9A, 0x55, 0x63
+    };
+
+    KMIP ctx = {0};
+    kmip_init(&ctx, encoding, ARRAY_LENGTH(encoding), KMIP_1_0);
+
+    int64 date_time = 1335514467;
+    Attribute expected = {0};
+    kmip_init_attribute(&expected);
+    expected.type = KMIP_ATTR_DEACTIVATION_DATE;
+    expected.value = &date_time;
+    Attribute observed = {0};
+    kmip_init_attribute(&observed);
+
+    int result = kmip_decode_attribute(&ctx, &observed);
+    result = report_decoding_test_result(
+        tracker,
+        &ctx,
+        kmip_compare_attribute(&expected, &observed),
+        result,
+        __func__);
+    kmip_free_attribute(&ctx, &observed);
+    kmip_destroy(&ctx);
+    return(result);
+}
+
+int
 test_encode_protocol_version(TestTracker *tracker)
 {
     TRACK_TEST(tracker);
@@ -8543,6 +8631,39 @@ test_encode_attribute_v2_activation_date(TestTracker *tracker)
 }
 
 int
+test_encode_attribute_v2_deactivation_date(TestTracker *tracker)
+{
+    TRACK_TEST(tracker);
+
+    /* This encoding matches the following values:
+    *  Deactivation Date - 1335514467 (Fri Apr 27 10:14:27 CEST 2012)
+    */
+    uint8 expected[16] = {
+        0x42, 0x00, 0x2F, 0x09, 0x00, 0x00, 0x00, 0x08,
+        0x00, 0x00, 0x00, 0x00, 0x4F, 0x9A, 0x55, 0x63
+    };
+
+    uint8 observed[16] = {0};
+    KMIP ctx = {0};
+    kmip_init(&ctx, observed, ARRAY_LENGTH(observed), KMIP_2_0);
+
+    int64 date_time = 1335514467;
+
+    Attribute attribute = {0};
+    kmip_init_attribute(&attribute);
+
+    attribute.type = KMIP_ATTR_DEACTIVATION_DATE;
+    attribute.value = &date_time;
+
+    int result = kmip_encode_attribute_v2(&ctx, &attribute);
+    result = report_encoding_test_result(tracker, &ctx, expected, observed, result, __func__);
+
+    kmip_destroy(&ctx);
+
+    return(result);
+}
+
+int
 test_encode_attribute_v2_unsupported_attribute(TestTracker *tracker)
 {
     TRACK_TEST(tracker);
@@ -9100,6 +9221,46 @@ test_decode_attribute_v2_activation_date(TestTracker *tracker)
     kmip_init_attribute(&expected);
 
     expected.type = KMIP_ATTR_ACTIVATION_DATE;
+    expected.value = &date_time;
+
+    Attribute observed = {0};
+    int result = kmip_decode_attribute_v2(&ctx, &observed);
+    int comparison = kmip_compare_attribute(&expected, &observed);
+    if(!comparison)
+    {
+        kmip_print_attribute(stderr, 1, &expected);
+        kmip_print_attribute(stderr, 1, &observed);
+    }
+    result = report_decoding_test_result(tracker, &ctx, comparison, result, __func__);
+
+    kmip_free_attribute(&ctx, &observed);
+    kmip_destroy(&ctx);
+
+    return(result);
+}
+
+int
+test_decode_attribute_v2_deactivation_date(TestTracker *tracker)
+{
+    TRACK_TEST(tracker);
+
+    /* This encoding matches the following values:
+    *  Deactivation Date - 1335514467 (Fri Apr 27 10:14:27 CEST 2012)
+    */
+    uint8 encoding[16] = {
+        0x42, 0x00, 0x2F, 0x09, 0x00, 0x00, 0x00, 0x08,
+        0x00, 0x00, 0x00, 0x00, 0x4F, 0x9A, 0x55, 0x63
+    };
+
+    KMIP ctx = {0};
+    kmip_init(&ctx, encoding, ARRAY_LENGTH(encoding), KMIP_2_0);
+
+    int64 date_time = 1335514467;
+
+    Attribute expected = {0};
+    kmip_init_attribute(&expected);
+
+    expected.type = KMIP_ATTR_DEACTIVATION_DATE;
     expected.value = &date_time;
 
     Attribute observed = {0};
@@ -11667,6 +11828,7 @@ run_tests(void)
     test_decode_attribute_state(&tracker);
     test_decode_attribute_object_group(&tracker);
     test_decode_attribute_activation_date(&tracker);
+    test_decode_attribute_deactivation_date(&tracker);
     test_decode_template_attribute(&tracker);
     test_decode_protocol_version(&tracker);
     test_decode_key_material_byte_string(&tracker);
@@ -11722,6 +11884,7 @@ run_tests(void)
     test_encode_attribute_state(&tracker);
     test_encode_attribute_object_group(&tracker);
     test_encode_attribute_activation_date(&tracker);
+    test_encode_attribute_deactivation_date(&tracker);
     test_encode_protocol_version(&tracker);
     test_encode_cryptographic_parameters(&tracker);
     test_encode_encryption_key_information(&tracker);
@@ -11817,6 +11980,7 @@ run_tests(void)
     test_decode_attribute_v2_state(&tracker);
     test_decode_attribute_v2_object_group(&tracker);
     test_decode_attribute_v2_activation_date(&tracker);
+    test_decode_attribute_v2_deactivation_date(&tracker);
     test_decode_attribute_v2_unsupported_attribute(&tracker);
     test_decode_create_request_payload_kmip_2_0(&tracker);
     test_decode_request_batch_item_get_payload_kmip_2_0(&tracker);
@@ -11837,6 +12001,7 @@ run_tests(void)
     test_encode_attribute_v2_state(&tracker);
     test_encode_attribute_v2_object_group(&tracker);
     test_encode_attribute_v2_activation_date(&tracker);
+    test_encode_attribute_v2_deactivation_date(&tracker);
     test_encode_attribute_v2_unsupported_attribute(&tracker);
     test_encode_create_request_payload_kmip_2_0(&tracker);
     test_encode_request_batch_item_get_payload_kmip_2_0(&tracker);
