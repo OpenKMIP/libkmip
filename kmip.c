@@ -9,6 +9,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <time.h>
 
 #include "kmip.h"
 #include "kmip_memset.h"
@@ -2809,6 +2810,11 @@ kmip_print_attribute_type_enum(FILE *f, enum attribute_type value)
             fprintf(f, "Object Group");
         }
         break;
+
+        case KMIP_ATTR_ACTIVATION_DATE:
+        {
+            fprintf(f, "Activation Date");
+        } break;
         
         default:
         fprintf(f, "Unknown");
@@ -3737,6 +3743,34 @@ kmip_print_byte_string(FILE *f, int indent, const char *name, ByteString *value)
 }
 
 void
+kmip_print_date_time(FILE *f, int64 value)
+{
+    if(value <= KMIP_UNSET)
+    {
+        fprintf(f, "-");
+    }
+    else
+    {
+        /* NOTE: This cast is only problematic if the current year is 2038+
+        *  AND time_t is equivalent to an int32 data type. If these conditions
+        *  are true, the cast will overflow and the time value will appear to
+        *  be set in 1901+.
+        *
+        *  No system should be using 32-bit time in 2038. If this impacts you,
+        *  upgrade your system.
+        */
+        time_t t = (time_t)value;
+
+        /* NOTE: The data pointed to by utc_time may change if gmtime is
+        *  called again before utc_time is used.
+        */
+        struct tm *utc_time = gmtime(&t);
+        fprintf(f, "%s", asctime(utc_time));
+    }
+    return;
+}
+
+void
 kmip_print_protocol_version(FILE *f, int indent, ProtocolVersion *value)
 {
     fprintf(f, "%*sProtocol Version @ %p\n", indent, "", (void *)value);
@@ -3981,6 +4015,12 @@ kmip_print_attribute_value(FILE *f, int indent, enum attribute_type type, void *
             kmip_print_text_string(f, indent + 2, "Object Group", value);
         }
         break;
+
+        case KMIP_ATTR_ACTIVATION_DATE:
+        {
+            fprintf(f, "\n");
+            kmip_print_date_time(f, *(int64 *)value);
+        } break;
         
         default:
         fprintf(f, "Unknown\n");
@@ -4488,7 +4528,9 @@ kmip_print_request_header(FILE *f, int indent, RequestHeader *value)
         fprintf(f, "%*sBatch Order Option: ", indent + 2, "");
         kmip_print_bool(f, value->batch_order_option);
         fprintf(f, "\n");
-        fprintf(f, "%*sTime Stamp: %lu\n", indent + 2, "", value->time_stamp);
+        fprintf(f, "%*sTime Stamp: ", indent + 2, "");
+        kmip_print_date_time(f, value->time_stamp);
+        fprintf(f, "\n");
         fprintf(f, "%*sBatch Count: %d\n", indent + 2, "", value->batch_count);
     }
 }
@@ -4501,7 +4543,9 @@ kmip_print_response_header(FILE *f, int indent, ResponseHeader *value)
     if(value != NULL)
     {
         kmip_print_protocol_version(f, indent + 2, value->protocol_version);
-        fprintf(f, "%*sTime Stamp: %lu\n", indent + 2, "", value->time_stamp);
+        fprintf(f, "%*sTime Stamp: ", indent + 2, "");
+        kmip_print_date_time(f, value->time_stamp);
+        fprintf(f, "\n");
         kmip_print_nonce(f, indent + 2, value->nonce);
 
         kmip_print_byte_string(f, indent + 2, "Server Hashed Password", value->server_hashed_password);
@@ -4709,6 +4753,11 @@ kmip_free_attribute(KMIP *ctx, Attribute *value)
                     kmip_free_text_string(ctx, value->value);
                 }
                 break;
+
+                case KMIP_ATTR_ACTIVATION_DATE:
+                {
+                    *(int64*)value->value = KMIP_UNSET;
+                } break;
                 
                 default:
                 /* NOTE (ph) Hitting this case means that we don't know what the */
@@ -5804,7 +5853,24 @@ kmip_deep_copy_int32(KMIP *ctx, const int32 *value)
         return(NULL);
 
     copy = ctx->memcpy_func(ctx->state, copy, value, sizeof(int32));
+    return(copy);
+}
 
+int64 *
+kmip_deep_copy_int64(KMIP *ctx, const int64 *value)
+{
+    if(ctx == NULL || value == NULL)
+    {
+        return(NULL);
+    }
+
+    int64 *copy = ctx->calloc_func(ctx->state, 1, sizeof(int64));
+    if(copy == NULL)
+    {
+        return(NULL);
+    }
+
+    copy = ctx->memcpy_func(ctx->state, copy, value, sizeof(int64));
     return(copy);
 }
 
@@ -5957,6 +6023,16 @@ kmip_deep_copy_attribute(KMIP *ctx, const Attribute *value)
         case KMIP_ATTR_STATE:
         {
             copy->value = kmip_deep_copy_int32(ctx, (int32 *)value->value);
+            if(copy->value == NULL)
+            {
+                ctx->free_func(ctx->state, copy);
+                return(NULL);
+            }
+        } break;
+
+        case KMIP_ATTR_ACTIVATION_DATE:
+        {
+            copy->value = kmip_deep_copy_int64(ctx, (int64 *)value->value);
             if(copy->value == NULL)
             {
                 ctx->free_func(ctx->state, copy);
@@ -6222,6 +6298,14 @@ kmip_compare_attribute(const Attribute *a, const Attribute *b)
                     return(kmip_compare_text_string((TextString *)a->value, (TextString *)b->value));
                 }
                 break;
+
+                case KMIP_ATTR_ACTIVATION_DATE:
+                {
+                    if(*(int64*)a->value != *(int64*)b->value)
+                    {
+                        return(KMIP_FALSE);
+                    }
+                } break;
                 
                 default:
                 /* NOTE (ph) Unsupported types can't be compared. */
@@ -8278,7 +8362,7 @@ kmip_encode_byte_string(KMIP *ctx, enum tag t, const ByteString *value)
 }
 
 int
-kmip_encode_date_time(KMIP *ctx, enum tag t, uint64 value)
+kmip_encode_date_time(KMIP *ctx, enum tag t, int64 value)
 {
     CHECK_BUFFER_FULL(ctx, 16);
     
@@ -8434,6 +8518,12 @@ kmip_encode_attribute_name(KMIP *ctx, enum attribute_type value)
             attribute_name.size = 12;
         }
         break;
+
+        case KMIP_ATTR_ACTIVATION_DATE:
+        {
+            attribute_name.value = "Activation Date";
+            attribute_name.size = 15;
+        } break;
         
         default:
         kmip_push_error_frame(ctx, __func__, __LINE__);
@@ -8536,6 +8626,11 @@ kmip_encode_attribute_v1(KMIP *ctx, const Attribute *value)
             result = kmip_encode_text_string(ctx, t, (TextString*)value->value);
         }
         break;
+
+        case KMIP_ATTR_ACTIVATION_DATE:
+        {
+            result = kmip_encode_date_time(ctx, t, *(int64 *)value->value);
+        } break;
 
         default:
         kmip_push_error_frame(ctx, __func__, __LINE__);
@@ -8659,6 +8754,15 @@ kmip_encode_attribute_v2(KMIP *ctx, const Attribute *value)
             );
         }
         break;
+
+        case KMIP_ATTR_ACTIVATION_DATE:
+        {
+            result = kmip_encode_date_time(
+                ctx,
+                KMIP_TAG_ACTIVATION_DATE,
+                *(int64 *)value->value
+            );
+        } break;
 
         default:
         {
@@ -10445,7 +10549,7 @@ kmip_decode_byte_string(KMIP *ctx, enum tag t, ByteString *value)
 }
 
 int
-kmip_decode_date_time(KMIP *ctx, enum tag t, uint64 *value)
+kmip_decode_date_time(KMIP *ctx, enum tag t, int64 *value)
 {
     CHECK_BUFFER_FULL(ctx, 16);
     
@@ -10562,6 +10666,10 @@ kmip_decode_attribute_name(KMIP *ctx, enum attribute_type *value)
     else if((n.size == 12) && (strncmp(n.value, "Object Group", 12) == 0))
     {
         *value = KMIP_ATTR_OBJECT_GROUP;
+    }
+    else if((n.size == 15) && (strncmp(n.value, "Activation Date", 15) == 0))
+    {
+        *value = KMIP_ATTR_ACTIVATION_DATE;
     }
     /* TODO (ph) Add all remaining attributes here. */
     else
@@ -10772,6 +10880,15 @@ kmip_decode_attribute_v1(KMIP *ctx, Attribute *value)
         }
         break;
 
+        case KMIP_ATTR_ACTIVATION_DATE:
+        {
+            value->value = ctx->calloc_func(ctx->state, 1, sizeof(int64));
+            CHECK_NEW_MEMORY(ctx, value->value, sizeof(int64), "ActivationDate date time");
+
+            result = kmip_decode_date_time(ctx, t, (int64*)value->value);
+            CHECK_RESULT(ctx, result);
+        } break;
+
         default:
         kmip_push_error_frame(ctx, __func__, __LINE__);
         return(KMIP_ERROR_ATTR_UNSUPPORTED);
@@ -10905,6 +11022,16 @@ kmip_decode_attribute_v2(KMIP *ctx, Attribute *value)
             CHECK_RESULT(ctx, result);
         }
         break;
+
+        case KMIP_TAG_ACTIVATION_DATE:
+        {
+            value->type = KMIP_ATTR_ACTIVATION_DATE;
+            value->value = ctx->calloc_func(ctx->state, 1, sizeof(int64));
+            CHECK_NEW_MEMORY(ctx, value->value, sizeof(int64), "ActivationDate date time");
+
+            result = kmip_decode_date_time(ctx, KMIP_TAG_ACTIVATION_DATE, (int64*)value->value);
+            CHECK_RESULT(ctx, result);
+        } break;
 
         default:
         {
