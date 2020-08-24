@@ -85,7 +85,8 @@ enum attribute_type
     KMIP_ATTR_APPLICATION_SPECIFIC_INFORMATION = 8,
     KMIP_ATTR_OBJECT_GROUP                     = 9,
     KMIP_ATTR_ACTIVATION_DATE                  = 10,
-    KMIP_ATTR_DEACTIVATION_DATE                = 11
+    KMIP_ATTR_DEACTIVATION_DATE                = 11,
+    KMIP_ATTR_PROCESS_START_DATE               = 12
 };
 
 enum batch_error_continuation_option
@@ -600,6 +601,7 @@ enum tag
     KMIP_TAG_OPERATION_POLICY_NAME            = 0x42005D,
     KMIP_TAG_PADDING_METHOD                   = 0x42005F,
     KMIP_TAG_PRIVATE_KEY                      = 0x420064,
+    KMIP_TAG_PROCESS_START_DATE               = 0x420067,
     KMIP_TAG_PROTOCOL_VERSION                 = 0x420069,
     KMIP_TAG_PROTOCOL_VERSION_MAJOR           = 0x42006A,
     KMIP_TAG_PROTOCOL_VERSION_MINOR           = 0x42006B,
