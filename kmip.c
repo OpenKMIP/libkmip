@@ -2820,6 +2820,11 @@ kmip_print_attribute_type_enum(FILE *f, enum attribute_type value)
         {
             fprintf(f, "Deactivation Date");
         } break;
+
+        case KMIP_ATTR_PROCESS_START_DATE:
+        {
+            fprintf(f, "Process Start Date");
+        } break;
         
         default:
         fprintf(f, "Unknown");
@@ -4022,17 +4027,13 @@ kmip_print_attribute_value(FILE *f, int indent, enum attribute_type type, void *
         break;
 
         case KMIP_ATTR_ACTIVATION_DATE:
+        case KMIP_ATTR_DEACTIVATION_DATE:
+        case KMIP_ATTR_PROCESS_START_DATE:
         {
             fprintf(f, "\n");
             kmip_print_date_time(f, *(int64 *)value);
         } break;
 
-        case KMIP_ATTR_DEACTIVATION_DATE:
-        {
-            fprintf(f, "\n");
-            kmip_print_date_time(f, *(int64 *)value);
-        } break;
-        
         default:
         fprintf(f, "Unknown\n");
         break;
@@ -4767,6 +4768,7 @@ kmip_free_attribute(KMIP *ctx, Attribute *value)
 
                 case KMIP_ATTR_ACTIVATION_DATE:
                 case KMIP_ATTR_DEACTIVATION_DATE:
+                case KMIP_ATTR_PROCESS_START_DATE:
                 {
                     *(int64*)value->value = KMIP_UNSET;
                 } break;
@@ -6044,6 +6046,7 @@ kmip_deep_copy_attribute(KMIP *ctx, const Attribute *value)
 
         case KMIP_ATTR_ACTIVATION_DATE:
         case KMIP_ATTR_DEACTIVATION_DATE:
+        case KMIP_ATTR_PROCESS_START_DATE:
         {
             copy->value = kmip_deep_copy_int64(ctx, (int64 *)value->value);
             if(copy->value == NULL)
@@ -6314,6 +6317,7 @@ kmip_compare_attribute(const Attribute *a, const Attribute *b)
 
                 case KMIP_ATTR_ACTIVATION_DATE:
                 case KMIP_ATTR_DEACTIVATION_DATE:
+                case KMIP_ATTR_PROCESS_START_DATE:
                 {
                     if(*(int64*)a->value != *(int64*)b->value)
                     {
@@ -8544,6 +8548,12 @@ kmip_encode_attribute_name(KMIP *ctx, enum attribute_type value)
             attribute_name.value = "Deactivation Date";
             attribute_name.size = 17;
         } break;
+
+        case KMIP_ATTR_PROCESS_START_DATE:
+        {
+            attribute_name.value = "Process Start Date";
+            attribute_name.size = 18;
+        } break;
         
         default:
         kmip_push_error_frame(ctx, __func__, __LINE__);
@@ -8649,6 +8659,7 @@ kmip_encode_attribute_v1(KMIP *ctx, const Attribute *value)
 
         case KMIP_ATTR_ACTIVATION_DATE:
         case KMIP_ATTR_DEACTIVATION_DATE:
+        case KMIP_ATTR_PROCESS_START_DATE:
         {
             result = kmip_encode_date_time(ctx, t, *(int64 *)value->value);
         } break;
@@ -8790,6 +8801,15 @@ kmip_encode_attribute_v2(KMIP *ctx, const Attribute *value)
             result = kmip_encode_date_time(
                 ctx,
                 KMIP_TAG_DEACTIVATION_DATE,
+                *(int64 *)value->value
+            );
+        } break;
+
+        case KMIP_ATTR_PROCESS_START_DATE:
+        {
+            result = kmip_encode_date_time(
+                ctx,
+                KMIP_TAG_PROCESS_START_DATE,
                 *(int64 *)value->value
             );
         } break;
@@ -10705,6 +10725,10 @@ kmip_decode_attribute_name(KMIP *ctx, enum attribute_type *value)
     {
         *value = KMIP_ATTR_DEACTIVATION_DATE;
     }
+    else if((18 == n.size) && (strncmp(n.value, "Process Start Date", 18) == 0))
+    {
+        *value = KMIP_ATTR_PROCESS_START_DATE;
+    }
     /* TODO (ph) Add all remaining attributes here. */
     else
     {
@@ -10932,6 +10956,15 @@ kmip_decode_attribute_v1(KMIP *ctx, Attribute *value)
             CHECK_RESULT(ctx, result);
         } break;
 
+        case KMIP_ATTR_PROCESS_START_DATE:
+        {
+            value->value = ctx->calloc_func(ctx->state, 1, sizeof(int64));
+            CHECK_NEW_MEMORY(ctx, value->value, sizeof(int64), "ProcessStartDate date time");
+
+            result = kmip_decode_date_time(ctx, t, (int64*)value->value);
+            CHECK_RESULT(ctx, result);
+        } break;
+
         default:
         kmip_push_error_frame(ctx, __func__, __LINE__);
         return(KMIP_ERROR_ATTR_UNSUPPORTED);
@@ -11083,6 +11116,16 @@ kmip_decode_attribute_v2(KMIP *ctx, Attribute *value)
             CHECK_NEW_MEMORY(ctx, value->value, sizeof(int64), "DeactivationDate date time");
 
             result = kmip_decode_date_time(ctx, KMIP_TAG_DEACTIVATION_DATE, (int64*)value->value);
+            CHECK_RESULT(ctx, result);
+        } break;
+
+        case KMIP_TAG_PROCESS_START_DATE:
+        {
+            value->type = KMIP_ATTR_PROCESS_START_DATE;
+            value->value = ctx->calloc_func(ctx->state, 1, sizeof(int64));
+            CHECK_NEW_MEMORY(ctx, value->value, sizeof(int64), "ProcessStartDate date time");
+
+            result = kmip_decode_date_time(ctx, tag, (int64*)value->value);
             CHECK_RESULT(ctx, result);
         } break;
 
