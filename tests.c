@@ -1433,6 +1433,60 @@ test_deep_copy_text_string(TestTracker *tracker)
 }
 
 int
+test_deep_copy_byte_string(TestTracker *tracker)
+{
+    TRACK_TEST(tracker);
+
+    ByteString expected = {0};
+    uint8 value[24] = {
+        0x73, 0x67, 0x57, 0x80, 0x51, 0x01, 0x2A, 0x6D,
+        0x13, 0x4A, 0x85, 0x5E, 0x25, 0xC8, 0xCD, 0x5E,
+        0x4C, 0xA1, 0x31, 0x45, 0x57, 0x29, 0xD3, 0xC8
+    };
+    expected.value = value;
+    expected.size = ARRAY_LENGTH(value);
+
+    ByteString *observed = NULL;
+    observed = kmip_deep_copy_byte_string(NULL, NULL);
+    if(NULL != observed)
+    {
+        TEST_FAILED(tracker, __func__, __LINE__);
+    }
+
+    KMIP ctx = {0};
+    kmip_init(&ctx, NULL, 0, KMIP_1_0);
+
+    observed = kmip_deep_copy_byte_string(&ctx, NULL);
+    if(NULL != observed)
+    {
+        kmip_destroy(&ctx);
+        TEST_FAILED(tracker, __func__, __LINE__);
+    }
+
+    observed = kmip_deep_copy_byte_string(&ctx, &expected);
+    if(NULL == observed)
+    {
+        kmip_destroy(&ctx);
+        TEST_FAILED(tracker, __func__, __LINE__);
+    }
+    if(!kmip_compare_byte_string(&expected, observed))
+    {
+        kmip_print_byte_string(stderr, 1, "ByteString", &expected);
+        kmip_print_byte_string(stderr, 1, "ByteString", observed);
+        kmip_free_byte_string(&ctx, observed);
+        ctx.free_func(ctx.state, observed);
+        kmip_destroy(&ctx);
+        TEST_FAILED(tracker, __func__, __LINE__);
+    }
+
+    kmip_free_byte_string(&ctx, observed);
+    ctx.free_func(ctx.state, observed);
+    kmip_destroy(&ctx);
+
+    TEST_PASSED(tracker, __func__);
+}
+
+int
 test_deep_copy_name(TestTracker *tracker)
 {
     TRACK_TEST(tracker);
@@ -1476,6 +1530,79 @@ test_deep_copy_name(TestTracker *tracker)
     }
 
     kmip_free_name(&ctx, observed);
+    ctx.free_func(ctx.state, observed);
+    kmip_destroy(&ctx);
+
+    TEST_PASSED(tracker, __func__);
+}
+
+int
+test_deep_copy_cryptographic_parameters(TestTracker *tracker)
+{
+    TRACK_TEST(tracker);
+
+    CryptographicParameters *observed = NULL;
+
+    observed = kmip_deep_copy_cryptographic_parameters(NULL, NULL);
+    if(NULL != observed)
+    {
+        TEST_FAILED(tracker, __func__, __LINE__);
+    }
+
+    KMIP ctx = {0};
+    kmip_init(&ctx, NULL, 0, KMIP_1_0);
+
+    observed = kmip_deep_copy_cryptographic_parameters(&ctx, NULL);
+    if(NULL != observed)
+    {
+        kmip_destroy(&ctx);
+        TEST_FAILED(tracker, __func__, __LINE__);
+    }
+
+    uint8 b[4] = {0x01, 0x02, 0x03, 0x04};
+    ByteString p_source = {0};
+    p_source.value = b;
+    p_source.size = ARRAY_LENGTH(b);
+
+    CryptographicParameters expected = {0};
+    expected.block_cipher_mode = KMIP_BLOCK_CBC;
+    expected.padding_method = KMIP_PAD_PKCS5;
+    expected.hashing_algorithm = KMIP_HASH_SHA1;
+    expected.key_role_type = KMIP_ROLE_KEK;
+
+    expected.digital_signature_algorithm = KMIP_DIGITAL_SHA1_WITH_RSA;
+    expected.cryptographic_algorithm = KMIP_CRYPTOALG_RSA;
+    expected.random_iv = KMIP_TRUE;
+    expected.iv_length = 256;
+    expected.tag_length = 16;
+    expected.fixed_field_length = 1024;
+    expected.invocation_field_length = 1024;
+    expected.counter_length = 32;
+    expected.initial_counter_value = 1;
+
+    expected.salt_length = 64;
+    expected.mask_generator = KMIP_MASKGEN_MGF1;
+    expected.mask_generator_hashing_algorithm = KMIP_HASH_SHA1;
+    expected.p_source = &p_source;
+    expected.trailer_field = 32;
+
+    observed = kmip_deep_copy_cryptographic_parameters(&ctx, &expected);
+    if(NULL == observed)
+    {
+        kmip_destroy(&ctx);
+        TEST_FAILED(tracker, __func__, __LINE__);
+    }
+    if(!kmip_compare_cryptographic_parameters(&expected, observed))
+    {
+        kmip_print_cryptographic_parameters(stderr, 1, &expected);
+        kmip_print_cryptographic_parameters(stderr, 1, &expected);
+        kmip_free_cryptographic_parameters(&ctx, observed);
+        ctx.free_func(ctx.state, observed);
+        kmip_destroy(&ctx);
+        TEST_FAILED(tracker, __func__, __LINE__);
+    }
+
+    kmip_free_cryptographic_parameters(&ctx, observed);
     ctx.free_func(ctx.state, observed);
     kmip_destroy(&ctx);
 
@@ -3752,6 +3879,121 @@ test_decode_attribute_protect_stop_date(TestTracker *tracker)
         kmip_compare_attribute(&expected, &observed),
         result,
         __func__);
+    kmip_free_attribute(&ctx, &observed);
+    kmip_destroy(&ctx);
+    return(result);
+}
+
+int
+test_encode_attribute_cryptographic_parameters(TestTracker *tracker)
+{
+    TRACK_TEST(tracker);
+
+    /* This encoding matches the following values:
+    *  Attribute
+    *      Attribute Name - Cryptographic Parameters
+    *      Attribute Value
+    *          Block Cipher Mode - CBC
+    *          Padding Method - PKCS5
+    *          Hashing Algorithm - SHA-1
+    */
+    uint8 expected[96] = {
+        0x42, 0x00, 0x08, 0x01, 0x00, 0x00, 0x00, 0x58,
+        0x42, 0x00, 0x0A, 0x07, 0x00, 0x00, 0x00, 0x18,
+        0x43, 0x72, 0x79, 0x70, 0x74, 0x6F, 0x67, 0x72,
+        0x61, 0x70, 0x68, 0x69, 0x63, 0x20, 0x50, 0x61,
+        0x72, 0x61, 0x6D, 0x65, 0x74, 0x65, 0x72, 0x73,
+        0x42, 0x00, 0x0B, 0x01, 0x00, 0x00, 0x00, 0x30,
+        0x42, 0x00, 0x11, 0x05, 0x00, 0x00, 0x00, 0x04,
+        0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00,
+        0x42, 0x00, 0x5F, 0x05, 0x00, 0x00, 0x00, 0x04,
+        0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x00,
+        0x42, 0x00, 0x38, 0x05, 0x00, 0x00, 0x00, 0x04,
+        0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00
+    };
+
+    uint8 observed[96] = {0};
+    KMIP ctx = {0};
+    kmip_init(&ctx, observed, ARRAY_LENGTH(observed), KMIP_1_0);
+
+    CryptographicParameters value = {0};
+    kmip_init_cryptographic_parameters(&value);
+    value.block_cipher_mode = KMIP_BLOCK_CBC;
+    value.padding_method = KMIP_PAD_PKCS5;
+    value.hashing_algorithm = KMIP_HASH_SHA1;
+
+    Attribute attr = {0};
+    kmip_init_attribute(&attr);
+
+    attr.type = KMIP_ATTR_CRYPTOGRAPHIC_PARAMETERS;
+    attr.value = &value;
+
+    int result = kmip_encode_attribute(&ctx, &attr);
+    result = report_encoding_test_result(
+        tracker,
+        &ctx,
+        expected,
+        observed,
+        result,
+        __func__
+    );
+    kmip_destroy(&ctx);
+    return(result);
+}
+
+int
+test_decode_attribute_cryptographic_parameters(TestTracker *tracker)
+{
+    TRACK_TEST(tracker);
+
+    /* This encoding matches the following values:
+    *  Attribute
+    *      Attribute Name - Cryptographic Parameters
+    *      Attribute Value
+    *          Block Cipher Mode - CBC
+    *          Padding Method - PKCS5
+    *          Hashing Algorithm - SHA-1
+    */
+    uint8 encoding[96] = {
+        0x42, 0x00, 0x08, 0x01, 0x00, 0x00, 0x00, 0x58,
+        0x42, 0x00, 0x0A, 0x07, 0x00, 0x00, 0x00, 0x18,
+        0x43, 0x72, 0x79, 0x70, 0x74, 0x6F, 0x67, 0x72,
+        0x61, 0x70, 0x68, 0x69, 0x63, 0x20, 0x50, 0x61,
+        0x72, 0x61, 0x6D, 0x65, 0x74, 0x65, 0x72, 0x73,
+        0x42, 0x00, 0x0B, 0x01, 0x00, 0x00, 0x00, 0x30,
+        0x42, 0x00, 0x11, 0x05, 0x00, 0x00, 0x00, 0x04,
+        0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00,
+        0x42, 0x00, 0x5F, 0x05, 0x00, 0x00, 0x00, 0x04,
+        0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x00,
+        0x42, 0x00, 0x38, 0x05, 0x00, 0x00, 0x00, 0x04,
+        0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00
+    };
+
+    KMIP ctx = {0};
+    kmip_init(&ctx, encoding, ARRAY_LENGTH(encoding), KMIP_1_0);
+
+    CryptographicParameters value = {0};
+    kmip_init_cryptographic_parameters(&value);
+    value.block_cipher_mode = KMIP_BLOCK_CBC;
+    value.padding_method = KMIP_PAD_PKCS5;
+    value.hashing_algorithm = KMIP_HASH_SHA1;
+
+    Attribute expected = {0};
+    kmip_init_attribute(&expected);
+    expected.type = KMIP_ATTR_CRYPTOGRAPHIC_PARAMETERS;
+    expected.value = &value;
+
+    Attribute observed = {0};
+    kmip_init_attribute(&observed);
+
+    int result = kmip_decode_attribute(&ctx, &observed);
+    result = report_decoding_test_result(
+        tracker,
+        &ctx,
+        kmip_compare_attribute(&expected, &observed),
+        result,
+        __func__
+    );
     kmip_free_attribute(&ctx, &observed);
     kmip_destroy(&ctx);
     return(result);
@@ -8906,6 +9148,51 @@ test_encode_attribute_v2_protect_stop_date(TestTracker *tracker)
 }
 
 int
+test_encode_attribute_v2_cryptographic_parameters(TestTracker *tracker)
+{
+    TRACK_TEST(tracker);
+
+    /* This encoding matches the following values:
+    *  Cryptographic Parameters
+    *      Block Cipher Mode - CBC
+    *      Padding Method - PKCS5
+    *      Hashing Algorithm - SHA-1
+    */
+    uint8 expected[56] = {
+        0x42, 0x00, 0x2B, 0x01, 0x00, 0x00, 0x00, 0x30,
+        0x42, 0x00, 0x11, 0x05, 0x00, 0x00, 0x00, 0x04,
+        0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00,
+        0x42, 0x00, 0x5F, 0x05, 0x00, 0x00, 0x00, 0x04,
+        0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x00,
+        0x42, 0x00, 0x38, 0x05, 0x00, 0x00, 0x00, 0x04,
+        0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00
+    };
+
+    uint8 observed[56] = {0};
+    KMIP ctx = {0};
+    kmip_init(&ctx, observed, ARRAY_LENGTH(observed), KMIP_2_0);
+
+    CryptographicParameters value = {0};
+    kmip_init_cryptographic_parameters(&value);
+    value.block_cipher_mode = KMIP_BLOCK_CBC;
+    value.padding_method = KMIP_PAD_PKCS5;
+    value.hashing_algorithm = KMIP_HASH_SHA1;
+
+    Attribute attr = {0};
+    kmip_init_attribute(&attr);
+
+    attr.type = KMIP_ATTR_CRYPTOGRAPHIC_PARAMETERS;
+    attr.value = &value;
+
+    int result = kmip_encode_attribute_v2(&ctx, &attr);
+    result = report_encoding_test_result(tracker, &ctx, expected, observed, result, __func__);
+
+    kmip_destroy(&ctx);
+
+    return(result);
+}
+
+int
 test_encode_attribute_v2_unsupported_attribute(TestTracker *tracker)
 {
     TRACK_TEST(tracker);
@@ -9586,6 +9873,60 @@ test_decode_attribute_v2_protect_stop_date(TestTracker *tracker)
     expected.value = &date_time;
 
     Attribute observed = {0};
+    int result = kmip_decode_attribute_v2(&ctx, &observed);
+    int comparison = kmip_compare_attribute(&expected, &observed);
+    if(!comparison)
+    {
+        kmip_print_attribute(stderr, 1, &expected);
+        kmip_print_attribute(stderr, 1, &observed);
+    }
+    result = report_decoding_test_result(tracker, &ctx, comparison, result, __func__);
+
+    kmip_free_attribute(&ctx, &observed);
+    kmip_destroy(&ctx);
+
+    return(result);
+}
+
+int
+test_decode_attribute_v2_cryptographic_parameters(TestTracker *tracker)
+{
+    TRACK_TEST(tracker);
+
+    /* This encoding matches the following values:
+    *  Cryptographic Parameters
+    *      Block Cipher Mode - CBC
+    *      Padding Method - PKCS5
+    *      Hashing Algorithm - SHA-1
+    */
+    uint8 encoding[56] = {
+        0x42, 0x00, 0x2B, 0x01, 0x00, 0x00, 0x00, 0x30,
+        0x42, 0x00, 0x11, 0x05, 0x00, 0x00, 0x00, 0x04,
+        0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00,
+        0x42, 0x00, 0x5F, 0x05, 0x00, 0x00, 0x00, 0x04,
+        0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x00,
+        0x42, 0x00, 0x38, 0x05, 0x00, 0x00, 0x00, 0x04,
+        0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00
+    };
+
+    KMIP ctx = {0};
+    kmip_init(&ctx, encoding, ARRAY_LENGTH(encoding), KMIP_2_0);
+
+    CryptographicParameters value = {0};
+    kmip_init_cryptographic_parameters(&value);
+    value.block_cipher_mode = KMIP_BLOCK_CBC;
+    value.padding_method = KMIP_PAD_PKCS5;
+    value.hashing_algorithm = KMIP_HASH_SHA1;
+
+    Attribute expected = {0};
+    kmip_init_attribute(&expected);
+
+    expected.type = KMIP_ATTR_CRYPTOGRAPHIC_PARAMETERS;
+    expected.value = &value;
+
+    Attribute observed = {0};
+    kmip_init_attribute(&observed);
+
     int result = kmip_decode_attribute_v2(&ctx, &observed);
     int comparison = kmip_compare_attribute(&expected, &observed);
     if(!comparison)
@@ -12112,7 +12453,9 @@ run_tests(void)
     test_deep_copy_int32(&tracker);
     test_deep_copy_int64(&tracker);
     test_deep_copy_text_string(&tracker);
+    test_deep_copy_byte_string(&tracker);
     test_deep_copy_name(&tracker);
+    test_deep_copy_cryptographic_parameters(&tracker);
     test_deep_copy_attribute(&tracker);
 
     printf("\nKMIP 1.0 Feature Tests\n");
@@ -12153,6 +12496,7 @@ run_tests(void)
     test_decode_attribute_deactivation_date(&tracker);
     test_decode_attribute_process_start_date(&tracker);
     test_decode_attribute_protect_stop_date(&tracker);
+    test_decode_attribute_cryptographic_parameters(&tracker);
     test_decode_template_attribute(&tracker);
     test_decode_protocol_version(&tracker);
     test_decode_key_material_byte_string(&tracker);
@@ -12211,6 +12555,7 @@ run_tests(void)
     test_encode_attribute_deactivation_date(&tracker);
     test_encode_attribute_process_start_date(&tracker);
     test_encode_attribute_protect_stop_date(&tracker);
+    test_encode_attribute_cryptographic_parameters(&tracker);
     test_encode_protocol_version(&tracker);
     test_encode_cryptographic_parameters(&tracker);
     test_encode_encryption_key_information(&tracker);
@@ -12309,6 +12654,7 @@ run_tests(void)
     test_decode_attribute_v2_deactivation_date(&tracker);
     test_decode_attribute_v2_process_start_date(&tracker);
     test_decode_attribute_v2_protect_stop_date(&tracker);
+    test_decode_attribute_v2_cryptographic_parameters(&tracker);
     test_decode_attribute_v2_unsupported_attribute(&tracker);
     test_decode_create_request_payload_kmip_2_0(&tracker);
     test_decode_request_batch_item_get_payload_kmip_2_0(&tracker);
@@ -12332,6 +12678,7 @@ run_tests(void)
     test_encode_attribute_v2_deactivation_date(&tracker);
     test_encode_attribute_v2_process_start_date(&tracker);
     test_encode_attribute_v2_protect_stop_date(&tracker);
+    test_encode_attribute_v2_cryptographic_parameters(&tracker);
     test_encode_attribute_v2_unsupported_attribute(&tracker);
     test_encode_create_request_payload_kmip_2_0(&tracker);
     test_encode_request_batch_item_get_payload_kmip_2_0(&tracker);

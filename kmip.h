@@ -87,7 +87,8 @@ enum attribute_type
     KMIP_ATTR_ACTIVATION_DATE                  = 10,
     KMIP_ATTR_DEACTIVATION_DATE                = 11,
     KMIP_ATTR_PROCESS_START_DATE               = 12,
-    KMIP_ATTR_PROTECT_STOP_DATE                = 13
+    KMIP_ATTR_PROTECT_STOP_DATE                = 13,
+    KMIP_ATTR_CRYPTOGRAPHIC_PARAMETERS         = 14
 };
 
 enum batch_error_continuation_option
@@ -1421,7 +1422,9 @@ Copying Functions
 int32 * kmip_deep_copy_int32(KMIP *, const int32 *);
 int64 * kmip_deep_copy_int64(KMIP *, const int64 *);
 TextString * kmip_deep_copy_text_string(KMIP *, const TextString *);
+ByteString * kmip_deep_copy_byte_string(KMIP *, const ByteString *);
 Name * kmip_deep_copy_name(KMIP *, const Name *);
+CryptographicParameters * kmip_deep_copy_cryptographic_parameters(KMIP *, const CryptographicParameters *);
 ApplicationSpecificInformation * kmip_deep_copy_application_specific_information(KMIP *, const ApplicationSpecificInformation *);
 Attribute * kmip_deep_copy_attribute(KMIP *, const Attribute *);
 
