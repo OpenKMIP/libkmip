@@ -2830,6 +2830,11 @@ kmip_print_attribute_type_enum(FILE *f, enum attribute_type value)
         {
             fprintf(f, "Protect Stop Date");
         } break;
+
+        case KMIP_ATTR_CRYPTOGRAPHIC_PARAMETERS:
+        {
+            fprintf(f, "Cryptographic Parameters");
+        } break;
         
         default:
         fprintf(f, "Unknown");
@@ -4040,6 +4045,12 @@ kmip_print_attribute_value(FILE *f, int indent, enum attribute_type type, void *
             kmip_print_date_time(f, *(int64 *)value);
         } break;
 
+        case KMIP_ATTR_CRYPTOGRAPHIC_PARAMETERS:
+        {
+            fprintf(f, "\n");
+            kmip_print_cryptographic_parameters(f, indent + 2, value);
+        } break;
+
         default:
         fprintf(f, "Unknown\n");
         break;
@@ -4778,6 +4789,11 @@ kmip_free_attribute(KMIP *ctx, Attribute *value)
                 case KMIP_ATTR_PROTECT_STOP_DATE:
                 {
                     *(int64*)value->value = KMIP_UNSET;
+                } break;
+
+                case KMIP_ATTR_CRYPTOGRAPHIC_PARAMETERS:
+                {
+                    kmip_free_cryptographic_parameters(ctx, value->value);
                 } break;
                 
                 default:
@@ -5922,6 +5938,39 @@ kmip_deep_copy_text_string(KMIP *ctx, const TextString *value)
     return(copy);
 }
 
+ByteString *
+kmip_deep_copy_byte_string(KMIP *ctx, const ByteString *value)
+{
+    if(NULL == ctx || NULL == value)
+    {
+        return(NULL);
+    }
+
+    ByteString *copy = ctx->calloc_func(ctx->state, 1, sizeof(ByteString));
+    if(NULL == copy)
+    {
+        return(NULL);
+    }
+
+    copy->size = value->size;
+    if(NULL != value->value)
+    {
+        copy->value = ctx->calloc_func(ctx->state, 1, value->size);
+        if(NULL == copy->value)
+        {
+            ctx->free_func(ctx->state, copy);
+            return(NULL);
+        }
+        copy->value = ctx->memcpy_func(ctx->state, copy->value, value->value, value->size);
+    }
+    else
+    {
+        copy->value = NULL;
+    }
+
+    return(copy);
+}
+
 Name *
 kmip_deep_copy_name(KMIP *ctx, const Name *value)
 {
@@ -5944,6 +5993,58 @@ kmip_deep_copy_name(KMIP *ctx, const Name *value)
     }
     else
         copy->value = NULL;
+
+    return(copy);
+}
+
+CryptographicParameters *
+kmip_deep_copy_cryptographic_parameters(KMIP *ctx, const CryptographicParameters *value)
+{
+    if(NULL == ctx || NULL == value)
+    {
+        return(NULL);
+    }
+
+    CryptographicParameters *copy = ctx->calloc_func(ctx->state, 1, sizeof(CryptographicParameters));
+    if(NULL == copy)
+    {
+        return(NULL);
+    }
+
+    if(NULL != value->p_source)
+    {
+        copy->p_source = kmip_deep_copy_byte_string(ctx, value->p_source);
+        if(NULL == copy->p_source)
+        {
+            kmip_free_cryptographic_parameters(ctx, copy);
+            ctx->free_func(ctx->state, copy);
+            return(NULL);
+        }
+    }
+    else
+    {
+        copy->p_source = NULL;
+    }
+
+    copy->block_cipher_mode = value->block_cipher_mode;
+    copy->padding_method = value->padding_method;
+    copy->hashing_algorithm = value->hashing_algorithm;
+    copy->key_role_type = value->key_role_type;
+
+    copy->digital_signature_algorithm = value->digital_signature_algorithm;
+    copy->cryptographic_algorithm = value->cryptographic_algorithm;
+    copy->random_iv = value->random_iv;
+    copy->iv_length = value->iv_length;
+    copy->tag_length = value->tag_length;
+    copy->fixed_field_length = value->fixed_field_length;
+    copy->invocation_field_length = value->invocation_field_length;
+    copy->counter_length = value->counter_length;
+    copy->initial_counter_value = value->initial_counter_value;
+
+    copy->salt_length = value->salt_length;
+    copy->mask_generator = value->mask_generator;
+    copy->mask_generator_hashing_algorithm = value->mask_generator_hashing_algorithm;
+    copy->trailer_field = value->trailer_field;
 
     return(copy);
 }
@@ -6058,6 +6159,16 @@ kmip_deep_copy_attribute(KMIP *ctx, const Attribute *value)
         {
             copy->value = kmip_deep_copy_int64(ctx, (int64 *)value->value);
             if(copy->value == NULL)
+            {
+                ctx->free_func(ctx->state, copy);
+                return(NULL);
+            }
+        } break;
+
+        case KMIP_ATTR_CRYPTOGRAPHIC_PARAMETERS:
+        {
+            copy->value = kmip_deep_copy_cryptographic_parameters(ctx, (CryptographicParameters*)value->value);
+            if(NULL == copy->value)
             {
                 ctx->free_func(ctx->state, copy);
                 return(NULL);
@@ -6332,6 +6443,14 @@ kmip_compare_attribute(const Attribute *a, const Attribute *b)
                     {
                         return(KMIP_FALSE);
                     }
+                } break;
+
+                case KMIP_ATTR_CRYPTOGRAPHIC_PARAMETERS:
+                {
+                    return(kmip_compare_cryptographic_parameters(
+                        (CryptographicParameters*)a->value,
+                        (CryptographicParameters*)b->value
+                    ));
                 } break;
                 
                 default:
@@ -8569,6 +8688,12 @@ kmip_encode_attribute_name(KMIP *ctx, enum attribute_type value)
             attribute_name.value = "Protect Stop Date";
             attribute_name.size = 17;
         } break;
+
+        case KMIP_ATTR_CRYPTOGRAPHIC_PARAMETERS:
+        {
+            attribute_name.value = "Cryptographic Parameters";
+            attribute_name.size = 24;
+        } break;
         
         default:
         kmip_push_error_frame(ctx, __func__, __LINE__);
@@ -8680,6 +8805,19 @@ kmip_encode_attribute_v1(KMIP *ctx, const Attribute *value)
             result = kmip_encode_date_time(ctx, t, *(int64 *)value->value);
         } break;
 
+        case KMIP_ATTR_CRYPTOGRAPHIC_PARAMETERS:
+        {
+            result = kmip_encode_cryptographic_parameters(ctx, (CryptographicParameters*)value->value);
+            CHECK_RESULT(ctx, result);
+
+            curr_index = ctx->index;
+            ctx->index = tag_index;
+
+            result = kmip_encode_int32_be(ctx, TAG_TYPE(KMIP_TAG_ATTRIBUTE_VALUE, KMIP_TYPE_STRUCTURE));
+
+            ctx->index = curr_index;
+        } break;
+
         default:
         kmip_push_error_frame(ctx, __func__, __LINE__);
         return(KMIP_ERROR_ATTR_UNSUPPORTED);
@@ -8701,7 +8839,6 @@ kmip_encode_attribute_v1(KMIP *ctx, const Attribute *value)
 int
 kmip_encode_attribute_v2(KMIP *ctx, const Attribute *value)
 {
-    /* TODO (ph) Add CryptographicParameters support? */
     CHECK_ENCODE_ARGS(ctx, value);
 
     int result = 0;
@@ -8836,6 +8973,14 @@ kmip_encode_attribute_v2(KMIP *ctx, const Attribute *value)
                 ctx,
                 KMIP_TAG_PROTECT_STOP_DATE,
                 *(int64 *)value->value
+            );
+        } break;
+
+        case KMIP_ATTR_CRYPTOGRAPHIC_PARAMETERS:
+        {
+            result = kmip_encode_cryptographic_parameters(
+                ctx,
+                (CryptographicParameters*)value->value
             );
         } break;
 
@@ -10758,6 +10903,10 @@ kmip_decode_attribute_name(KMIP *ctx, enum attribute_type *value)
     {
         *value = KMIP_ATTR_PROTECT_STOP_DATE;
     }
+    else if((24 == n.size) && (strncmp(n.value, "Cryptographic Parameters", 24) == 0))
+    {
+        *value = KMIP_ATTR_CRYPTOGRAPHIC_PARAMETERS;
+    }
     /* TODO (ph) Add all remaining attributes here. */
     else
     {
@@ -10912,7 +11061,38 @@ kmip_decode_attribute_v1(KMIP *ctx, Attribute *value)
             CHECK_RESULT(ctx, result);
         }
         break;
-        
+
+        case KMIP_ATTR_CRYPTOGRAPHIC_PARAMETERS:
+        {
+            /* TODO (ph) Like encoding, this is messy. Better solution? */
+            if(kmip_is_tag_type_next(ctx, KMIP_TAG_ATTRIBUTE_VALUE, KMIP_TYPE_STRUCTURE))
+            {
+                /* NOTE (ph) Decoding structures will fail if the structure tag */
+                /* is not present in the encoding. Temporarily swap the tags, */
+                /* decode the structure, and then swap the tags back to */
+                /* preserve the encoding. The tag/type check above guarantees */
+                /* space exists for this to succeed. */
+                kmip_encode_int32_be(ctx, TAG_TYPE(KMIP_TAG_CRYPTOGRAPHIC_PARAMETERS, KMIP_TYPE_STRUCTURE));
+                ctx->index = tag_index;
+                value->value = ctx->calloc_func(ctx->state, 1, sizeof(CryptographicParameters));
+                CHECK_NEW_MEMORY(ctx, value->value, sizeof(CryptographicParameters), "CryptographicParameters structure");
+                kmip_init_cryptographic_parameters((CryptographicParameters*)value->value);
+                result = kmip_decode_cryptographic_parameters(ctx, (CryptographicParameters*)value->value);
+
+                curr_index = ctx->index;
+                ctx->index = tag_index;
+
+                kmip_encode_int32_be(ctx, TAG_TYPE(KMIP_TAG_ATTRIBUTE_VALUE, KMIP_TYPE_STRUCTURE));
+                ctx->index = curr_index;
+            }
+            else
+            {
+                result = KMIP_TAG_MISMATCH;
+            }
+
+            CHECK_RESULT(ctx, result);
+        } break;
+
         case KMIP_ATTR_OBJECT_TYPE:
         value->value = ctx->calloc_func(ctx->state, 1, sizeof(int32));
         CHECK_NEW_MEMORY(ctx, value->value, sizeof(int32), "ObjectType enumeration");
@@ -11174,6 +11354,16 @@ kmip_decode_attribute_v2(KMIP *ctx, Attribute *value)
             CHECK_NEW_MEMORY(ctx, value->value, sizeof(int64), "ProtectStopDate date time");
 
             result = kmip_decode_date_time(ctx, tag, (int64*)value->value);
+            CHECK_RESULT(ctx, result);
+        } break;
+
+        case KMIP_TAG_CRYPTOGRAPHIC_PARAMETERS:
+        {
+            value->type = KMIP_ATTR_CRYPTOGRAPHIC_PARAMETERS;
+            value->value = ctx->calloc_func(ctx->state, 1, sizeof(CryptographicParameters));
+            CHECK_NEW_MEMORY(ctx, value->value, sizeof(CryptographicParameters), "CryptographicParameters structure");
+
+            result = kmip_decode_cryptographic_parameters(ctx, value->value);
             CHECK_RESULT(ctx, result);
         } break;
 
