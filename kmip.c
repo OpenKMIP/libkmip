@@ -1450,7 +1450,7 @@ kmip_is_tag_type_next(const KMIP *ctx, enum tag t, enum type s)
     return(KMIP_TRUE);
 }
 
-int
+size_t
 kmip_get_num_items_next(KMIP *ctx, enum tag t)
 {
     if(ctx == NULL)
@@ -1458,7 +1458,7 @@ kmip_get_num_items_next(KMIP *ctx, enum tag t)
         return(0);
     }
     
-    int count = 0;
+    size_t count = 0;
     
     uint8 *index = ctx->index;
     uint32 length = 0;

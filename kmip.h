@@ -1278,7 +1278,7 @@ void kmip_set_alloc_error_message(KMIP *, size_t, const char *);
 void kmip_set_error_message(KMIP *, const char *);
 int kmip_is_tag_next(const KMIP *, enum tag);
 int kmip_is_tag_type_next(const KMIP *, enum tag, enum type);
-int kmip_get_num_items_next(KMIP *, enum tag);
+size_t kmip_get_num_items_next(KMIP *, enum tag);
 uint32 kmip_peek_tag(KMIP *);
 int kmip_is_attribute_tag(uint32);
 
