@@ -8384,8 +8384,10 @@ int
 kmip_encode_int8_be(KMIP *ctx, int8 value)
 {
     CHECK_BUFFER_FULL(ctx, sizeof(int8));
-    
-    *ctx->index++ = value;
+
+    uint8 v = *(uint8 *)((void *)(&value));
+
+    *ctx->index++ = v;
     
     return(KMIP_OK);
 }
@@ -8394,12 +8396,14 @@ int
 kmip_encode_int32_be(KMIP *ctx, int32 value)
 {
     CHECK_BUFFER_FULL(ctx, sizeof(int32));
-    
-    *ctx->index++ = (value << 0) >> 24;
-    *ctx->index++ = (value << 8) >> 24;
-    *ctx->index++ = (value << 16) >> 24;
-    *ctx->index++ = (value << 24) >> 24;
-    
+
+    uint32 v = *(uint32 *)((void *)(&value));
+
+    *ctx->index++ = (uint8)((v & 0xFF000000) >> 24);
+    *ctx->index++ = (uint8)((v & 0x00FF0000) >> 16);
+    *ctx->index++ = (uint8)((v & 0x0000FF00) >> 8);
+    *ctx->index++ = (uint8)((v & 0x000000FF) >> 0);
+
     return(KMIP_OK);
 }
 
@@ -8407,15 +8411,17 @@ int
 kmip_encode_int64_be(KMIP *ctx, int64 value)
 {
     CHECK_BUFFER_FULL(ctx, sizeof(int64));
-    
-    *ctx->index++ = (value << 0) >> 56;
-    *ctx->index++ = (value << 8) >> 56;
-    *ctx->index++ = (value << 16) >> 56;
-    *ctx->index++ = (value << 24) >> 56;
-    *ctx->index++ = (value << 32) >> 56;
-    *ctx->index++ = (value << 40) >> 56;
-    *ctx->index++ = (value << 48) >> 56;
-    *ctx->index++ = (value << 56) >> 56;
+
+    uint64 v = *(uint64 *)((void *)(&value));
+
+    *ctx->index++ = (uint8)((v & 0xFF00000000000000) >> 56);
+    *ctx->index++ = (uint8)((v & 0x00FF000000000000) >> 48);
+    *ctx->index++ = (uint8)((v & 0x0000FF0000000000) >> 40);
+    *ctx->index++ = (uint8)((v & 0x000000FF00000000) >> 32);
+    *ctx->index++ = (uint8)((v & 0x00000000FF000000) >> 24);
+    *ctx->index++ = (uint8)((v & 0x0000000000FF0000) >> 16);
+    *ctx->index++ = (uint8)((v & 0x000000000000FF00) >> 8);
+    *ctx->index++ = (uint8)((v & 0x00000000000000FF) >> 0);
     
     return(KMIP_OK);
 }
