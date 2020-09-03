@@ -6315,15 +6315,22 @@ kmip_compare_protection_storage_masks(const ProtectionStorageMasks *a, const Pro
 
             LinkedListItem *a_item = a->masks->head;
             LinkedListItem *b_item = b->masks->head;
-            while((a_item != NULL) || (b_item != NULL))
+            while((a_item != NULL) && (b_item != NULL))
             {
                 if(a_item != b_item)
                 {
-                    int32 a_data = *(int32 *)a_item->data;
-                    int32 b_data = *(int32 *)b_item->data;
+                    int32 *a_data = (int32 *)a_item->data;
+                    int32 *b_data = (int32 *)b_item->data;
                     if(a_data != b_data)
                     {
-                        return(KMIP_FALSE);
+                        if((a_data == NULL) || (b_data == NULL))
+                        {
+                            return(KMIP_FALSE);
+                        }
+                        if(*a_data != *b_data)
+                        {
+                            return(KMIP_FALSE);
+                        }
                     }
                 }
 
@@ -6488,7 +6495,7 @@ kmip_compare_attributes(const Attributes *a, const Attributes *b)
 
             LinkedListItem *a_item = a->attribute_list->head;
             LinkedListItem *b_item = b->attribute_list->head;
-            while((a_item != NULL) || (b_item != NULL))
+            while((a_item != NULL) && (b_item != NULL))
             {
                 if(a_item != b_item)
                 {
