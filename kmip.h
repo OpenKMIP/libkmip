@@ -1132,7 +1132,7 @@ do                                                      \
         kmip_push_error_frame((A), __func__, __LINE__); \
         return(KMIP_TAG_MISMATCH);                      \
     }                                                   \
-    else if((int32)(((B) << 24) >> 24) != (int32)(D))   \
+    else if((int32)((B) & 0x000000FF) != (int32)(D))    \
     {                                                   \
         kmip_push_error_frame((A), __func__, __LINE__); \
         return(KMIP_TYPE_MISMATCH);                     \
