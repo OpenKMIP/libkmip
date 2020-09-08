@@ -29,6 +29,12 @@ typedef uint64_t uint64;
 
 typedef size_t memory_index;
 
+#ifdef intptr_t
+typedef intptr_t intptr;
+#else
+typedef int64 intptr;
+#endif
+
 typedef float real32;
 typedef double real64;
 
@@ -58,6 +64,7 @@ typedef double real64;
 #define KMIP_ERROR_BUFFER_UNDERFULL  (-18)
 #define KMIP_INVALID_ENCODING        (-19)
 #define KMIP_INVALID_FIELD           (-20)
+#define KMIP_INVALID_LENGTH          (-21)
 
 /*
 Enumerations
@@ -1488,6 +1495,7 @@ int kmip_encode_text_string(KMIP *, enum tag, const TextString *);
 int kmip_encode_byte_string(KMIP *, enum tag, const ByteString *);
 int kmip_encode_date_time(KMIP *, enum tag, int64);
 int kmip_encode_interval(KMIP *, enum tag, uint32);
+int kmip_encode_length(KMIP *, intptr);
 int kmip_encode_name(KMIP *, const Name *);
 int kmip_encode_attribute_name(KMIP *, enum attribute_type);
 int kmip_encode_attribute_v1(KMIP *, const Attribute *);
