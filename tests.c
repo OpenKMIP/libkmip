@@ -430,13 +430,13 @@ test_get_num_items_next(TestTracker *tracker)
     
     uint8 *before = ctx.index;
     int result = 0;
-    int count = 0;
+    size_t count = 0;
     
     count = kmip_get_num_items_next(&ctx, KMIP_TAG_ATTRIBUTE);
     if(count != 3)
     {
         printf("FAIL - %s\n", __func__);
-        printf("- expected item count not found (exp. 3, obs. %d)\n",
+        printf("- expected item count not found (exp. 3, obs. %zu)\n",
                count);
         tracker->tests_failed++;
         result = 1;
@@ -493,13 +493,13 @@ test_get_num_items_next_with_partial_item(TestTracker *tracker)
     
     uint8 *before = ctx.index;
     int result = 0;
-    int count = 0;
+    size_t count = 0;
     
     count = kmip_get_num_items_next(&ctx, KMIP_TAG_ATTRIBUTE);
     if(count != 2)
     {
         printf("FAIL - %s\n", __func__);
-        printf("- expected item count not found (exp. 2, obs. %d)\n",
+        printf("- expected item count not found (exp. 2, obs. %zu)\n",
                count);
         tracker->tests_failed++;
         result = 1;
@@ -549,13 +549,13 @@ test_get_num_items_next_with_mismatch_item(TestTracker *tracker)
     
     uint8 *before = ctx.index;
     int result = 0;
-    int count = 0;
+    size_t count = 0;
     
     count = kmip_get_num_items_next(&ctx, KMIP_TAG_ATTRIBUTE);
     if(count != 1)
     {
         printf("FAIL - %s\n", __func__);
-        printf("- expected item count not found (exp. 1, obs. %d)\n",
+        printf("- expected item count not found (exp. 1, obs. %zu)\n",
                count);
         tracker->tests_failed++;
         result = 1;
@@ -605,13 +605,13 @@ test_get_num_items_next_with_no_matches(TestTracker *tracker)
     
     uint8 *before = ctx.index;
     int result = 0;
-    int count = 0;
+    size_t count = 0;
     
     count = kmip_get_num_items_next(&ctx, KMIP_TAG_ATTRIBUTE);
     if(count != 0)
     {
         printf("FAIL - %s\n", __func__);
-        printf("- expected item count not found (exp. 0, obs. %d)\n",
+        printf("- expected item count not found (exp. 0, obs. %zu)\n",
                count);
         tracker->tests_failed++;
         result = 1;
@@ -669,13 +669,13 @@ test_get_num_items_next_with_non_structures(TestTracker *tracker)
     
     uint8 *before = ctx.index;
     int result = 0;
-    int count = 0;
+    size_t count = 0;
     
     count = kmip_get_num_items_next(&ctx, KMIP_TAG_UNIQUE_IDENTIFIER);
     if(count != 3)
     {
         printf("FAIL - %s\n", __func__);
-        printf("- expected item count not found (exp. 3, obs. %d)\n",
+        printf("- expected item count not found (exp. 3, obs. %zu)\n",
                count);
         tracker->tests_failed++;
         result = 1;
