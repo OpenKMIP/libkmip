@@ -8482,7 +8482,7 @@ int
 kmip_encode_text_string(KMIP *ctx, enum tag t, const TextString *value)
 {
     /* TODO (ph) What if value is NULL? */
-    uint8 padding = (8 - (value->size % 8)) % 8;
+    uint8 padding = CALCULATE_PADDING(value->size);
     CHECK_BUFFER_FULL(ctx, 8 + value->size + padding);
     
     kmip_encode_int32_be(ctx, TAG_TYPE(t, KMIP_TYPE_TEXT_STRING));
@@ -8503,7 +8503,7 @@ kmip_encode_text_string(KMIP *ctx, enum tag t, const TextString *value)
 int
 kmip_encode_byte_string(KMIP *ctx, enum tag t, const ByteString *value)
 {
-    uint8 padding = (8 - (value->size % 8)) % 8;
+    uint8 padding = CALCULATE_PADDING(value->size);
     CHECK_BUFFER_FULL(ctx, 8 + value->size + padding);
     
     kmip_encode_int32_be(ctx, TAG_TYPE(t, KMIP_TYPE_BYTE_STRING));
@@ -10780,7 +10780,7 @@ kmip_decode_text_string(KMIP *ctx, enum tag t, TextString *value)
     CHECK_TAG_TYPE(ctx, tag_type, t, KMIP_TYPE_TEXT_STRING);
     
     kmip_decode_int32_be(ctx, &length);
-    padding = (8 - (length % 8)) % 8;
+    padding = CALCULATE_PADDING(length);
     CHECK_BUFFER_FULL(ctx, (uint32)(length + padding));
     
     value->value = ctx->calloc_func(ctx->state, 1, length);
@@ -10815,7 +10815,7 @@ kmip_decode_byte_string(KMIP *ctx, enum tag t, ByteString *value)
     CHECK_TAG_TYPE(ctx, tag_type, t, KMIP_TYPE_BYTE_STRING);
     
     kmip_decode_int32_be(ctx, &length);
-    padding = (8 - (length % 8)) % 8;
+    padding = CALCULATE_PADDING(length);
     CHECK_BUFFER_FULL(ctx, (uint32)(length + padding));
     
     value->value = ctx->calloc_func(ctx->state, 1, length);
