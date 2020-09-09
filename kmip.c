@@ -10677,18 +10677,33 @@ kmip_decode_int64_be(KMIP *ctx, void *value)
 }
 
 int
+kmip_decode_length(KMIP *ctx, uint32 *value)
+{
+    CHECK_BUFFER_FULL(ctx, 4);
+
+    kmip_decode_int32_be(ctx, value);
+
+    if(*value > INT_MAX)
+    {
+        HANDLE_FAILURE(ctx, KMIP_INVALID_LENGTH);
+    }
+
+    return(KMIP_OK);
+}
+
+int
 kmip_decode_integer(KMIP *ctx, enum tag t, int32 *value)
 {
     CHECK_BUFFER_FULL(ctx, 16);
     
     int32 tag_type = 0;
-    int32 length = 0;
+    uint32 length = 0;
     int32 padding = 0;
     
     kmip_decode_int32_be(ctx, &tag_type);
     CHECK_TAG_TYPE(ctx, tag_type, t, KMIP_TYPE_INTEGER);
-    
-    kmip_decode_int32_be(ctx, &length);
+
+    kmip_decode_length(ctx, &length);
     CHECK_LENGTH(ctx, length, 4);
     
     kmip_decode_int32_be(ctx, value);
@@ -10705,12 +10720,12 @@ kmip_decode_long(KMIP *ctx, enum tag t, int64 *value)
     CHECK_BUFFER_FULL(ctx, 16);
     
     int32 tag_type = 0;
-    int32 length = 0;
+    uint32 length = 0;
     
     kmip_decode_int32_be(ctx, &tag_type);
     CHECK_TAG_TYPE(ctx, tag_type, t, KMIP_TYPE_LONG_INTEGER);
-    
-    kmip_decode_int32_be(ctx, &length);
+
+    kmip_decode_length(ctx, &length);
     CHECK_LENGTH(ctx, length, 8);
     
     kmip_decode_int64_be(ctx, value);
@@ -10724,14 +10739,14 @@ kmip_decode_enum(KMIP *ctx, enum tag t, void *value)
     CHECK_BUFFER_FULL(ctx, 16);
     
     int32 tag_type = 0;
-    int32 length = 0;
+    uint32 length = 0;
     int32 *v = (int32*)value;
     int32 padding = 0;
     
     kmip_decode_int32_be(ctx, &tag_type);
     CHECK_TAG_TYPE(ctx, tag_type, t, KMIP_TYPE_ENUMERATION);
     
-    kmip_decode_int32_be(ctx, &length);
+    kmip_decode_length(ctx, &length);
     CHECK_LENGTH(ctx, length, 4);
     
     kmip_decode_int32_be(ctx, v);
@@ -10748,13 +10763,13 @@ kmip_decode_bool(KMIP *ctx, enum tag t, bool32 *value)
     CHECK_BUFFER_FULL(ctx, 16);
     
     int32 tag_type = 0;
-    int32 length = 0;
+    uint32 length = 0;
     int32 padding = 0;
     
     kmip_decode_int32_be(ctx, &tag_type);
     CHECK_TAG_TYPE(ctx, tag_type, t, KMIP_TYPE_BOOLEAN);
     
-    kmip_decode_int32_be(ctx, &length);
+    kmip_decode_length(ctx, &length);
     CHECK_LENGTH(ctx, length, 8);
     
     kmip_decode_int32_be(ctx, &padding);
@@ -10772,27 +10787,27 @@ kmip_decode_text_string(KMIP *ctx, enum tag t, TextString *value)
     CHECK_BUFFER_FULL(ctx, 8);
     
     int32 tag_type = 0;
-    int32 length = 0;
-    int32 padding = 0;
+    uint32 length = 0;
+    uint8 padding = 0;
     int8 spacer = 0;
     
     kmip_decode_int32_be(ctx, &tag_type);
     CHECK_TAG_TYPE(ctx, tag_type, t, KMIP_TYPE_TEXT_STRING);
     
-    kmip_decode_int32_be(ctx, &length);
+    kmip_decode_length(ctx, &length);
     padding = CALCULATE_PADDING(length);
-    CHECK_BUFFER_FULL(ctx, (uint32)(length + padding));
+    CHECK_BUFFER_FULL(ctx, length + padding);
     
     value->value = ctx->calloc_func(ctx->state, 1, length);
     value->size = length;
     
     char *index = value->value;
     
-    for(int32 i = 0; i < length; i++)
+    for(uint32 i = 0; i < length; i++)
     {
         kmip_decode_int8_be(ctx, (int8*)index++);
     }
-    for(int32 i = 0; i < padding; i++)
+    for(uint8 i = 0; i < padding; i++)
     {
         kmip_decode_int8_be(ctx, &spacer);
         CHECK_PADDING(ctx, spacer);
@@ -10807,27 +10822,27 @@ kmip_decode_byte_string(KMIP *ctx, enum tag t, ByteString *value)
     CHECK_BUFFER_FULL(ctx, 8);
     
     int32 tag_type = 0;
-    int32 length = 0;
-    int32 padding = 0;
+    uint32 length = 0;
+    uint8 padding = 0;
     int8 spacer = 0;
     
     kmip_decode_int32_be(ctx, &tag_type);
     CHECK_TAG_TYPE(ctx, tag_type, t, KMIP_TYPE_BYTE_STRING);
-    
-    kmip_decode_int32_be(ctx, &length);
+
+    kmip_decode_length(ctx, &length);
     padding = CALCULATE_PADDING(length);
-    CHECK_BUFFER_FULL(ctx, (uint32)(length + padding));
+    CHECK_BUFFER_FULL(ctx, length + padding);
     
     value->value = ctx->calloc_func(ctx->state, 1, length);
     value->size = length;
     
     uint8 *index = value->value;
     
-    for(int32 i = 0; i < length; i++)
+    for(uint32 i = 0; i < length; i++)
     {
         kmip_decode_int8_be(ctx, index++);
     }
-    for(int32 i = 0; i < padding; i++)
+    for(uint8 i = 0; i < padding; i++)
     {
         kmip_decode_int8_be(ctx, &spacer);
         CHECK_PADDING(ctx, spacer);
@@ -10842,12 +10857,12 @@ kmip_decode_date_time(KMIP *ctx, enum tag t, int64 *value)
     CHECK_BUFFER_FULL(ctx, 16);
     
     int32 tag_type = 0;
-    int32 length = 0;
+    uint32 length = 0;
     
     kmip_decode_int32_be(ctx, &tag_type);
     CHECK_TAG_TYPE(ctx, tag_type, t, KMIP_TYPE_DATE_TIME);
     
-    kmip_decode_int32_be(ctx, &length);
+    kmip_decode_length(ctx, &length);
     CHECK_LENGTH(ctx, length, 8);
     
     kmip_decode_int64_be(ctx, value);
@@ -10861,13 +10876,13 @@ kmip_decode_interval(KMIP *ctx, enum tag t, uint32 *value)
     CHECK_BUFFER_FULL(ctx, 16);
     
     int32 tag_type = 0;
-    int32 length = 0;
+    uint32 length = 0;
     int32 padding = 0;
     
     kmip_decode_int32_be(ctx, &tag_type);
     CHECK_TAG_TYPE(ctx, tag_type, t, KMIP_TYPE_INTERVAL);
     
-    kmip_decode_int32_be(ctx, &length);
+    kmip_decode_length(ctx, &length);
     CHECK_LENGTH(ctx, length, 4);
     
     kmip_decode_int32_be(ctx, value);
@@ -10890,7 +10905,7 @@ kmip_decode_name(KMIP *ctx, Name *value)
     kmip_decode_int32_be(ctx, &tag_type);
     CHECK_TAG_TYPE(ctx, tag_type, KMIP_TAG_NAME, KMIP_TYPE_STRUCTURE);
     
-    kmip_decode_int32_be(ctx, &length);
+    kmip_decode_length(ctx, &length);
     CHECK_BUFFER_FULL(ctx, length);
     
     value->value = ctx->calloc_func(ctx->state, 1, sizeof(TextString));
@@ -11002,7 +11017,7 @@ kmip_decode_protection_storage_masks(KMIP *ctx, ProtectionStorageMasks *value)
     CHECK_RESULT(ctx, result);
     CHECK_TAG_TYPE(ctx, tag_type, KMIP_TAG_PROTECTION_STORAGE_MASKS, KMIP_TYPE_STRUCTURE);
 
-    result = kmip_decode_int32_be(ctx, &length);
+    result = kmip_decode_length(ctx, &length);
     CHECK_RESULT(ctx, result);
     CHECK_BUFFER_FULL(ctx, length);
 
@@ -11042,7 +11057,7 @@ kmip_decode_attribute_v1(KMIP *ctx, Attribute *value)
     kmip_decode_int32_be(ctx, &tag_type);
     CHECK_TAG_TYPE(ctx, tag_type, KMIP_TAG_ATTRIBUTE, KMIP_TYPE_STRUCTURE);
     
-    kmip_decode_int32_be(ctx, &length);
+    kmip_decode_length(ctx, &length);
     CHECK_BUFFER_FULL(ctx, length);
     
     result = kmip_decode_attribute_name(ctx, &value->type);
@@ -11088,7 +11103,6 @@ kmip_decode_attribute_v1(KMIP *ctx, Attribute *value)
             }
 
             CHECK_RESULT(ctx, result);
-
         }
         break;
 
@@ -11476,7 +11490,7 @@ kmip_decode_attributes(KMIP *ctx, Attributes *value)
     CHECK_RESULT(ctx, result);
     CHECK_TAG_TYPE(ctx, tag_type, KMIP_TAG_ATTRIBUTES, KMIP_TYPE_STRUCTURE);
 
-    result = kmip_decode_int32_be(ctx, &length);
+    result = kmip_decode_length(ctx, &length);
     CHECK_RESULT(ctx, result);
     CHECK_BUFFER_FULL(ctx, length);
 
@@ -11514,7 +11528,7 @@ kmip_decode_template_attribute(KMIP *ctx, TemplateAttribute *value)
     kmip_decode_int32_be(ctx, &tag_type);
     CHECK_TAG_TYPE(ctx, tag_type, KMIP_TAG_TEMPLATE_ATTRIBUTE, KMIP_TYPE_STRUCTURE);
     
-    kmip_decode_int32_be(ctx, &length);
+    kmip_decode_length(ctx, &length);
     CHECK_BUFFER_FULL(ctx, length);
     
     value->name_count = kmip_get_num_items_next(ctx, KMIP_TAG_NAME);
@@ -11558,7 +11572,7 @@ kmip_decode_protocol_version(KMIP *ctx, ProtocolVersion *value)
     kmip_decode_int32_be(ctx, &tag_type);
     CHECK_TAG_TYPE(ctx, tag_type, KMIP_TAG_PROTOCOL_VERSION, KMIP_TYPE_STRUCTURE);
     
-    kmip_decode_int32_be(ctx, &length);
+    kmip_decode_length(ctx, &length);
     CHECK_LENGTH(ctx, length, 32);
     
     result = kmip_decode_integer(ctx, KMIP_TAG_PROTOCOL_VERSION_MAJOR, &value->major);
@@ -11582,7 +11596,7 @@ kmip_decode_transparent_symmetric_key(KMIP *ctx, TransparentSymmetricKey *value)
     kmip_decode_int32_be(ctx, &tag_type);
     CHECK_TAG_TYPE(ctx, tag_type, KMIP_TAG_KEY_MATERIAL, KMIP_TYPE_STRUCTURE);
     
-    kmip_decode_int32_be(ctx, &length);
+    kmip_decode_length(ctx, &length);
     CHECK_BUFFER_FULL(ctx, length);
     
     value->key = ctx->calloc_func(ctx->state, 1, sizeof(ByteString));
@@ -11662,7 +11676,7 @@ kmip_decode_key_value(KMIP *ctx, enum key_format_type format, KeyValue *value)
     kmip_decode_int32_be(ctx, &tag_type);
     CHECK_TAG_TYPE(ctx, tag_type, KMIP_TAG_KEY_VALUE, KMIP_TYPE_STRUCTURE);
     
-    kmip_decode_int32_be(ctx, &length);
+    kmip_decode_length(ctx, &length);
     CHECK_BUFFER_FULL(ctx, length);
     
     result = kmip_decode_key_material(ctx, format, &value->key_material);
@@ -11698,7 +11712,7 @@ kmip_decode_application_specific_information(KMIP *ctx, ApplicationSpecificInfor
     kmip_decode_int32_be(ctx, &tag_type);
     CHECK_TAG_TYPE(ctx, tag_type, KMIP_TAG_APPLICATION_SPECIFIC_INFORMATION, KMIP_TYPE_STRUCTURE);
 
-    kmip_decode_int32_be(ctx, &length);
+    kmip_decode_length(ctx, &length);
     CHECK_BUFFER_FULL(ctx, length);
 
     if(kmip_is_tag_next(ctx, KMIP_TAG_APPLICATION_NAMESPACE))
@@ -11751,7 +11765,7 @@ kmip_decode_cryptographic_parameters(KMIP *ctx, CryptographicParameters *value)
     kmip_decode_int32_be(ctx, &tag_type);
     CHECK_TAG_TYPE(ctx, tag_type, KMIP_TAG_CRYPTOGRAPHIC_PARAMETERS, KMIP_TYPE_STRUCTURE);
     
-    kmip_decode_int32_be(ctx, &length);
+    kmip_decode_length(ctx, &length);
     CHECK_BUFFER_FULL(ctx, length);
     
     if(kmip_is_tag_next(ctx, KMIP_TAG_BLOCK_CIPHER_MODE))
@@ -11894,7 +11908,7 @@ kmip_decode_encryption_key_information(KMIP *ctx, EncryptionKeyInformation *valu
     kmip_decode_int32_be(ctx, &tag_type);
     CHECK_TAG_TYPE(ctx, tag_type, KMIP_TAG_ENCRYPTION_KEY_INFORMATION, KMIP_TYPE_STRUCTURE);
     
-    kmip_decode_int32_be(ctx, &length);
+    kmip_decode_length(ctx, &length);
     CHECK_BUFFER_FULL(ctx, length);
     
     value->unique_identifier = ctx->calloc_func(ctx->state, 1, sizeof(TextString));
@@ -11927,7 +11941,7 @@ kmip_decode_mac_signature_key_information(KMIP *ctx, MACSignatureKeyInformation 
     kmip_decode_int32_be(ctx, &tag_type);
     CHECK_TAG_TYPE(ctx, tag_type, KMIP_TAG_MAC_SIGNATURE_KEY_INFORMATION, KMIP_TYPE_STRUCTURE);
     
-    kmip_decode_int32_be(ctx, &length);
+    kmip_decode_length(ctx, &length);
     CHECK_BUFFER_FULL(ctx, length);
     
     value->unique_identifier = ctx->calloc_func(ctx->state, 1, sizeof(TextString));
@@ -11961,7 +11975,7 @@ kmip_decode_key_wrapping_data(KMIP *ctx, KeyWrappingData *value)
     kmip_decode_int32_be(ctx, &tag_type);
     CHECK_TAG_TYPE(ctx, tag_type, KMIP_TAG_KEY_WRAPPING_DATA, KMIP_TYPE_STRUCTURE);
     
-    kmip_decode_int32_be(ctx, &length);
+    kmip_decode_length(ctx, &length);
     CHECK_BUFFER_FULL(ctx, length);
     
     result = kmip_decode_enum(ctx, KMIP_TAG_WRAPPING_METHOD, &value->wrapping_method);
@@ -12029,7 +12043,7 @@ kmip_decode_key_block(KMIP *ctx, KeyBlock *value)
     kmip_decode_int32_be(ctx, &tag_type);
     CHECK_TAG_TYPE(ctx, tag_type, KMIP_TAG_KEY_BLOCK, KMIP_TYPE_STRUCTURE);
     
-    kmip_decode_int32_be(ctx, &length);
+    kmip_decode_length(ctx, &length);
     CHECK_BUFFER_FULL(ctx, length);
     
     result = kmip_decode_enum(ctx, KMIP_TAG_KEY_FORMAT_TYPE, &value->key_format_type);
@@ -12098,7 +12112,7 @@ kmip_decode_symmetric_key(KMIP *ctx, SymmetricKey *value)
     kmip_decode_int32_be(ctx, &tag_type);
     CHECK_TAG_TYPE(ctx, tag_type, KMIP_TAG_SYMMETRIC_KEY, KMIP_TYPE_STRUCTURE);
     
-    kmip_decode_int32_be(ctx, &length);
+    kmip_decode_length(ctx, &length);
     CHECK_BUFFER_FULL(ctx, length);
     
     value->key_block = ctx->calloc_func(ctx->state, 1, sizeof(KeyBlock));
@@ -12122,7 +12136,7 @@ kmip_decode_public_key(KMIP *ctx, PublicKey *value)
     kmip_decode_int32_be(ctx, &tag_type);
     CHECK_TAG_TYPE(ctx, tag_type, KMIP_TAG_PUBLIC_KEY, KMIP_TYPE_STRUCTURE);
     
-    kmip_decode_int32_be(ctx, &length);
+    kmip_decode_length(ctx, &length);
     CHECK_BUFFER_FULL(ctx, length);
     
     value->key_block = ctx->calloc_func(ctx->state, 1, sizeof(KeyBlock));
@@ -12146,7 +12160,7 @@ kmip_decode_private_key(KMIP *ctx, PrivateKey *value)
     kmip_decode_int32_be(ctx, &tag_type);
     CHECK_TAG_TYPE(ctx, tag_type, KMIP_TAG_PRIVATE_KEY, KMIP_TYPE_STRUCTURE);
     
-    kmip_decode_int32_be(ctx, &length);
+    kmip_decode_length(ctx, &length);
     CHECK_BUFFER_FULL(ctx, length);
     
     value->key_block = ctx->calloc_func(ctx->state, 1, sizeof(KeyBlock));
@@ -12170,7 +12184,7 @@ kmip_decode_key_wrapping_specification(KMIP *ctx, KeyWrappingSpecification *valu
     kmip_decode_int32_be(ctx, &tag_type);
     CHECK_TAG_TYPE(ctx, tag_type, KMIP_TAG_KEY_WRAPPING_SPECIFICATION, KMIP_TYPE_STRUCTURE);
     
-    kmip_decode_int32_be(ctx, &length);
+    kmip_decode_length(ctx, &length);
     CHECK_BUFFER_FULL(ctx, length);
     
     result = kmip_decode_enum(ctx, KMIP_TAG_WRAPPING_METHOD, &value->wrapping_method);
@@ -12229,7 +12243,7 @@ kmip_decode_create_request_payload(KMIP *ctx, CreateRequestPayload *value)
     kmip_decode_int32_be(ctx, &tag_type);
     CHECK_TAG_TYPE(ctx, tag_type, KMIP_TAG_REQUEST_PAYLOAD, KMIP_TYPE_STRUCTURE);
     
-    kmip_decode_int32_be(ctx, &length);
+    kmip_decode_length(ctx, &length);
     CHECK_BUFFER_FULL(ctx, length);
     
     result = kmip_decode_enum(ctx, KMIP_TAG_OBJECT_TYPE, &value->object_type);
@@ -12311,7 +12325,7 @@ kmip_decode_create_response_payload(KMIP *ctx, CreateResponsePayload *value)
     kmip_decode_int32_be(ctx, &tag_type);
     CHECK_TAG_TYPE(ctx, tag_type, KMIP_TAG_RESPONSE_PAYLOAD, KMIP_TYPE_STRUCTURE);
     
-    kmip_decode_int32_be(ctx, &length);
+    kmip_decode_length(ctx, &length);
     CHECK_BUFFER_FULL(ctx, length);
     
     result = kmip_decode_enum(ctx, KMIP_TAG_OBJECT_TYPE, &value->object_type);
@@ -12351,7 +12365,7 @@ kmip_decode_get_request_payload(KMIP *ctx, GetRequestPayload *value)
     kmip_decode_int32_be(ctx, &tag_type);
     CHECK_TAG_TYPE(ctx, tag_type, KMIP_TAG_REQUEST_PAYLOAD, KMIP_TYPE_STRUCTURE);
     
-    kmip_decode_int32_be(ctx, &length);
+    kmip_decode_length(ctx, &length);
     CHECK_BUFFER_FULL(ctx, length);
 
     if(kmip_is_tag_next(ctx, KMIP_TAG_UNIQUE_IDENTIFIER))
@@ -12409,7 +12423,7 @@ kmip_decode_get_response_payload(KMIP *ctx, GetResponsePayload *value)
     kmip_decode_int32_be(ctx, &tag_type);
     CHECK_TAG_TYPE(ctx, tag_type, KMIP_TAG_RESPONSE_PAYLOAD, KMIP_TYPE_STRUCTURE);
     
-    kmip_decode_int32_be(ctx, &length);
+    kmip_decode_length(ctx, &length);
     CHECK_BUFFER_FULL(ctx, length);
     
     result = kmip_decode_enum(ctx, KMIP_TAG_OBJECT_TYPE, &value->object_type);
@@ -12466,7 +12480,7 @@ kmip_decode_destroy_request_payload(KMIP *ctx, DestroyRequestPayload *value)
     kmip_decode_int32_be(ctx, &tag_type);
     CHECK_TAG_TYPE(ctx, tag_type, KMIP_TAG_REQUEST_PAYLOAD, KMIP_TYPE_STRUCTURE);
     
-    kmip_decode_int32_be(ctx, &length);
+    kmip_decode_length(ctx, &length);
     CHECK_BUFFER_FULL(ctx, length);
     
     if(kmip_is_tag_next(ctx, KMIP_TAG_UNIQUE_IDENTIFIER))
@@ -12492,7 +12506,7 @@ kmip_decode_destroy_response_payload(KMIP *ctx, DestroyResponsePayload *value)
     kmip_decode_int32_be(ctx, &tag_type);
     CHECK_TAG_TYPE(ctx, tag_type, KMIP_TAG_RESPONSE_PAYLOAD, KMIP_TYPE_STRUCTURE);
     
-    kmip_decode_int32_be(ctx, &length);
+    kmip_decode_length(ctx, &length);
     CHECK_BUFFER_FULL(ctx, length);
     
     value->unique_identifier = ctx->calloc_func(ctx->state, 1, sizeof(TextString));
@@ -12517,7 +12531,7 @@ kmip_decode_request_batch_item(KMIP *ctx, RequestBatchItem *value)
     kmip_decode_int32_be(ctx, &tag_type);
     CHECK_TAG_TYPE(ctx, tag_type, KMIP_TAG_BATCH_ITEM, KMIP_TYPE_STRUCTURE);
     
-    kmip_decode_int32_be(ctx, &length);
+    kmip_decode_length(ctx, &length);
     CHECK_BUFFER_FULL(ctx, length);
     
     result = kmip_decode_enum(ctx, KMIP_TAG_OPERATION, &value->operation);
@@ -12583,7 +12597,7 @@ kmip_decode_response_batch_item(KMIP *ctx, ResponseBatchItem *value)
     kmip_decode_int32_be(ctx, &tag_type);
     CHECK_TAG_TYPE(ctx, tag_type, KMIP_TAG_BATCH_ITEM, KMIP_TYPE_STRUCTURE);
     
-    kmip_decode_int32_be(ctx, &length);
+    kmip_decode_length(ctx, &length);
     CHECK_BUFFER_FULL(ctx, length);
     
     if(kmip_is_tag_next(ctx, KMIP_TAG_OPERATION))
@@ -12677,7 +12691,7 @@ kmip_decode_nonce(KMIP *ctx, Nonce *value)
     kmip_decode_int32_be(ctx, &tag_type);
     CHECK_TAG_TYPE(ctx, tag_type, KMIP_TAG_NONCE, KMIP_TYPE_STRUCTURE);
     
-    kmip_decode_int32_be(ctx, &length);
+    kmip_decode_length(ctx, &length);
     CHECK_BUFFER_FULL(ctx, length);
     
     value->nonce_id = ctx->calloc_func(ctx->state, 1, sizeof(ByteString));
@@ -12707,7 +12721,7 @@ kmip_decode_username_password_credential(KMIP *ctx, UsernamePasswordCredential *
     kmip_decode_int32_be(ctx, &tag_type);
     CHECK_TAG_TYPE(ctx, tag_type, KMIP_TAG_CREDENTIAL_VALUE, KMIP_TYPE_STRUCTURE);
     
-    kmip_decode_int32_be(ctx, &length);
+    kmip_decode_length(ctx, &length);
     CHECK_BUFFER_FULL(ctx, length);
     
     value->username = ctx->calloc_func(ctx->state, 1, sizeof(TextString));
@@ -12740,7 +12754,7 @@ kmip_decode_device_credential(KMIP *ctx, DeviceCredential *value)
     kmip_decode_int32_be(ctx, &tag_type);
     CHECK_TAG_TYPE(ctx, tag_type, KMIP_TAG_CREDENTIAL_VALUE, KMIP_TYPE_STRUCTURE);
     
-    kmip_decode_int32_be(ctx, &length);
+    kmip_decode_length(ctx, &length);
     CHECK_BUFFER_FULL(ctx, length);
     
     if(kmip_is_tag_next(ctx, KMIP_TAG_DEVICE_SERIAL_NUMBER))
@@ -12812,7 +12826,7 @@ kmip_decode_attestation_credential(KMIP *ctx, AttestationCredential *value)
     kmip_decode_int32_be(ctx, &tag_type);
     CHECK_TAG_TYPE(ctx, tag_type, KMIP_TAG_CREDENTIAL_VALUE, KMIP_TYPE_STRUCTURE);
     
-    kmip_decode_int32_be(ctx, &length);
+    kmip_decode_length(ctx, &length);
     CHECK_BUFFER_FULL(ctx, length);
     
     value->nonce = ctx->calloc_func(ctx->state, 1, sizeof(Nonce));
@@ -12893,7 +12907,7 @@ kmip_decode_credential(KMIP *ctx, Credential *value)
     kmip_decode_int32_be(ctx, &tag_type);
     CHECK_TAG_TYPE(ctx, tag_type, KMIP_TAG_CREDENTIAL, KMIP_TYPE_STRUCTURE);
     
-    kmip_decode_int32_be(ctx, &length);
+    kmip_decode_length(ctx, &length);
     CHECK_BUFFER_FULL(ctx, length);
     
     result = kmip_decode_enum(ctx, KMIP_TAG_CREDENTIAL_TYPE, &value->credential_type);
@@ -12918,7 +12932,7 @@ kmip_decode_authentication(KMIP *ctx, Authentication *value)
     kmip_decode_int32_be(ctx, &tag_type);
     CHECK_TAG_TYPE(ctx, tag_type, KMIP_TAG_AUTHENTICATION, KMIP_TYPE_STRUCTURE);
     
-    kmip_decode_int32_be(ctx, &length);
+    kmip_decode_length(ctx, &length);
     CHECK_BUFFER_FULL(ctx, length);
     
     value->credential = ctx->calloc_func(ctx->state, 1, sizeof(Credential));
@@ -12942,7 +12956,7 @@ kmip_decode_request_header(KMIP *ctx, RequestHeader *value)
     kmip_decode_int32_be(ctx, &tag_type);
     CHECK_TAG_TYPE(ctx, tag_type, KMIP_TAG_REQUEST_HEADER, KMIP_TYPE_STRUCTURE);
     
-    kmip_decode_int32_be(ctx, &length);
+    kmip_decode_length(ctx, &length);
     CHECK_BUFFER_FULL(ctx, length);
     
     value->protocol_version = ctx->calloc_func(ctx->state, 1, sizeof(ProtocolVersion));
@@ -13053,7 +13067,7 @@ kmip_decode_response_header(KMIP *ctx, ResponseHeader *value)
     kmip_decode_int32_be(ctx, &tag_type);
     CHECK_TAG_TYPE(ctx, tag_type, KMIP_TAG_RESPONSE_HEADER, KMIP_TYPE_STRUCTURE);
     
-    kmip_decode_int32_be(ctx, &length);
+    kmip_decode_length(ctx, &length);
     CHECK_BUFFER_FULL(ctx, length);
     
     value->protocol_version = ctx->calloc_func(ctx->state, 1, sizeof(ProtocolVersion));
@@ -13142,7 +13156,7 @@ kmip_decode_request_message(KMIP *ctx, RequestMessage *value)
     kmip_decode_int32_be(ctx, &tag_type);
     CHECK_TAG_TYPE(ctx, tag_type, KMIP_TAG_REQUEST_MESSAGE, KMIP_TYPE_STRUCTURE);
     
-    kmip_decode_int32_be(ctx, &length);
+    kmip_decode_length(ctx, &length);
     CHECK_BUFFER_FULL(ctx, length);
     
     value->request_header = ctx->calloc_func(ctx->state, 1, sizeof(RequestHeader));
@@ -13180,7 +13194,7 @@ kmip_decode_response_message(KMIP *ctx, ResponseMessage *value)
     kmip_decode_int32_be(ctx, &tag_type);
     CHECK_TAG_TYPE(ctx, tag_type, KMIP_TAG_RESPONSE_MESSAGE, KMIP_TYPE_STRUCTURE);
     
-    kmip_decode_int32_be(ctx, &length);
+    kmip_decode_length(ctx, &length);
     CHECK_BUFFER_FULL(ctx, length);
     
     value->response_header = ctx->calloc_func(ctx->state, 1, sizeof(ResponseHeader));
