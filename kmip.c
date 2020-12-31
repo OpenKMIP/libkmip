@@ -1150,7 +1150,7 @@ kmip_clear_errors(KMIP *ctx)
     
     for(size_t i = 0; i < ARRAY_LENGTH(ctx->errors); i++)
     {
-        ctx->errors[i] = (ErrorFrame){0};
+        ctx->errors[i] = (ErrorFrame){{0},0};
     }
     ctx->frame_index = ctx->errors;
     
@@ -2785,6 +2785,11 @@ kmip_print_attribute_type_enum(enum attribute_type value)
         case KMIP_ATTR_STATE:
         printf("State");
         break;
+
+        case KMIP_ATTR_OBJECT_GROUP:
+        printf("Object Group");
+        break;
+
         
         default:
         printf("Unknown");
@@ -3931,6 +3936,12 @@ kmip_print_attribute_value(int indent, enum attribute_type type, void *value)
         kmip_print_state_enum(*(enum state *)value);
         printf("\n");
         break;
+
+        case KMIP_ATTR_OBJECT_GROUP:
+        printf("\n");
+        kmip_print_text_string(indent + 2, "Object Group", value);
+        break;
+
         
         default:
         printf("Unknown\n");
@@ -4700,6 +4711,11 @@ kmip_free_attribute(KMIP *ctx, Attribute *value)
                 case KMIP_ATTR_STATE:
                 *(int32*)value->value = 0;
                 break;
+
+                case KMIP_ATTR_OBJECT_GROUP:
+                kmip_free_text_string(ctx, value->value);
+                break;
+
                 
                 default:
                 /* NOTE (ph) Hitting this case means that we don't know what the */
@@ -5850,6 +5866,7 @@ kmip_deep_copy_attribute(KMIP *ctx, const Attribute *value)
     {
         case KMIP_ATTR_UNIQUE_IDENTIFIER:
         case KMIP_ATTR_OPERATION_POLICY_NAME:
+        case KMIP_ATTR_OBJECT_GROUP:
         {
             copy->value = kmip_deep_copy_text_string(ctx, (TextString *)value->value);
             if(copy->value == NULL)
@@ -6027,6 +6044,9 @@ kmip_compare_protection_storage_masks(const ProtectionStorageMasks *a, const Pro
             {
                 if(a_item != b_item)
                 {
+                    if(!a_item || !b_item)
+                        break;
+
                     int32 a_data = *(int32 *)a_item->data;
                     int32 b_data = *(int32 *)b_item->data;
                     if(a_data != b_data)
@@ -6124,6 +6144,11 @@ kmip_compare_attribute(const Attribute *a, const Attribute *b)
                     return(KMIP_FALSE);
                 }
                 break;
+
+                case KMIP_ATTR_OBJECT_GROUP:
+                return(kmip_compare_text_string((TextString *)a->value, (TextString *)b->value));
+                break;
+
                 
                 default:
                 /* NOTE (ph) Unsupported types can't be compared. */
@@ -6164,6 +6189,9 @@ kmip_compare_attributes(const Attributes *a, const Attributes *b)
             {
                 if(a_item != b_item)
                 {
+                    if(!a_item || !b_item)
+                        break;
+
                     Attribute *a_data = (Attribute *)a_item->data;
                     Attribute *b_data = (Attribute *)b_item->data;
                     if(kmip_compare_attribute(a_data, b_data) == KMIP_FALSE)
@@ -8282,6 +8310,11 @@ kmip_encode_attribute_name(KMIP *ctx, enum attribute_type value)
         attribute_name.value = "State";
         attribute_name.size = 5;
         break;
+
+        case KMIP_ATTR_OBJECT_GROUP:
+        attribute_name.value = "Object Group";
+        attribute_name.size = 12;
+        break;
         
         default:
         kmip_push_error_frame(ctx, __func__, __LINE__);
@@ -8364,6 +8397,11 @@ kmip_encode_attribute_v1(KMIP *ctx, const Attribute *value)
         case KMIP_ATTR_STATE:
         result = kmip_encode_enum(ctx, t, *(int32 *)value->value);
         break;
+
+        case KMIP_ATTR_OBJECT_GROUP:
+        result = kmip_encode_text_string(ctx, t, (TextString*)value->value);
+        break;
+
         
         default:
         kmip_push_error_frame(ctx, __func__, __LINE__);
@@ -8468,6 +8506,17 @@ kmip_encode_attribute_v2(KMIP *ctx, const Attribute *value)
             );
         }
         break;
+
+        case KMIP_ATTR_OBJECT_GROUP:
+        {
+            result = kmip_encode_text_string(
+                ctx,
+                KMIP_TAG_OBJECT_GROUP,
+                (TextString*)value->value
+            );
+        }
+        break;
+
 
         default:
         {
@@ -8581,8 +8630,11 @@ kmip_encode_protocol_version(KMIP *ctx, const ProtocolVersion *value)
     uint8 *length_index = ctx->index;
     uint8 *value_index = ctx->index += 4;
     
-    kmip_encode_integer(ctx, KMIP_TAG_PROTOCOL_VERSION_MAJOR, value->major);
-    kmip_encode_integer(ctx, KMIP_TAG_PROTOCOL_VERSION_MINOR, value->minor);
+    int result = 0;
+    result = kmip_encode_integer(ctx, KMIP_TAG_PROTOCOL_VERSION_MAJOR, value->major);
+    CHECK_RESULT(ctx, result);
+    result = kmip_encode_integer(ctx, KMIP_TAG_PROTOCOL_VERSION_MINOR, value->minor);
+    CHECK_RESULT(ctx, result);
     
     uint8 *curr_index = ctx->index;
     ctx->index = length_index;
@@ -10319,6 +10371,10 @@ kmip_decode_attribute_name(KMIP *ctx, enum attribute_type *value)
     {
         *value = KMIP_ATTR_STATE;
     }
+    else if((n.size == 12) && (strncmp(n.value, "Object Group", 12) == 0))
+    {
+        *value = KMIP_ATTR_OBJECT_GROUP;
+    }
     /* TODO (ph) Add all remaining attributes here. */
     else
     {
@@ -10486,6 +10542,14 @@ kmip_decode_attribute_v1(KMIP *ctx, Attribute *value)
         CHECK_RESULT(ctx, result);
         CHECK_ENUM(ctx, KMIP_TAG_STATE, *(int32 *)value->value);
         break;
+
+        case KMIP_ATTR_OBJECT_GROUP:
+        value->value = ctx->calloc_func(ctx->state, 1, sizeof(TextString));
+        CHECK_NEW_MEMORY(ctx, value->value, sizeof(TextString), "ObjectGroup text string");
+        result = kmip_decode_text_string(ctx, t, (TextString*)value->value);
+        CHECK_RESULT(ctx, result);
+        break;
+
         
         default:
         kmip_push_error_frame(ctx, __func__, __LINE__);
@@ -10598,6 +10662,18 @@ kmip_decode_attribute_v2(KMIP *ctx, Attribute *value)
             CHECK_ENUM(ctx, KMIP_TAG_STATE, *(int32 *)value->value);
         }
         break;
+
+        case KMIP_TAG_OBJECT_GROUP:
+        {
+            value->type = KMIP_ATTR_OBJECT_GROUP;
+            value->value = ctx->calloc_func(ctx->state, 1, sizeof(TextString));
+            CHECK_NEW_MEMORY(ctx, value->value, sizeof(TextString), "ObjectGroup text string");
+
+            result = kmip_decode_text_string(ctx, KMIP_TAG_OBJECT_GROUP, (TextString *)value->value);
+            CHECK_RESULT(ctx, result);
+        }
+        break;
+
 
         default:
         {

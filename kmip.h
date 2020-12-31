@@ -79,7 +79,8 @@ enum attribute_type
     KMIP_ATTR_CRYPTOGRAPHIC_LENGTH      = 4,
     KMIP_ATTR_OPERATION_POLICY_NAME     = 5,
     KMIP_ATTR_CRYPTOGRAPHIC_USAGE_MASK  = 6,
-    KMIP_ATTR_STATE                     = 7
+    KMIP_ATTR_STATE                     = 7,
+    KMIP_ATTR_OBJECT_GROUP              = 8
 };
 
 enum batch_error_continuation_option
@@ -583,6 +584,7 @@ enum tag
     KMIP_TAG_NAME                             = 0x420053,
     KMIP_TAG_NAME_TYPE                        = 0x420054,
     KMIP_TAG_NAME_VALUE                       = 0x420055,
+    KMIP_TAG_OBJECT_GROUP                     = 0x420056,
     KMIP_TAG_OBJECT_TYPE                      = 0x420057,
     KMIP_TAG_OPERATION                        = 0x42005C,
     KMIP_TAG_OPERATION_POLICY_NAME            = 0x42005D,
@@ -617,6 +619,7 @@ enum tag
     KMIP_TAG_MACHINE_IDENTIFIER               = 0x4200A9,
     KMIP_TAG_MEDIA_IDENTIFIER                 = 0x4200AA,
     KMIP_TAG_NETWORK_IDENTIFIER               = 0x4200AB,
+    KMIP_TAG_OBJECT_GROUP_MEMBER              = 0x4200AC,
     KMIP_TAG_DIGITAL_SIGNATURE_ALGORITHM      = 0x4200AE,
     KMIP_TAG_DEVICE_SERIAL_NUMBER             = 0x4200B0,
     /* KMIP 1.2 */
