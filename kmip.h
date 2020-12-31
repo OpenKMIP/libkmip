@@ -1281,6 +1281,7 @@ Printing Functions
 void kmip_print_buffer(void *, int);
 void kmip_print_stack_trace(KMIP *);
 void kmip_print_error_string(int);
+const char* kmip_get_error_string(int);
 void kmip_print_batch_error_continuation_option(enum batch_error_continuation_option);
 void kmip_print_operation_enum(enum operation);
 void kmip_print_result_status_enum(enum result_status);
@@ -1399,6 +1400,7 @@ int32 * kmip_deep_copy_int32(KMIP *, const int32 *);
 TextString * kmip_deep_copy_text_string(KMIP *, const TextString *);
 Name * kmip_deep_copy_name(KMIP *, const Name *);
 Attribute * kmip_deep_copy_attribute(KMIP *, const Attribute *);
+char* kmip_copy_textstring(char* dest, TextString* src, size_t size);
 
 /*
 Comparison Functions

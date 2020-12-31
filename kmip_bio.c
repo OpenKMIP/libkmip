@@ -14,6 +14,7 @@
 
 #include "kmip.h"
 #include "kmip_memset.h"
+#include "kmip_bio.h"
 
 /*
 OpenSSH BIO API
@@ -662,6 +663,46 @@ int kmip_bio_get_symmetric_key(BIO *bio,
     return(result);
 }
 
+LastResult last_result = {0};
+
+void kmip_clear_last_result(void)
+{
+    last_result.operation     = 0;
+    last_result.result_status = KMIP_STATUS_SUCCESS;
+    last_result.result_reason = 0;
+    last_result.result_message[0] = 0;
+}
+
+int kmip_set_last_result(ResponseBatchItem* value)
+{
+    if (value)
+    {
+        last_result.operation = value->operation;
+        last_result.result_status = value->result_status;
+        last_result.result_reason = value->result_reason;
+        if (value->result_message)
+            kmip_copy_textstring(last_result.result_message, value->result_message, sizeof(last_result.result_message));
+        else
+            last_result.result_message[0] = 0;
+    }
+    return 0;
+}
+
+const LastResult* kmip_get_last_result(void)
+{
+    return &last_result;
+}
+
+int kmip_last_reason(void)
+{
+    return last_result.result_reason;
+}
+
+const char* kmip_last_message(void)
+{
+    return last_result.result_message;
+}
+
 int kmip_bio_create_symmetric_key_with_context(KMIP *ctx, BIO *bio,
                                                TemplateAttribute *template_attribute,
                                                char **id, int *id_size)
@@ -846,17 +887,25 @@ int kmip_bio_create_symmetric_key_with_context(KMIP *ctx, BIO *bio,
     
     ResponseBatchItem resp_item = resp_m.batch_items[0];
     result = resp_item.result_status;
+
+    kmip_set_last_result(&resp_item);
     
-    CreateResponsePayload *pld = (CreateResponsePayload *)resp_item.response_payload;
-    TextString *unique_identifier = pld->unique_identifier;
-    
-    char *result_id = ctx->calloc_func(ctx->state, 1, unique_identifier->size);
-    *id_size = unique_identifier->size;
-    for(int i = 0; i < *id_size; i++)
+    if (result == KMIP_STATUS_SUCCESS)
     {
-        result_id[i] = unique_identifier->value[i];
+        CreateResponsePayload *pld = (CreateResponsePayload *)resp_item.response_payload;
+        if (pld)
+        {
+            TextString *unique_identifier = pld->unique_identifier;
+
+            char *result_id = ctx->calloc_func(ctx->state, 1, unique_identifier->size);
+            *id_size = unique_identifier->size;
+            for(int i = 0; i < *id_size; i++)
+            {
+                result_id[i] = unique_identifier->value[i];
+            }
+            *id = result_id;
+        }
     }
-    *id = result_id;
     
     /* Clean up the response message and the encoding buffer. */
     kmip_free_response_message(ctx, &resp_m);
@@ -1060,6 +1109,8 @@ int kmip_bio_get_symmetric_key_with_context(KMIP *ctx, BIO *bio,
     
     ResponseBatchItem resp_item = resp_m.batch_items[0];
     result = resp_item.result_status;
+
+    kmip_set_last_result(&resp_item);
     
     if(result != KMIP_STATUS_SUCCESS)
     {

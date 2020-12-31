@@ -1757,114 +1757,118 @@ kmip_print_stack_trace(KMIP *ctx)
     } while(index-- != ctx->errors);
 }
 
-void
-kmip_print_error_string(int value)
+const char*
+kmip_get_error_string(int value)
 {
     /* TODO (ph) Move this to a static string array. */
     switch(value)
     {
         case 0:
         {
-            printf("KMIP_OK");
+            return("KMIP_OK");
         } break;
         
         case -1:
         {
-            printf("KMIP_NOT_IMPLEMENTED");
+            return("KMIP_NOT_IMPLEMENTED");
         } break;
         
         case -2:
         {
-            printf("KMIP_ERROR_BUFFER_FULL");
+            return("KMIP_ERROR_BUFFER_FULL");
         } break;
         
         case -3:
         {
-            printf("KMIP_ERROR_ATTR_UNSUPPORTED");
+            return("KMIP_ERROR_ATTR_UNSUPPORTED");
         } break;
         
         case -4:
         {
-            printf("KMIP_TAG_MISMATCH");
+            return("KMIP_TAG_MISMATCH");
         } break;
         
         case -5:
         {
-            printf("KMIP_TYPE_MISMATCH");
+            return("KMIP_TYPE_MISMATCH");
         } break;
         
         case -6:
         {
-            printf("KMIP_LENGTH_MISMATCH");
+            return("KMIP_LENGTH_MISMATCH");
         } break;
         
         case -7:
         {
-            printf("KMIP_PADDING_MISMATCH");
+            return("KMIP_PADDING_MISMATCH");
         } break;
         
         case -8:
         {
-            printf("KMIP_BOOLEAN_MISMATCH");
+            return("KMIP_BOOLEAN_MISMATCH");
         } break;
         
         case -9:
         {
-            printf("KMIP_ENUM_MISMATCH");
+            return("KMIP_ENUM_MISMATCH");
         } break;
         
         case -10:
         {
-            printf("KMIP_ENUM_UNSUPPORTED");
+            return("KMIP_ENUM_UNSUPPORTED");
         } break;
         
         case -11:
         {
-            printf("KMIP_INVALID_FOR_VERSION");
+            return("KMIP_INVALID_FOR_VERSION");
         } break;
         
         case -12:
         {
-            printf("KMIP_MEMORY_ALLOC_FAILED");
+            return("KMIP_MEMORY_ALLOC_FAILED");
         } break;
 
         case -13:
         {
-            printf("KMIP_IO_FAILURE");
+            return("KMIP_IO_FAILURE");
         } break;
 
         case -14:
         {
-            printf("KMIP_EXCEED_MAX_MESSAGE_SIZE");
+            return("KMIP_EXCEED_MAX_MESSAGE_SIZE");
         } break;
 
         case -15:
         {
-            printf("KMIP_MALFORMED_RESPONSE");
+            return("KMIP_MALFORMED_RESPONSE");
         } break;
 
         case -16:
         {
-            printf("KMIP_OBJECT_MISMATCH");
+            return("KMIP_OBJECT_MISMATCH");
         } break;
 
         case -17:
         {
-            printf("KMIP_ARG_INVALID");
+            return("KMIP_ARG_INVALID");
         } break;
 
         case -18:
         {
-            printf("KMIP_ERROR_BUFFER_UNDERFULL");
+            return("KMIP_ERROR_BUFFER_UNDERFULL");
         } break;
 
         default:
-        {
-            printf("Unrecognized Error Code");
-        } break;
+            break;
     };
     
-    return;
+    return("Unrecognized Error Code");
+}
+    
+void
+kmip_print_error_string(int value)
+{
+    printf("%s", kmip_get_error_string(value) );
 }
 
 void
@@ -5909,6 +5913,23 @@ kmip_deep_copy_attribute(KMIP *ctx, const Attribute *value)
 
     return(copy);
 }
+
+#define min(a,b) (((a) < (b)) ? (a) : (b))
+
+char* kmip_copy_textstring(char* dest, TextString* src, size_t size)
+{
+    if(src && src->value != NULL)
+    {
+        size_t len = min(size, src->size);
+        memcpy(dest, src->value, len);
+        dest[len] = 0;
+    }
+    else
+        *dest = 0;
+
+    return dest;
+}
+
 
 /*
 Comparison Functions

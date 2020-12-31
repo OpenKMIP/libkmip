@@ -12,6 +12,22 @@
 #include <openssl/ssl.h>
 #include "kmip.h"
 
+
+typedef struct last_result
+{
+    enum operation operation;
+    enum result_status result_status;
+    enum result_reason result_reason;
+    char result_message[128];
+} LastResult;
+
+int kmip_set_last_result(ResponseBatchItem*);
+const LastResult* kmip_get_last_result(void);
+int kmip_last_reason(void);
+const char* kmip_last_message(void);
+void kmip_clear_last_result(void);
+
+
 /*
 OpenSSH BIO API
 */
