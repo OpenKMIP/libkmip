@@ -12,6 +12,8 @@
 
 #include "kmip.h"
 #include "kmip_memset.h"
+#include "kmip_query.h"
+#include "kmip_locate.h"
 
 /*
 Miscellaneous Utilities
@@ -866,6 +868,8 @@ kmip_check_enum_value(enum kmip_version version, enum tag t, int value)
             case KMIP_OP_CREATE:
             case KMIP_OP_GET:
             case KMIP_OP_DESTROY:
+            case KMIP_OP_QUERY:
+            case KMIP_OP_LOCATE:
             return(KMIP_OK);
             break;
             
@@ -1130,6 +1134,56 @@ kmip_check_enum_value(enum kmip_version version, enum tag t, int value)
         };
         break;
         
+        case KMIP_TAG_QUERY_FUNCTION:
+        switch (value)
+        {
+        /* KMIP 1.0 */
+        case KMIP_QUERY_OPERATIONS:
+        case KMIP_QUERY_OBJECTS:
+        case KMIP_QUERY_SERVER_INFORMATION:
+        case KMIP_QUERY_APPLICATION_NAMESPACES:
+            return(KMIP_OK);
+            break;
+        /* KMIP 1.1 */
+        case KMIP_QUERY_EXTENSION_LIST:
+        case KMIP_QUERY_EXTENSION_MAP:
+            if(version >= KMIP_1_1)
+                return(KMIP_OK);
+            else
+                return(KMIP_INVALID_FOR_VERSION);
+            break;
+        /* KMIP 1.2 */
+        case KMIP_QUERY_ATTESTATION_TYPES:
+            if(version >= KMIP_1_2)
+                return(KMIP_OK);
+            else
+                return(KMIP_INVALID_FOR_VERSION);
+            break;
+        /* KMIP 1.3 */
+        case KMIP_QUERY_RNGS:
+        case KMIP_QUERY_VALIDATIONS:
+        case KMIP_QUERY_PROFILES:
+        case KMIP_QUERY_CAPABILITIES:
+        case KMIP_QUERY_CLIENT_REGISTRATION_METHODS:
+            if(version >= KMIP_1_3)
+                return(KMIP_OK);
+            else
+                return(KMIP_INVALID_FOR_VERSION);
+            break;
+        /* KMIP 2.0 */
+        case KMIP_QUERY_DEFAULTS_INFORMATION:
+        case KMIP_QUERY_STORAGE_PROTECTION_MASKS:
+            if(version >= KMIP_2_0)
+                return(KMIP_OK);
+            else
+                return(KMIP_INVALID_FOR_VERSION);
+            break;
+        default:
+            return(KMIP_ENUM_MISMATCH);
+            break;
+        }
+        break;
+        
         default:
         return(KMIP_ENUM_UNSUPPORTED);
         break;
@@ -1150,7 +1204,7 @@ kmip_clear_errors(KMIP *ctx)
     
     for(size_t i = 0; i < ARRAY_LENGTH(ctx->errors); i++)
     {
-        ctx->errors[i] = (ErrorFrame){{0},0};
+        ctx->errors[i] = (ErrorFrame){0};
     }
     ctx->frame_index = ctx->errors;
     
@@ -1952,6 +2006,14 @@ kmip_print_operation_enum(enum operation value)
         printf("Destroy");
         break;
         
+        case KMIP_OP_QUERY:
+        printf("Query");
+        break;
+
+        case KMIP_OP_LOCATE:
+        printf("Locate");
+        break;
+
         default:
         printf("Unknown");
         break;
@@ -4255,6 +4317,14 @@ kmip_print_request_payload(int indent, enum operation type, void *value)
         kmip_print_destroy_request_payload(indent, value);
         break;
         
+        case KMIP_OP_QUERY:
+        kmip_print_query_request_payload(indent, value);
+        break;
+
+        case KMIP_OP_LOCATE:
+        kmip_print_locate_request_payload(indent, value);
+        break;
+
         default:
         printf("%*sUnknown Payload @ %p\n", indent, "", value);
         break;
@@ -4278,6 +4348,14 @@ kmip_print_response_payload(int indent, enum operation type, void *value)
         kmip_print_destroy_response_payload(indent, value);
         break;
         
+        case KMIP_OP_QUERY:
+        kmip_print_query_response_payload(indent, value);
+        break;
+
+        case KMIP_OP_LOCATE:
+        kmip_print_locate_response_payload(indent, value);
+        break;
+
         default:
         printf("%*sUnknown Payload @ %p\n", indent, "", value);
         break;
@@ -5314,6 +5392,14 @@ kmip_free_request_batch_item(KMIP *ctx, RequestBatchItem *value)
                 kmip_free_destroy_request_payload(ctx, (DestroyRequestPayload *)value->request_payload);
                 break;
                 
+                case KMIP_OP_QUERY:
+                kmip_free_query_request_payload(ctx, (QueryRequestPayload *)value->request_payload);
+                break;
+
+                case KMIP_OP_LOCATE:
+                kmip_free_locate_request_payload(ctx, (LocateRequestPayload *)value->request_payload);
+                break;
+
                 default:
                 /* NOTE (ph) Hitting this case means that we don't know    */
                 /*      what the actual type, size, or value of            */
@@ -5379,6 +5465,14 @@ kmip_free_response_batch_item(KMIP *ctx, ResponseBatchItem *value)
                 kmip_free_destroy_response_payload(ctx, (DestroyResponsePayload *)value->response_payload);
                 break;
                 
+                case KMIP_OP_QUERY:
+                kmip_free_query_response_payload(ctx, (QueryResponsePayload *)value->response_payload);
+                break;
+
+                case KMIP_OP_LOCATE:
+                kmip_free_locate_response_payload(ctx, (LocateResponsePayload *)value->response_payload);
+                break;
+
                 default:
                 /* NOTE (ph) Hitting this case means that we don't know    */
                 /*      what the actual type, size, or value of            */
@@ -7270,6 +7364,20 @@ kmip_compare_request_batch_item(const RequestBatchItem *a, const RequestBatchIte
                 }
                 break;
                 
+                case KMIP_OP_QUERY:
+                if(kmip_compare_query_request_payload((QueryRequestPayload *)a->request_payload, (QueryRequestPayload *)b->request_payload) == KMIP_FALSE)
+                {
+                    return(KMIP_FALSE);
+                }
+                break;
+                
+                case KMIP_OP_LOCATE:
+                if(kmip_compare_locate_request_payload((LocateRequestPayload *)a->request_payload, (LocateRequestPayload *)b->request_payload) == KMIP_FALSE)
+                {
+                    return(KMIP_FALSE);
+                }
+                break;
+
                 default:
                 /* NOTE (ph) Unsupported payloads cannot be compared. */
                 return(KMIP_FALSE);
@@ -7375,6 +7483,20 @@ kmip_compare_response_batch_item(const ResponseBatchItem *a, const ResponseBatch
                 }
                 break;
                 
+                case KMIP_OP_QUERY:
+                if(kmip_compare_query_response_payload((QueryResponsePayload *)a->response_payload, (QueryResponsePayload *)b->response_payload) == KMIP_FALSE)
+                {
+                    return(KMIP_FALSE);
+                }
+                break;
+
+                case KMIP_OP_LOCATE:
+                if(kmip_compare_locate_response_payload((LocateResponsePayload *)a->response_payload, (LocateResponsePayload *)b->response_payload) == KMIP_FALSE)
+                {
+                    return(KMIP_FALSE);
+                }
+                break;
+
                 default:
                 /* NOTE (ph) Unsupported payloads cannot be compared. */
                 return(KMIP_FALSE);
@@ -9922,6 +10044,14 @@ kmip_encode_request_batch_item(KMIP *ctx, const RequestBatchItem *value)
         result = kmip_encode_destroy_request_payload(ctx, (DestroyRequestPayload*)value->request_payload);
         break;
         
+        case KMIP_OP_QUERY:
+        result = kmip_encode_query_request_payload(ctx, (QueryRequestPayload*)value->request_payload);
+        break;
+
+        case KMIP_OP_LOCATE:
+        result = kmip_encode_locate_request_payload(ctx, (LocateRequestPayload*)value->request_payload);
+        break;
+
         default:
         kmip_push_error_frame(ctx, __func__, __LINE__);
         return(KMIP_NOT_IMPLEMENTED);
@@ -9993,6 +10123,14 @@ kmip_encode_response_batch_item(KMIP *ctx, const ResponseBatchItem *value)
         result = kmip_encode_destroy_response_payload(ctx, (DestroyResponsePayload*)value->response_payload);
         break;
         
+        case KMIP_OP_QUERY:
+        result = kmip_encode_query_response_payload(ctx, (QueryResponsePayload*)value->response_payload);
+        break;
+
+        case KMIP_OP_LOCATE:
+        result = kmip_encode_locate_response_payload(ctx, (LocateResponsePayload*)value->response_payload);
+        break;
+
         default:
         kmip_push_error_frame(ctx, __func__, __LINE__);
         return(KMIP_NOT_IMPLEMENTED);
@@ -11769,6 +11907,18 @@ kmip_decode_request_batch_item(KMIP *ctx, RequestBatchItem *value)
         result = kmip_decode_destroy_request_payload(ctx, (DestroyRequestPayload*)value->request_payload);
         break;
         
+        case KMIP_OP_QUERY:
+        value->request_payload = ctx->calloc_func(ctx->state, 1, sizeof(QueryRequestPayload));
+        CHECK_NEW_MEMORY(ctx, value->request_payload, sizeof(QueryRequestPayload), "QueryRequestPayload structure");
+        result = kmip_decode_query_request_payload(ctx, (QueryRequestPayload*)value->request_payload);
+        break;
+
+        case KMIP_OP_LOCATE:
+        value->request_payload = ctx->calloc_func(ctx->state, 1, sizeof(LocateRequestPayload));
+        CHECK_NEW_MEMORY(ctx, value->request_payload, sizeof(LocateRequestPayload), "LocateRequestPayload structure");
+        result = kmip_decode_locate_request_payload(ctx, (LocateRequestPayload*)value->request_payload);
+        break;
+
         default:
         kmip_push_error_frame(ctx, __func__, __LINE__);
         return(KMIP_NOT_IMPLEMENTED);
@@ -11862,6 +12012,18 @@ kmip_decode_response_batch_item(KMIP *ctx, ResponseBatchItem *value)
             result = kmip_decode_destroy_response_payload(ctx, value->response_payload);
             break;
             
+            case KMIP_OP_QUERY:
+            value->response_payload = ctx->calloc_func(ctx->state, 1, sizeof(QueryResponsePayload));
+            CHECK_NEW_MEMORY(ctx, value->response_payload, sizeof(QueryResponsePayload), "QueryResponsePayload structure");
+            result = kmip_decode_query_response_payload(ctx, value->response_payload);
+            break;
+
+            case KMIP_OP_LOCATE:
+            value->response_payload = ctx->calloc_func(ctx->state, 1, sizeof(LocateResponsePayload));
+            CHECK_NEW_MEMORY(ctx, value->response_payload, sizeof(LocateResponsePayload), "LocateResponsePayload structure");
+            result = kmip_decode_locate_response_payload(ctx, value->response_payload);
+            break;
+
             default:
             kmip_push_error_frame(ctx, __func__, __LINE__);
             return(KMIP_NOT_IMPLEMENTED);

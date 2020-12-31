@@ -401,8 +401,10 @@ enum operation
 {
     /* KMIP 1.0 */
     KMIP_OP_CREATE  = 0x01,
+    KMIP_OP_LOCATE  = 0x08,
     KMIP_OP_GET     = 0x0A,
-    KMIP_OP_DESTROY = 0x14
+    KMIP_OP_DESTROY = 0x14,
+    KMIP_OP_QUERY   = 0x18
 };
 
 enum padding_method
@@ -437,6 +439,29 @@ enum protection_storage_mask
     KMIP_PROTECT_OUTSOURCED        = 0x00000800,
     KMIP_PROTECT_VALIDATED         = 0x00001000,
     KMIP_PROTECT_SAME_JURISDICTION = 0x00002000
+};
+
+enum query_function
+{
+    /* KMIP 1.0 */
+    KMIP_QUERY_OPERATIONS                  = 0x0001,
+    KMIP_QUERY_OBJECTS                     = 0x0002,
+    KMIP_QUERY_SERVER_INFORMATION          = 0x0003,
+    KMIP_QUERY_APPLICATION_NAMESPACES      = 0x0004,
+    /* KMIP 1.1 */
+    KMIP_QUERY_EXTENSION_LIST              = 0x0005,
+    KMIP_QUERY_EXTENSION_MAP               = 0x0006,
+    /* KMIP 1.2 */
+    KMIP_QUERY_ATTESTATION_TYPES           = 0x0007,
+    /* KMIP 1.3 */
+    KMIP_QUERY_RNGS                        = 0x0008,
+    KMIP_QUERY_VALIDATIONS                 = 0x0009,
+    KMIP_QUERY_PROFILES                    = 0x000A,
+    KMIP_QUERY_CAPABILITIES                = 0x000B,
+    KMIP_QUERY_CLIENT_REGISTRATION_METHODS = 0x000C,
+    /* KMIP 2.0 */
+    KMIP_QUERY_DEFAULTS_INFORMATION        = 0x000D,
+    KMIP_QUERY_STORAGE_PROTECTION_MASKS    = 0x000E
 };
 
 enum result_reason
@@ -580,6 +605,7 @@ enum tag
     KMIP_TAG_KEY_WRAPPING_SPECIFICATION       = 0x420047,
     KMIP_TAG_MAC_SIGNATURE                    = 0x42004D,
     KMIP_TAG_MAC_SIGNATURE_KEY_INFORMATION    = 0x42004E,
+    KMIP_TAG_MAXIMUM_ITEMS                    = 0x42004F,
     KMIP_TAG_MAXIMUM_RESPONSE_SIZE            = 0x420050,
     KMIP_TAG_NAME                             = 0x420053,
     KMIP_TAG_NAME_TYPE                        = 0x420054,
@@ -594,6 +620,7 @@ enum tag
     KMIP_TAG_PROTOCOL_VERSION_MAJOR           = 0x42006A,
     KMIP_TAG_PROTOCOL_VERSION_MINOR           = 0x42006B,
     KMIP_TAG_PUBLIC_KEY                       = 0x42006D,
+    KMIP_TAG_QUERY_FUNCTION                   = 0x420074,
     KMIP_TAG_REQUEST_HEADER                   = 0x420077,
     KMIP_TAG_REQUEST_MESSAGE                  = 0x420078,
     KMIP_TAG_REQUEST_PAYLOAD                  = 0x420079,
@@ -604,13 +631,16 @@ enum tag
     KMIP_TAG_RESULT_REASON                    = 0x42007E,
     KMIP_TAG_RESULT_STATUS                    = 0x42007F,
     KMIP_TAG_KEY_ROLE_TYPE                    = 0x420083,
+    KMIP_TAG_SERVER_INFORMATION               = 0x420088,
     KMIP_TAG_STATE                            = 0x42008D,
+    KMIP_TAG_STORAGE_STATUS_MASK              = 0x42008E,
     KMIP_TAG_SYMMETRIC_KEY                    = 0x42008F,
     KMIP_TAG_TEMPLATE_ATTRIBUTE               = 0x420091,
     KMIP_TAG_TIME_STAMP                       = 0x420092,
     KMIP_TAG_UNIQUE_BATCH_ITEM_ID             = 0x420093,
     KMIP_TAG_UNIQUE_IDENTIFIER                = 0x420094,
     KMIP_TAG_USERNAME                         = 0x420099,
+    KMIP_TAG_VENDOR_IDENTIFICATION            = 0x42009D,
     KMIP_TAG_WRAPPING_METHOD                  = 0x42009E,
     KMIP_TAG_PASSWORD                         = 0x4200A1,
     /* KMIP 1.1 */
@@ -637,6 +667,8 @@ enum tag
     KMIP_TAG_INITIAL_COUNTER_VALUE            = 0x4200D1,
     KMIP_TAG_INVOCATION_FIELD_LENGTH          = 0x4200D2,
     KMIP_TAG_ATTESTATION_CAPABLE_INDICATOR    = 0x4200D3,
+    KMIP_TAG_OFFSET_ITEMS                     = 0x4200D4,
+    KMIP_TAG_LOCATED_ITEMS                    = 0x4200D5,
     /* KMIP 1.4 */
     KMIP_TAG_KEY_WRAP_TYPE                    = 0x4200F8,
     KMIP_TAG_SALT_LENGTH                      = 0x420100,
@@ -648,6 +680,15 @@ enum tag
     KMIP_TAG_SERVER_CORRELATION_VALUE         = 0x420106,
     /* KMIP 2.0 */
     KMIP_TAG_ATTRIBUTES                       = 0x420125,
+    KMIP_TAG_SERVER_NAME                      = 0x42012D,  /* KMIP 2.0 */
+    KMIP_TAG_SERVER_SERIAL_NUMBER             = 0x42012E,
+    KMIP_TAG_SERVER_VERSION                   = 0x42012F,
+    KMIP_TAG_SERVER_LOAD                      = 0x420130,
+    KMIP_TAG_PRODUCT_NAME                     = 0x420131,
+    KMIP_TAG_BUILD_LEVEL                      = 0x420132,
+    KMIP_TAG_BUILD_DATE                       = 0x420133,
+    KMIP_TAG_CLUSTER_INFO                     = 0x420134,
+    KMIP_TAG_ALTERNATE_FAILOVER_ENDPOINTS     = 0x420135,
     KMIP_TAG_EPHEMERAL                        = 0x420154,
     KMIP_TAG_SERVER_HASHED_PASSWORD           = 0x420155,
     KMIP_TAG_PROTECTION_STORAGE_MASK          = 0x42015E,
