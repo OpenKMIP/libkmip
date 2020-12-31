@@ -15,6 +15,7 @@
 #include "kmip.h"
 #include "kmip_bio.h"
 #include "kmip_memset.h"
+#include "ssl_connect.h"
 
 void
 print_help(const char *app)
@@ -27,12 +28,16 @@ print_help(const char *app)
     printf("-k path : path to client key file\n");
     printf("-p port : the port number of the KMIP server\n");
     printf("-r path : path to CA certificate file\n");
+    printf("-n name : name of new key\n");
+    printf("-g group : name of object group\n");
 }
 
 int
 parse_arguments(int argc, char **argv,
                 char **server_address, char **server_port,
                 char **client_certificate, char **client_key, char **ca_certificate,
+                char** key_name,
+                char **group,
                 int *print_usage)
 {
     if(argc <= 1)
@@ -55,6 +60,10 @@ parse_arguments(int argc, char **argv,
             *server_port = argv[++i];
         else if(strncmp(argv[i], "-r", 2) == 0)
             *ca_certificate = argv[++i];
+        else if(strncmp(argv[i], "-n", 2) == 0)
+            *key_name = argv[++i];
+        else if(strncmp(argv[i], "-g", 2) == 0)
+            *group = argv[++i];
         else
         {
             printf("Invalid option: '%s'\n", argv[i]);
@@ -67,71 +76,10 @@ parse_arguments(int argc, char **argv,
 }
 
 int
-use_low_level_api(const char *server_address,
-                  const char *server_port,
-                  const char *client_certificate,
-                  const char *client_key,
-                  const char *ca_certificate)
+use_low_level_api(BIO* bio,
+                  const char *key_name,
+                  const char *group)
 {
-    /* Set up the TLS connection to the KMIP server. */
-    SSL_CTX *ctx = NULL;
-    SSL *ssl = NULL;
-    OPENSSL_init_ssl(0, NULL);
-    ctx = SSL_CTX_new(TLS_client_method());
-    
-    printf("\n");
-    printf("Loading the client certificate: %s\n", client_certificate);
-    if(SSL_CTX_use_certificate_file(ctx, client_certificate, SSL_FILETYPE_PEM) != 1)
-    {
-        fprintf(stderr, "Loading the client certificate failed\n");
-        ERR_print_errors_fp(stderr);
-        SSL_CTX_free(ctx);
-        return(-1);
-    }
-    
-    printf("Loading the client key: %s\n", client_key);
-    if(SSL_CTX_use_PrivateKey_file(ctx, client_key, SSL_FILETYPE_PEM) != 1)
-    {
-        fprintf(stderr, "Loading the client key failed\n");
-        ERR_print_errors_fp(stderr);
-        SSL_CTX_free(ctx);
-        return(-1);
-    }
-    
-    printf("Loading the CA certificate: %s\n", ca_certificate);
-    if(SSL_CTX_load_verify_locations(ctx, ca_certificate, NULL) != 1)
-    {
-        fprintf(stderr, "Loading the CA certificate failed\n");
-        ERR_print_errors_fp(stderr);
-        SSL_CTX_free(ctx);
-        return(-1);
-    }
-    
-    BIO *bio = NULL;
-    bio = BIO_new_ssl_connect(ctx);
-    if(bio == NULL)
-    {
-        fprintf(stderr, "BIO_new_ssl_connect failed\n");
-        ERR_print_errors_fp(stderr);
-        SSL_CTX_free(ctx);
-        return(-1);
-    }
-    
-    BIO_get_ssl(bio, &ssl);
-    SSL_set_mode(ssl, SSL_MODE_AUTO_RETRY);
-    BIO_set_conn_hostname(bio, server_address);
-    BIO_set_conn_port(bio, server_port);
-    if(BIO_do_connect(bio) != 1)
-    {
-        fprintf(stderr, "BIO_do_connect failed\n");
-        ERR_print_errors_fp(stderr);
-        BIO_free_all(bio);
-        SSL_CTX_free(ctx);
-        return(-1);
-    }
-    
-    printf("\n");
-    
     /* Set up the KMIP context and the initial encoding buffer. */
     KMIP kmip_context = {0};
     kmip_init(&kmip_context, NULL, 0, KMIP_1_0);
@@ -144,15 +92,13 @@ use_low_level_api(const char *server_address,
     if(encoding == NULL)
     {
         kmip_destroy(&kmip_context);
-        BIO_free_all(bio);
-        SSL_CTX_free(ctx);
         return(KMIP_MEMORY_ALLOC_FAILED);
     }
     kmip_set_buffer(&kmip_context, encoding, buffer_total_size);
     
     /* Build the request message. */
-    Attribute a[3] = {0};
-    for(int i = 0; i < 3; i++)
+    Attribute a[6] = {{0}};
+    for(int i = 0; i < 6; i++)
         kmip_init_attribute(&a[i]);
     
     enum cryptographic_algorithm algorithm = KMIP_CRYPTOALG_AES;
@@ -166,10 +112,42 @@ use_low_level_api(const char *server_address,
     int32 mask = KMIP_CRYPTOMASK_ENCRYPT | KMIP_CRYPTOMASK_DECRYPT;
     a[2].type = KMIP_ATTR_CRYPTOGRAPHIC_USAGE_MASK;
     a[2].value = &mask;
+
+    int idx = 3;
+
+    TextString g = { 0 };
+    if (group)
+    {
+        g.value = (char*) group;
+        g.size = kmip_strnlen_s(group, 50);
+
+        a[idx].type = KMIP_ATTR_OBJECT_GROUP;
+        a[idx].value = &g;
+
+        idx++;
+    }
+
+    TextString s = { 0 };
+    Name n = { 0 };
+    if (key_name)
+    {
+        s.value = (char*) key_name;
+        s.size = kmip_strnlen_s(key_name, 50);
+
+        n.value = &s;
+        n.type = KMIP_NAME_UNINTERPRETED_TEXT_STRING;
+
+        a[idx].type = KMIP_ATTR_NAME;
+        a[idx].value = &n;
+
+        idx++;
+    }
+
+    int attrib_count = idx;
     
     TemplateAttribute ta = {0};
     ta.attributes = a;
-    ta.attribute_count = ARRAY_LENGTH(a);
+    ta.attribute_count = attrib_count;
     
     ProtocolVersion pv = {0};
     kmip_init_protocol_version(&pv, kmip_context.version);
@@ -215,8 +193,6 @@ use_low_level_api(const char *server_address,
             printf("buffer for the Create request.\n");
 
             kmip_destroy(&kmip_context);
-            BIO_free_all(bio);
-            SSL_CTX_free(ctx);
             return(KMIP_MEMORY_ALLOC_FAILED);
         }
         
@@ -239,8 +215,6 @@ use_low_level_api(const char *server_address,
         encoding = NULL;
         kmip_set_buffer(&kmip_context, NULL, 0);
         kmip_destroy(&kmip_context);
-        BIO_free_all(bio);
-        SSL_CTX_free(ctx);
         return(encode_result);
     }
     
@@ -251,9 +225,6 @@ use_low_level_api(const char *server_address,
     int response_size = 0;
     
     int result = kmip_bio_send_request_encoding(&kmip_context, bio, (char *)encoding, kmip_context.index - kmip_context.buffer, &response, &response_size);
-    
-    BIO_free_all(bio);
-    SSL_CTX_free(ctx);
     
     printf("\n");
     if(result < 0)
@@ -321,9 +292,18 @@ use_low_level_api(const char *server_address,
     
     printf("The KMIP operation was executed with no errors.\n");
     printf("Result: ");
-    kmip_print_result_status_enum(result);
-    printf(" (%d)\n\n", result);
-    
+    kmip_print_result_status_enum(result_status);
+    printf(" (%d)\n\n", result_status);
+
+    if (result_status != KMIP_STATUS_SUCCESS)
+    {
+        printf("Result Reason: ");
+        kmip_print_result_reason_enum(req.result_reason);
+        printf("\n");
+
+        kmip_print_text_string(0, "Result Message", req.result_message);
+    }
+
     if(result == KMIP_STATUS_SUCCESS)
     {
         CreateResponsePayload *pld = (CreateResponsePayload *)req.response_payload;
@@ -347,6 +327,88 @@ use_low_level_api(const char *server_address,
     return(result_status);
 }
 
+
+int
+use_mid_level_api(BIO* bio,
+                  const char *key_name,
+                  const char *group,
+                  char* id,
+                  int*  idlen
+                  )
+{
+    /* Set up the KMIP context and the initial encoding buffer. */
+    KMIP kmip_context = {0};
+    kmip_init(&kmip_context, NULL, 0, KMIP_1_0);
+
+    /* Build the request message. */
+    Attribute a[6] = {{0}};
+    for(int i = 0; i < 6; i++)
+        kmip_init_attribute(&a[i]);
+
+    enum cryptographic_algorithm algorithm = KMIP_CRYPTOALG_AES;
+    a[0].type = KMIP_ATTR_CRYPTOGRAPHIC_ALGORITHM;
+    a[0].value = &algorithm;
+
+    int32 length = 256;
+    a[1].type = KMIP_ATTR_CRYPTOGRAPHIC_LENGTH;
+    a[1].value = &length;
+
+    int32 mask = KMIP_CRYPTOMASK_ENCRYPT | KMIP_CRYPTOMASK_DECRYPT;
+    a[2].type = KMIP_ATTR_CRYPTOGRAPHIC_USAGE_MASK;
+    a[2].value = &mask;
+
+    int idx = 3;
+
+    TextString g = { 0 };
+    if (group)
+    {
+        g.value = (char*) group;
+        g.size = kmip_strnlen_s(group, 50);
+
+        a[idx].type = KMIP_ATTR_OBJECT_GROUP;
+        a[idx].value = &g;
+
+        idx++;
+    }
+
+    TextString s = { 0 };
+    Name n = { 0 };
+    if (key_name)
+    {
+        s.value = (char*) key_name;
+        s.size = kmip_strnlen_s(key_name, 50);
+
+        n.value = &s;
+        n.type = KMIP_NAME_UNINTERPRETED_TEXT_STRING;
+
+        a[idx].type = KMIP_ATTR_NAME;
+        a[idx].value = &n;
+
+        idx++;
+    }
+
+    int attrib_count = idx;
+
+    TemplateAttribute ta = {0};
+    ta.attributes = a;
+    ta.attribute_count = attrib_count;
+
+    char* uuid = NULL;
+    int uuid_size = 0;
+    int result = kmip_bio_create_symmetric_key_with_context(&kmip_context, bio, &ta, &uuid, &uuid_size);
+
+    if (uuid)
+    {
+        strncpy(id, uuid, uuid_size);
+        id[uuid_size] = 0;
+        *idlen = uuid_size;
+        kmip_context.free_func(kmip_context.state, uuid);
+    }
+    kmip_destroy(&kmip_context);
+
+    return(result);
+}
+
 int
 main(int argc, char **argv)
 {
@@ -355,9 +417,11 @@ main(int argc, char **argv)
     char *client_certificate = NULL;
     char *client_key = NULL;
     char *ca_certificate = NULL;
+    char *key_name = NULL;
+    char *group = NULL;
     int help = 0;
     
-    int error = parse_arguments(argc, argv, &server_address, &server_port, &client_certificate, &client_key, &ca_certificate, &help);
+    int error = parse_arguments(argc, argv, &server_address, &server_port, &client_certificate, &client_key, &ca_certificate, &key_name, &group, &help);
     if(error)
         return(error);
     if(help)
@@ -365,7 +429,31 @@ main(int argc, char **argv)
         print_help(argv[0]);
         return(0);
     }
+
+    ssl_initialize();
+    SSL_CTX* ctx = ssl_create_context(client_certificate, client_key, ca_certificate);
+    if (!ctx)
+        return 1;
+
+    SSL_SESSION* session = NULL;
     
-    use_low_level_api(server_address, server_port, client_certificate, client_key, ca_certificate);
+    BIO* bio = ssl_connect(ctx, server_address, server_port, &session);
+    if (!bio)
+        return 1;
+
+    //int rc = use_low_level_api(bio, key_name, group);
+    char id[128] = {0};
+    int id_len = 0;
+    int rc = use_mid_level_api(bio, key_name, group, id, &id_len);
+
+    printf("create rc=%d, id=%s\n", rc, id);
+
+    ssl_disconnect(bio);
+
+    if (session)
+        SSL_SESSION_free(session);
+
+    SSL_CTX_free(ctx);
+
     return(0);
 }

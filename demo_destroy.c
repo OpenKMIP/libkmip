@@ -14,6 +14,7 @@
 
 #include "kmip.h"
 #include "kmip_bio.h"
+#include "ssl_connect.h"
 
 void
 print_help(const char *app)
@@ -84,75 +85,11 @@ parse_arguments(int argc, char **argv,
 }
 
 int
-use_high_level_api(const char *server_address,
-                   const char *server_port,
-                   const char *client_certificate,
-                   const char *client_key,
-                   const char *ca_certificate,
+use_high_level_api(BIO* bio,
                    char *id)
 {
-    /* Set up the TLS connection to the KMIP server. */
-    SSL_CTX *ctx = NULL;
-    SSL *ssl = NULL;
-    OPENSSL_init_ssl(0, NULL);
-    ctx = SSL_CTX_new(TLS_client_method());
-    
-    printf("\n");
-    printf("Loading the client certificate: %s\n", client_certificate);
-    if(SSL_CTX_use_certificate_file(ctx, client_certificate, SSL_FILETYPE_PEM) != 1)
-    {
-        fprintf(stderr, "Loading the client certificate failed\n");
-        ERR_print_errors_fp(stderr);
-        SSL_CTX_free(ctx);
-        return(-1);
-    }
-    
-    printf("Loading the client key: %s\n", client_key);
-    if(SSL_CTX_use_PrivateKey_file(ctx, client_key, SSL_FILETYPE_PEM) != 1)
-    {
-        fprintf(stderr, "Loading the client key failed\n");
-        ERR_print_errors_fp(stderr);
-        SSL_CTX_free(ctx);
-        return(-1);
-    }
-    
-    printf("Loading the CA certificate: %s\n", ca_certificate);
-    if(SSL_CTX_load_verify_locations(ctx, ca_certificate, NULL) != 1)
-    {
-        fprintf(stderr, "Loading the CA file failed\n");
-        ERR_print_errors_fp(stderr);
-        SSL_CTX_free(ctx);
-        return(-1);
-    }
-    
-    BIO *bio = NULL;
-    bio = BIO_new_ssl_connect(ctx);
-    if(bio == NULL)
-    {
-        fprintf(stderr, "BIO_new_ssl_connect failed\n");
-        ERR_print_errors_fp(stderr);
-        SSL_CTX_free(ctx);
-        return(-1);
-    }
-    
-    BIO_get_ssl(bio, &ssl);
-    SSL_set_mode(ssl, SSL_MODE_AUTO_RETRY);
-    BIO_set_conn_hostname(bio, server_address);
-    BIO_set_conn_port(bio, server_port);
-    if(BIO_do_connect(bio) != 1)
-    {
-        fprintf(stderr, "BIO_do_connect failed\n");
-        ERR_print_errors_fp(stderr);
-        BIO_free_all(bio);
-        SSL_CTX_free(ctx);
-        return(-1);
-    }
-    
     /* Send the request message. */
     int result = kmip_bio_destroy_symmetric_key(bio, id, kmip_strnlen_s(id, 50));
-    
-    BIO_free_all(bio);
-    SSL_CTX_free(ctx);
     
     /* Handle the response results. */
     printf("\n");
@@ -194,6 +131,25 @@ main(int argc, char **argv)
         return(0);
     }
     
-    int result = use_high_level_api(server_address, server_port, client_certificate, client_key, ca_certificate, id);
+    ssl_initialize();
+    SSL_CTX* ctx = ssl_create_context(client_certificate, client_key, ca_certificate);
+    if (!ctx)
+        return 1;
+
+    SSL_SESSION* session = NULL;
+
+    BIO* bio = ssl_connect(ctx, server_address, server_port, &session);
+    if (!bio)
+        return 1;
+
+    int result = use_high_level_api(bio, id);
+
+    ssl_disconnect(bio);
+
+    if (session)
+        SSL_SESSION_free(session);
+
+    SSL_CTX_free(ctx);
+
     return(result);
 }

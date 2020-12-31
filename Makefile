@@ -29,8 +29,8 @@ DESTDIR =
 PREFIX  = /usr/local
 KMIP    = kmip
 
-OFILES  = kmip.o kmip_memset.o kmip_bio.o
-LOFILES = kmip.lo kmip_memset.lo kmip_bio.lo
+OFILES  = kmip.o kmip_memset.o kmip_bio.o ssl_connect.o
+LOFILES = kmip.lo kmip_memset.lo kmip_bio.lo  ssl_connect.lo
 
 all: demos tests $(LIBS)
 
@@ -99,6 +99,9 @@ kmip_memset.lo: kmip_memset.c kmip_memset.h
 
 kmip_bio.o: kmip_bio.c kmip_bio.h
 kmip_bio.lo: kmip_bio.c kmip_bio.h
+
+ssl_connect.o: ssl_connect.c ssl_connect.h
+ssl_connect.lo: ssl_connect.c ssl_connect.h
 
 clean:
 	rm -f *.o *.lo

@@ -15,6 +15,7 @@
 #include "kmip.h"
 #include "kmip_bio.h"
 #include "kmip_memset.h"
+#include "ssl_connect.h"
 
 void
 print_help(const char *app)
@@ -118,77 +119,14 @@ demo_free(void *state, void *ptr)
 }
 
 int
-use_mid_level_api(char *server_address,
-                  char *server_port,
-                  char *client_certificate,
-                  char *client_key,
-                  char *ca_certificate,
+use_mid_level_api(BIO* bio,
                   char *username,
                   char *password,
                   char *id)
 {
-    /* Set up the TLS connection to the KMIP server. */
-    SSL_CTX *ctx = NULL;
-    SSL *ssl = NULL;
-    OPENSSL_init_ssl(0, NULL);
-    ctx = SSL_CTX_new(TLS_client_method());
-    
-    printf("\n");
-    printf("Loading the client certificate: %s\n", client_certificate);
-    if(SSL_CTX_use_certificate_file(ctx, client_certificate, SSL_FILETYPE_PEM) != 1)
-    {
-        fprintf(stderr, "Loading the client certificate failed\n");
-        ERR_print_errors_fp(stderr);
-        SSL_CTX_free(ctx);
-        return(-1);
-    }
-    
-    printf("Loading the client key: %s\n", client_key);
-    if(SSL_CTX_use_PrivateKey_file(ctx, client_key, SSL_FILETYPE_PEM) != 1)
-    {
-        fprintf(stderr, "Loading the client key failed\n");
-        ERR_print_errors_fp(stderr);
-        SSL_CTX_free(ctx);
-        return(-1);
-    }
-    
-    printf("Loading the CA certificate: %s\n", ca_certificate);
-    if(SSL_CTX_load_verify_locations(ctx, ca_certificate, NULL) != 1)
-    {
-        fprintf(stderr, "Loading the CA file failed\n");
-        ERR_print_errors_fp(stderr);
-        SSL_CTX_free(ctx);
-        return(-1);
-    }
-    
-    BIO *bio = NULL;
-    bio = BIO_new_ssl_connect(ctx);
-    if(bio == NULL)
-    {
-        printf("BIO_new_ssl_connect failed\n");
-        SSL_CTX_free(ctx);
-        return(-1);
-    }
-    
-    BIO_get_ssl(bio, &ssl);
-    SSL_set_mode(ssl, SSL_MODE_AUTO_RETRY);
-    BIO_set_conn_hostname(bio, server_address);
-    BIO_set_conn_port(bio, server_port);
-
-    if(BIO_do_connect(bio) != 1)
-    {
-        fprintf(stderr, "BIO_do_connect failed\n");
-        ERR_print_errors_fp(stderr);
-        BIO_free_all(bio);
-        SSL_CTX_free(ctx);
-        return(-1);
-    }
-    
-    printf("\n");
-    
     char *key = NULL;
     int key_size = 0;
-    size_t id_size = kmip_strnlen_s(id, 50);
+    size_t id_size = kmip_strnlen_s(id, 100);
     
     /* Set up the KMIP context and send the request message. */
     KMIP kmip_context = {0};
@@ -199,37 +137,37 @@ use_mid_level_api(char *server_address,
     
     kmip_init(&kmip_context, NULL, 0, KMIP_1_0);
     
-    TextString u = {0};
-    u.value = username;
-    u.size = kmip_strnlen_s(username, 50);
-    
+    int result;
+
+    TextString u = { 0 };
     TextString p = {0};
-    p.value = password;
-    p.size = kmip_strnlen_s(password, 50);
-    
     UsernamePasswordCredential upc = {0};
-    upc.username = &u;
-    upc.password = &p;
-    
     Credential credential = {0};
-    credential.credential_type = KMIP_CRED_USERNAME_AND_PASSWORD;
-    credential.credential_value = &upc;
-    
-    int result = kmip_add_credential(&kmip_context, &credential);
-    
-    if(result != KMIP_OK)
+    if (username && password)
     {
-        printf("Failed to add credential to the KMIP context.\n");
-        BIO_free_all(bio);
-        SSL_CTX_free(ctx);
-        kmip_destroy(&kmip_context);
-        return(result);
+        u.value = username;
+        u.size = kmip_strnlen_s(username, 50);
+
+        p.value = password;
+        p.size = kmip_strnlen_s(password, 50);
+
+        upc.username = &u;
+        upc.password = &p;
+
+        credential.credential_type = KMIP_CRED_USERNAME_AND_PASSWORD;
+        credential.credential_value = &upc;
+    
+        result = kmip_add_credential(&kmip_context, &credential);
+    
+        if(result != KMIP_OK)
+        {
+            printf("Failed to add credential to the KMIP context.\n");
+            kmip_destroy(&kmip_context);
+            return(result);
+        }
     }
     
     result = kmip_bio_get_symmetric_key_with_context(&kmip_context, bio, id, id_size, &key, &key_size);
-    
-    BIO_free_all(bio);
-    SSL_CTX_free(ctx);
     
     /* Handle the response results. */
     printf("\n");
@@ -297,7 +235,26 @@ main(int argc, char **argv)
         print_help(argv[0]);
         return(0);
     }
-    
-    int result = use_mid_level_api(server_address, server_port, client_certificate, client_key, ca_certificate, username, password, id);
+
+    ssl_initialize();
+    SSL_CTX* ctx = ssl_create_context(client_certificate, client_key, ca_certificate);
+    if (!ctx)
+        return 1;
+
+    SSL_SESSION* session = NULL;
+
+    BIO* bio = ssl_connect(ctx, server_address, server_port, &session);
+    if (!bio)
+        return 1;
+
+    int result = use_mid_level_api(bio, username, password, id);
+
+    ssl_disconnect(bio);
+
+    if (session)
+        SSL_SESSION_free(session);
+
+    SSL_CTX_free(ctx);
+
     return(result);
 }
