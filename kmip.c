@@ -1206,7 +1206,7 @@ kmip_clear_errors(KMIP *ctx)
     
     for(size_t i = 0; i < ARRAY_LENGTH(ctx->errors); i++)
     {
-        ctx->errors[i] = (ErrorFrame){0};
+        ctx->errors[i] = (ErrorFrame){{0},0};
     }
     ctx->frame_index = ctx->errors;
     
@@ -4414,11 +4414,11 @@ kmip_print_request_payload(FILE *f, int indent, enum operation type, void *value
         break;
         
         case KMIP_OP_QUERY:
-        kmip_print_query_request_payload(indent, value);
+        kmip_print_query_request_payload(f, indent, value);
         break;
 
         case KMIP_OP_LOCATE:
-        kmip_print_locate_request_payload(indent, value);
+        kmip_print_locate_request_payload(f, indent, value);
         break;
 
         default:
@@ -4445,11 +4445,11 @@ kmip_print_response_payload(FILE *f, int indent, enum operation type, void *valu
         break;
         
         case KMIP_OP_QUERY:
-        kmip_print_query_response_payload(indent, value);
+        kmip_print_query_response_payload(f, indent, value);
         break;
 
         case KMIP_OP_LOCATE:
-        kmip_print_locate_response_payload(indent, value);
+        kmip_print_locate_response_payload(f, indent, value);
         break;
 
         default:
@@ -6615,9 +6615,6 @@ kmip_compare_attributes(const Attributes *a, const Attributes *b)
             {
                 if(a_item != b_item)
                 {
-                    if(!a_item || !b_item)
-                        break;
-
                     Attribute *a_data = (Attribute *)a_item->data;
                     Attribute *b_data = (Attribute *)b_item->data;
                     if(kmip_compare_attribute(a_data, b_data) == KMIP_FALSE)
@@ -8973,11 +8970,6 @@ kmip_encode_attribute_v1(KMIP *ctx, const Attribute *value)
         result = kmip_encode_enum(ctx, t, *(int32 *)value->value);
         break;
 
-        case KMIP_ATTR_OBJECT_GROUP:
-        result = kmip_encode_text_string(ctx, t, (TextString*)value->value);
-        break;
-
-        
         case KMIP_ATTR_OBJECT_GROUP:
         {
             result = kmip_encode_text_string(ctx, t, (TextString*)value->value);

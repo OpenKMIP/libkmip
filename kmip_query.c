@@ -22,11 +22,11 @@ Query Utilities
 
 
 void
-kmip_print_query_function_enum(int indent, enum query_function value)
+kmip_print_query_function_enum(FILE* f, int indent, enum query_function value)
 {
     if(value == 0)
     {
-        printf("-");
+        fprintf(f, "%*s-", indent, "");
         return;
     }
 
@@ -34,74 +34,74 @@ kmip_print_query_function_enum(int indent, enum query_function value)
     {
         /* KMIP 1.0 */
         case KMIP_QUERY_OPERATIONS:
-            printf("Operations");
+            fprintf(f, "%*sOperations", indent, "");
             break;
         case KMIP_QUERY_OBJECTS:
-            printf("Objects");
+            fprintf(f, "%*sObjects", indent, "");
             break;
         case KMIP_QUERY_SERVER_INFORMATION:
-            printf("Server Information");
+            fprintf(f, "%*sServer Information", indent, "");
             break;
         case KMIP_QUERY_APPLICATION_NAMESPACES:
-            printf("Application namespaces");
+            fprintf(f, "%*sApplication namespaces", indent, "");
             break;
         /* KMIP 1.1 */
         case KMIP_QUERY_EXTENSION_LIST:
-            printf("Extension list");
+            fprintf(f, "%*sExtension list", indent, "");
             break;
         case KMIP_QUERY_EXTENSION_MAP:
-            printf("Extension Map");
+            fprintf(f, "%*sExtension Map", indent, "");
             break;
         /* KMIP 1.2 */
         case KMIP_QUERY_ATTESTATION_TYPES:
-            printf("Attestation Types");
+            fprintf(f, "%*sAttestation Types", indent, "");
             break;
         /* KMIP 1.3 */
         case KMIP_QUERY_RNGS:
-            printf("RNGS");
+            fprintf(f, "%*sRNGS", indent, "");
             break;
         case KMIP_QUERY_VALIDATIONS:
-            printf("Validations");
+            fprintf(f, "%*sValidations", indent, "");
             break;
         case KMIP_QUERY_PROFILES:
-            printf("Profiles");
+            fprintf(f, "%*sProfiles", indent, "");
             break;
         case KMIP_QUERY_CAPABILITIES:
-            printf("Capabilities");
+            fprintf(f, "%*sCapabilities", indent, "");
             break;
         case KMIP_QUERY_CLIENT_REGISTRATION_METHODS:
-            printf("Registration Methods");
+            fprintf(f, "%*sRegistration Methods", indent, "");
             break;
         /* KMIP 2.0 */
         case KMIP_QUERY_DEFAULTS_INFORMATION:
-            printf("Defaults Information");
+            fprintf(f, "%*sDefaults Information", indent, "");
             break;
         case KMIP_QUERY_STORAGE_PROTECTION_MASKS:
-            printf("Storage Protection Masks");
+            fprintf(f, "%*sStorage Protection Masks", indent, "");
             break;
 
         default:
-        printf("Unknown");
+        fprintf(f, "%*sUnknown", indent, "");
         break;
     };
 }
 
 void
-kmip_print_query_functions(int indent, QueryRequestPayload* value)
+kmip_print_query_functions(FILE* f, int indent, QueryRequestPayload* value)
 {
-    printf("%*sQuery Functions @ %p\n", indent, "", (void *)value);
+    fprintf(f, "%*sQuery Functions @ %p\n", indent, "", (void *)value);
 
     if(value != NULL)
     {
-        printf("%*sFunctions: %zu\n", indent + 2, "", value->functions->size);
+        fprintf(f, "%*sFunctions: %zu\n", indent + 2, "", value->functions->size);
         LinkedListItem *curr = value->functions->head;
         size_t count = 1;
         while(curr != NULL)
         {
-            printf("%*sFunction: %zu: ", indent + 4, "", count);
+            fprintf(f, "%*sFunction: %zu: ", indent + 4, "", count);
             int32 func = *(int32 *)curr->data;
-            kmip_print_query_function_enum(indent + 6, func);
-            printf("\n");
+            kmip_print_query_function_enum(f, indent + 6, func);
+            fprintf(f, "\n");
 
             curr = curr->next;
             count++;
@@ -473,9 +473,9 @@ from pykmip, its a list of integers
 */
 
 
-void kmip_print_query_request_payload(int indent, QueryRequestPayload *value)
+void kmip_print_query_request_payload(FILE* f, int indent, QueryRequestPayload *value)
 {
-    kmip_print_query_functions(indent, value);
+    kmip_print_query_functions(f, indent, value);
 }
 
 void
@@ -502,10 +502,14 @@ kmip_free_query_request_payload(KMIP *ctx, QueryRequestPayload *value)
 }
 int kmip_compare_query_request_payload(const QueryRequestPayload *a, const QueryRequestPayload *b)
 {
+    (void) a;
+    (void) b;
     return(KMIP_NOT_IMPLEMENTED);
 }
 int kmip_decode_query_request_payload(KMIP *ctx, QueryRequestPayload *value)
 {
+    (void) ctx;
+    (void) value;
     return(KMIP_NOT_IMPLEMENTED);
 }
 
@@ -565,9 +569,9 @@ kmip_decode_operations(KMIP *ctx, Operations *value)
 }
 
 void
-kmip_print_operation_enum_2(enum all_operations value)
+kmip_print_operation_enum_2(FILE* f, enum all_operations value)
 {
-    #define PRINT(x)  case (x): printf(#x); break;
+    #define PRINT(x)  case (x): fprintf(f, #x); break;
 
     switch (value)
     {
@@ -630,7 +634,7 @@ kmip_print_operation_enum_2(enum all_operations value)
         PRINT(KMIP_OP_REPROVISION);
 
         default:
-            printf("Unknown");
+            fprintf(f, "Unknown");
             break;
     }
 }
@@ -660,21 +664,21 @@ kmip_free_operations(KMIP *ctx, Operations *value)
 }
 
 void
-kmip_print_operations(int indent, Operations *value)
+kmip_print_operations(FILE* f, int indent, Operations *value)
 {
-    printf("%*sOperations @ %p\n", indent, "", (void *)value);
+    fprintf(f, "%*sOperations @ %p\n", indent, "", (void *)value);
 
     if(value != NULL)
     {
-        printf("%*sOperations: %zu\n", indent + 2, "", value->operation_list->size);
+        fprintf(f, "%*sOperations: %zu\n", indent + 2, "", value->operation_list->size);
         LinkedListItem *curr = value->operation_list->head;
         size_t count = 1;
         while(curr != NULL)
         {
-            printf("%*sOperation: %zu: ", indent + 4, "", count);
+            fprintf(f, "%*sOperation: %zu: ", indent + 4, "", count);
             int32 oper = *(int32 *)curr->data;
-            kmip_print_operation_enum_2(oper);
-            printf("\n");
+            kmip_print_operation_enum_2(f, oper);
+            fprintf(f, "\n");
 
             curr = curr->next;
             count++;
@@ -683,7 +687,7 @@ kmip_print_operations(int indent, Operations *value)
 }
 
 void
-kmip_copy_operations(int ops[], size_t* ops_size, Operations *value, int max_ops)
+kmip_copy_operations(int ops[], size_t* ops_size, Operations *value, unsigned max_ops)
 {
     if(value != NULL)
     {
@@ -701,7 +705,7 @@ kmip_copy_operations(int ops[], size_t* ops_size, Operations *value, int max_ops
 }
 
 void
-kmip_copy_objects(int objs[], size_t* objs_size, ObjectTypes *value, int max_objs)
+kmip_copy_objects(int objs[], size_t* objs_size, ObjectTypes *value, unsigned max_objs)
 {
     if(value != NULL)
     {
@@ -719,21 +723,21 @@ kmip_copy_objects(int objs[], size_t* objs_size, ObjectTypes *value, int max_obj
 }
 
 void
-kmip_print_object_types(int indent, ObjectTypes* value)
+kmip_print_object_types(FILE* f, int indent, ObjectTypes* value)
 {
-    printf("%*sObjects @ %p\n", indent, "", (void *)value);
+    fprintf(f, "%*sObjects @ %p\n", indent, "", (void *)value);
 
     if(value != NULL)
     {
-        printf("%*sObjects: %zu\n", indent + 2, "", value->object_list->size);
+        fprintf(f, "%*sObjects: %zu\n", indent + 2, "", value->object_list->size);
         LinkedListItem *curr = value->object_list->head;
         size_t count = 1;
         while(curr != NULL)
         {
-            printf("%*sObject: %zu: ", indent + 4, "", count);
+            fprintf(f, "%*sObject: %zu: ", indent + 4, "", count);
             int32 obj = *(int32 *)curr->data;
-            kmip_print_object_type_enum(obj);
-            printf("\n");
+            kmip_print_object_type_enum(f, obj);
+            fprintf(f, "\n");
 
             curr = curr->next;
             count++;
@@ -897,30 +901,30 @@ kmip_decode_server_information(KMIP *ctx, ServerInformation *value)
 }
 
 void
-kmip_print_server_information(int indent, ServerInformation* value)
+kmip_print_server_information(FILE* f, int indent, ServerInformation* value)
 {
-    printf("%*sServer Information @ %p\n", indent, "", (void *)value);
+    fprintf(f,"%*sServer Information @ %p\n", indent, "", (void *)value);
 
     if(value != NULL)
     {
-        kmip_print_text_string(indent + 2, "Server Name", value->server_name);
-        kmip_print_text_string(indent + 2, "Server Serial Number", value->server_serial_number);
-        kmip_print_text_string(indent + 2, "Server Version", value->server_version);
-        kmip_print_text_string(indent + 2, "Server Load", value->server_load);
-        kmip_print_text_string(indent + 2, "Product Name", value->product_name);
-        kmip_print_text_string(indent + 2, "Build Llevel", value->build_level);
-        kmip_print_text_string(indent + 2, "Build Date", value->build_date);
-        kmip_print_text_string(indent + 2, "Cluster info", value->cluster_info);
+        kmip_print_text_string(f,indent + 2, "Server Name", value->server_name);
+        kmip_print_text_string(f,indent + 2, "Server Serial Number", value->server_serial_number);
+        kmip_print_text_string(f,indent + 2, "Server Version", value->server_version);
+        kmip_print_text_string(f,indent + 2, "Server Load", value->server_load);
+        kmip_print_text_string(f,indent + 2, "Product Name", value->product_name);
+        kmip_print_text_string(f,indent + 2, "Build Llevel", value->build_level);
+        kmip_print_text_string(f,indent + 2, "Build Date", value->build_date);
+        kmip_print_text_string(f,indent + 2, "Cluster info", value->cluster_info);
     }
 }
 
 
-void kmip_print_query_response_payload(int indent, QueryResponsePayload *value)
+void kmip_print_query_response_payload(FILE* f, int indent, QueryResponsePayload *value)
 {
-    kmip_print_operations(indent, value->operations);
-    kmip_print_object_types(indent, value->objects);
-    kmip_print_text_string(indent, "Vendor ID", value->vendor_identification);
-    kmip_print_server_information(indent, value->server_information);
+    kmip_print_operations(f,indent, value->operations);
+    kmip_print_object_types(f,indent, value->objects);
+    kmip_print_text_string(f,indent, "Vendor ID", value->vendor_identification);
+    kmip_print_server_information(f,indent, value->server_information);
 }
 
 void kmip_free_query_response_payload(KMIP *ctx, QueryResponsePayload *value)
@@ -955,6 +959,8 @@ void kmip_free_query_response_payload(KMIP *ctx, QueryResponsePayload *value)
 
 int kmip_compare_query_response_payload(const QueryResponsePayload *a, const QueryResponsePayload *b)
 {
+    (void) a;
+    (void) b;
     return(KMIP_NOT_IMPLEMENTED);
 }
 
@@ -1009,6 +1015,8 @@ int kmip_decode_query_response_payload(KMIP *ctx, QueryResponsePayload *value)
 int
 kmip_encode_query_response_payload(KMIP *ctx, const QueryResponsePayload *value)
 {
+    (void) ctx;
+    (void) value;
     return(KMIP_NOT_IMPLEMENTED);
 }
 

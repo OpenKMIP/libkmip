@@ -149,27 +149,27 @@ typedef struct query_response
     char             cluster_info[MAX_QUERY_LEN];
 } QueryResponse;
 
-void kmip_print_query_request_payload(int, QueryRequestPayload *);
+void kmip_print_query_request_payload(FILE*, int, QueryRequestPayload *);
 void kmip_free_query_request_payload(KMIP *, QueryRequestPayload *);
 int kmip_compare_query_request_payload(const QueryRequestPayload *, const QueryRequestPayload *);
 int kmip_encode_query_request_payload(KMIP *, const QueryRequestPayload *);
 int kmip_decode_query_request_payload(KMIP *, QueryRequestPayload *);
 
-void kmip_print_query_response_payload(int, QueryResponsePayload *);
+void kmip_print_query_response_payload(FILE*, int, QueryResponsePayload *);
 void kmip_free_query_response_payload(KMIP *, QueryResponsePayload *);
 int kmip_compare_query_response_payload(const QueryResponsePayload *, const QueryResponsePayload *);
 int kmip_encode_query_response_payload(KMIP *, const QueryResponsePayload *);
 int kmip_decode_query_response_payload(KMIP *, QueryResponsePayload *);
 
-void kmip_print_query_function_enum(int indent, enum query_function value);
-void kmip_print_query_functions(int indent, QueryRequestPayload* value);
+void kmip_print_query_function_enum(FILE*, int indent, enum query_function value);
+void kmip_print_query_functions(FILE*, int indent, QueryRequestPayload* value);
 void kmip_free_query_functions(KMIP *ctx, QueryRequestPayload* value);
 int  kmip_compare_query_functions(const QueryRequestPayload* a, const QueryRequestPayload* b);
 int  kmip_encode_query_functions(KMIP *ctx, const QueryRequestPayload* value);
 int  kmip_decode_query_functions(KMIP *ctx, QueryRequestPayload* value);
 
 
-void kmip_copy_operations(int ops[], size_t* ops_size, Operations *value, int max_ops);
-void kmip_copy_objects(int objs[], size_t* objs_size, ObjectTypes *value, int max_objs);
+void kmip_copy_operations(int ops[], size_t* ops_size, Operations *value, unsigned max_ops);
+void kmip_copy_objects(int objs[], size_t* objs_size, ObjectTypes *value, unsigned max_objs);
 void kmip_copy_query_result(QueryResponse* query_result, QueryResponsePayload *pld);
 

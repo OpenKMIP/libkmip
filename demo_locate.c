@@ -211,11 +211,11 @@ int use_low_level_api(KMIP *ctx, BIO *bio, Attribute* attribs, size_t attrib_cou
         printf("An error occurred while encoding the Locate request.\n");
         printf("Error Code: %d\n", encode_result);
         printf("Error Name: ");
-        kmip_print_error_string(encode_result);
+        kmip_print_error_string(stderr, encode_result);
         printf("\n");
         printf("Context Error: %s\n", ctx->error_message);
         printf("Stack trace:\n");
-        kmip_print_stack_trace(ctx);
+        kmip_print_stack_trace(stderr, ctx);
 
         kmip_free_buffer(ctx, encoding, buffer_total_size);
         encoding = NULL;
@@ -224,7 +224,7 @@ int use_low_level_api(KMIP *ctx, BIO *bio, Attribute* attribs, size_t attrib_cou
         return(encode_result);
     }
 
-    kmip_print_request_message(&rm);
+    kmip_print_request_message(stdout, &rm);
     printf("\n");
 
     char *response = NULL;
@@ -243,11 +243,11 @@ int use_low_level_api(KMIP *ctx, BIO *bio, Attribute* attribs, size_t attrib_cou
         printf("An error occurred in locate request.\n");
         printf("Error Code: %d\n", result);
         printf("Error Name: ");
-        kmip_print_error_string(result);
+        kmip_print_error_string(stderr, result);
         printf("\n");
         printf("Context Error: %s\n", ctx->error_message);
         printf("Stack trace:\n");
-        kmip_print_stack_trace(ctx);
+        kmip_print_stack_trace(stderr, ctx);
 
         kmip_free_buffer(ctx, encoding, buffer_total_size);
         kmip_free_buffer(ctx, response, response_size);
@@ -266,10 +266,11 @@ int use_low_level_api(KMIP *ctx, BIO *bio, Attribute* attribs, size_t attrib_cou
         FILE* out = fopen( "/tmp/kmip_locate.dat", "w" );
         if (out)
         {
-            int len = fwrite( response, response_size, 1, out );
+            if (fwrite( response, response_size, 1, out ) != 1 )
+                fprintf(stderr, "failed writing dat file\n");
             fclose(out);
         }
-        kmip_print_buffer(response, response_size);
+        kmip_print_buffer(stdout, response, response_size);
     }
 
     printf("bio locate free encoding =  %p\n", encoding);
@@ -285,11 +286,11 @@ int use_low_level_api(KMIP *ctx, BIO *bio, Attribute* attribs, size_t attrib_cou
         printf("An error occurred while decoding the Locate response.\n");
         printf("Error Code: %d\n", decode_result);
         printf("Error Name: ");
-        kmip_print_error_string(decode_result);
+        kmip_print_error_string(stderr, decode_result);
         printf("\n");
         printf("Context Error: %s\n", ctx->error_message);
         printf("Stack trace:\n");
-        kmip_print_stack_trace(ctx);
+        kmip_print_stack_trace(stderr, ctx);
 
         kmip_free_response_message(ctx, &resp_m);
         kmip_free_buffer(ctx, response, response_size);
@@ -299,7 +300,7 @@ int use_low_level_api(KMIP *ctx, BIO *bio, Attribute* attribs, size_t attrib_cou
         return(decode_result);
     }
 
-    kmip_print_response_message(&resp_m);
+    kmip_print_response_message(stdout, &resp_m);
     printf("\n");
 
     if(resp_m.batch_count != 1 || resp_m.batch_items == NULL)
@@ -318,7 +319,7 @@ int use_low_level_api(KMIP *ctx, BIO *bio, Attribute* attribs, size_t attrib_cou
 
     printf("The KMIP operation was executed with no errors.\n");
     printf("Result: ");
-    kmip_print_result_status_enum(result);
+    kmip_print_result_status_enum(stdout, result);
     printf(" (%d)\n\n", result);
 
     if(result == KMIP_STATUS_SUCCESS)
@@ -326,7 +327,7 @@ int use_low_level_api(KMIP *ctx, BIO *bio, Attribute* attribs, size_t attrib_cou
         kmip_copy_locate_result(locate_result, (LocateResponsePayload*) req.response_payload);
     }
 
-    printf("bio locate free response resp_m =  %p, response = %p\n", &resp_m, response);
+    printf("bio locate free response resp_m =  %p, response = %p\n", (void*)&resp_m, response);
     if (locate_result->ids_size)
     {
         printf("id[0] = %s\n", locate_result->ids[0]);
@@ -415,7 +416,7 @@ use_mid_level_api(BIO* bio,
 #endif // USE_DEVICE_CREDENTIALS
 
     /* Build the request message. */
-    Attribute a[6] = {0};
+    Attribute a[6] = {{0}};
     for(int i = 0; i < 6; i++)
         kmip_init_attribute(&a[i]);
 
@@ -486,17 +487,17 @@ use_mid_level_api(BIO* bio,
         printf("An error occurred while running the locate.");
         printf("Error Code: %d\n", result);
         printf("Error Name: ");
-        kmip_print_error_string(result);
+        kmip_print_error_string(stderr, result);
         printf("\n");
         printf("Context Error: %s\n", kmip_context.error_message);
         printf("Stack trace:\n");
-        kmip_print_stack_trace(&kmip_context);
+        kmip_print_stack_trace(stderr, &kmip_context);
     }
     else if(result >= 0)
     {
         printf("The KMIP operation was executed with no errors.\n");
         printf("Result: ");
-        kmip_print_result_status_enum(result);
+        kmip_print_result_status_enum(stdout, result);
         printf(" (%d)\n", result);
         
         if(result == KMIP_STATUS_SUCCESS)
@@ -556,7 +557,7 @@ main(int argc, char **argv)
     {
         printf("Locate results: ");
         printf("located items: %d\n", locate_result.located_items);
-        printf("returned items: %d\n", locate_result.ids_size);
+        printf("returned items: %zu\n", locate_result.ids_size);
         printf("id[0]=  %s\n", locate_result.ids[0]);
         printf("\n");
     }

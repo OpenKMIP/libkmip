@@ -62,7 +62,7 @@ int kmip_encode_attribute_list(KMIP* ctx, LinkedList* value)
 
 }
 
-void kmip_print_attribute_list(int indent, LinkedList* value)
+void kmip_print_attribute_list(FILE* f, int indent, LinkedList* value)
 {
     if(value != NULL)
     {
@@ -70,31 +70,31 @@ void kmip_print_attribute_list(int indent, LinkedList* value)
         while(curr != NULL)
         {
             Attribute *attribute = (Attribute *)curr->data;
-            kmip_print_attribute(indent + 2, attribute);
+            kmip_print_attribute(f, indent + 2, attribute);
 
             curr = curr->next;
         }
     }
 }
 
-void kmip_print_locate_request_payload(int indent, LocateRequestPayload * value)
+void kmip_print_locate_request_payload(FILE* f, int indent, LocateRequestPayload * value)
 {
     if (value)
     {
-        printf("%*sMaximum items: ", indent + 2, "");
-        kmip_print_integer(value->maximum_items);
-        printf("\n");
+        fprintf(f, "%*sMaximum items: ", indent + 2, "");
+        kmip_print_integer(f, value->maximum_items);
+        fprintf(f, "\n");
 
-        printf("%*sOffset items: ", indent + 2, "");
-        kmip_print_integer(value->offset_items);
-        printf("\n");
+        fprintf(f, "%*sOffset items: ", indent + 2, "");
+        kmip_print_integer(f, value->offset_items);
+        fprintf(f, "\n");
 
-        printf("%*sStorage status: ", indent + 2, "");
-        kmip_print_integer(value->storage_status_mask);
-        printf("\n");
+        fprintf(f, "%*sStorage status: ", indent + 2, "");
+        kmip_print_integer(f, value->storage_status_mask);
+        fprintf(f, "\n");
 
         if(value->attribute_list)
-            kmip_print_attribute_list(indent + 2, value->attribute_list);
+            kmip_print_attribute_list(f, indent + 2, value->attribute_list);
     }
 }
 
@@ -111,6 +111,8 @@ void kmip_free_locate_request_payload(KMIP* ctx, LocateRequestPayload *value)
 
 int kmip_compare_locate_request_payload(const LocateRequestPayload *a, const LocateRequestPayload *b)
 {
+    (void) a;
+    (void) b;
     return(KMIP_NOT_IMPLEMENTED);
 }
 
@@ -191,16 +193,18 @@ kmip_encode_locate_request_payload(KMIP* ctx, const LocateRequestPayload* value)
 
 int kmip_decode_locate_request_payload(KMIP* ctx, LocateRequestPayload *value)
 {
+    (void) ctx;
+    (void) value;
     return(KMIP_NOT_IMPLEMENTED);
 }
 
-void kmip_print_locate_response_payload(int indent, LocateResponsePayload *value)
+void kmip_print_locate_response_payload(FILE* f, int indent, LocateResponsePayload *value)
 {
-    printf("%*sLocated Items: ", indent + 2, "");
-    kmip_print_integer(value->located_items);
-    printf("\n");
+    fprintf(f, "%*sLocated Items: ", indent + 2, "");
+    kmip_print_integer(f, value->located_items);
+    fprintf(f, "\n");
 
-    kmip_print_unique_identifiers(indent, value->unique_ids);
+    kmip_print_unique_identifiers(f, indent, value->unique_ids);
 }
 void kmip_free_locate_response_payload(KMIP* ctx, LocateResponsePayload *value)
 {
@@ -214,10 +218,14 @@ void kmip_free_locate_response_payload(KMIP* ctx, LocateResponsePayload *value)
 }
 int kmip_compare_locate_response_payload(const LocateResponsePayload *a, const LocateResponsePayload *b)
 {
+    (void) a;
+    (void) b;
     return(KMIP_NOT_IMPLEMENTED);
 }
 int kmip_encode_locate_response_payload(KMIP* ctx, const LocateResponsePayload *value)
 {
+    (void) ctx;
+    (void) value;
     return(KMIP_NOT_IMPLEMENTED);
 }
 int kmip_decode_locate_response_payload(KMIP* ctx, LocateResponsePayload *value)
@@ -253,20 +261,20 @@ int kmip_decode_locate_response_payload(KMIP* ctx, LocateResponsePayload *value)
 
 
 void
-kmip_print_unique_identifiers(int indent, UniqueIdentifiers* value)
+kmip_print_unique_identifiers(FILE* f, int indent, UniqueIdentifiers* value)
 {
-    printf("%*sUnique IDs @ %p\n", indent, "", (void *)value);
+    fprintf(f, "%*sUnique IDs @ %p\n", indent, "", (void *)value);
 
     if(value != NULL)
     {
-        printf("%*sUnique IDs: %zu\n", indent + 2, "", value->unique_identifier_list->size);
+        fprintf(f, "%*sUnique IDs: %zu\n", indent + 2, "", value->unique_identifier_list->size);
         LinkedListItem *curr = value->unique_identifier_list->head;
         size_t count = 1;
         while(curr != NULL)
         {
-            printf("%*sUnique ID: %zu: ", indent + 4, "", count);
-            kmip_print_text_string(indent + 2, "", curr->data);
-            printf("\n");
+            fprintf(f, "%*sUnique ID: %zu: ", indent + 4, "", count);
+            kmip_print_text_string(f, indent + 2, "", curr->data);
+            fprintf(f, "\n");
 
             curr = curr->next;
             count++;
@@ -275,7 +283,7 @@ kmip_print_unique_identifiers(int indent, UniqueIdentifiers* value)
 }
 
 void
-kmip_copy_unique_ids(char ids[][MAX_LOCATE_LEN], size_t* id_size, UniqueIdentifiers* value, int max_ids)
+kmip_copy_unique_ids(char ids[][MAX_LOCATE_LEN], size_t* id_size, UniqueIdentifiers* value, unsigned max_ids)
 {
     size_t idx = 0;
     if(value != NULL)

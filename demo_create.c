@@ -292,16 +292,16 @@ use_low_level_api(BIO* bio,
     
     printf("The KMIP operation was executed with no errors.\n");
     printf("Result: ");
-    kmip_print_result_status_enum(result_status);
+    kmip_print_result_status_enum(stdout, result_status);
     printf(" (%d)\n\n", result_status);
 
     if (result_status != KMIP_STATUS_SUCCESS)
     {
         printf("Result Reason: ");
-        kmip_print_result_reason_enum(req.result_reason);
+        kmip_print_result_reason_enum(stdout, req.result_reason);
         printf("\n");
 
-        kmip_print_text_string(0, "Result Message", req.result_message);
+        kmip_print_text_string(stdout, 0, "Result Message", req.result_message);
     }
 
     if(result == KMIP_STATUS_SUCCESS)

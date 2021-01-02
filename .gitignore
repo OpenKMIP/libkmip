@@ -6,3 +6,5 @@ demo_create
 demo_get
 demo_destroy
 tests
+demo_query
+demo_locate

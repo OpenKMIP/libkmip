@@ -151,7 +151,7 @@ int use_low_level_api(KMIP *ctx, BIO *bio, enum query_function queries[], size_t
         kmip_linked_list_enqueue(functions, item);
     }
 
-    printf("functions = %p\n", functions);
+    //printf("functions = %p\n", (void*) functions);
 
     QueryRequestPayload qrp = {0};
     qrp.functions = functions;
@@ -198,11 +198,11 @@ int use_low_level_api(KMIP *ctx, BIO *bio, enum query_function queries[], size_t
         printf("An error occurred while encoding the Query request.\n");
         printf("Error Code: %d\n", encode_result);
         printf("Error Name: ");
-        kmip_print_error_string(encode_result);
+        kmip_print_error_string(stdout, encode_result);
         printf("\n");
         printf("Context Error: %s\n", ctx->error_message);
         printf("Stack trace:\n");
-        kmip_print_stack_trace(ctx);
+        kmip_print_stack_trace(stdout, ctx);
 
         kmip_free_buffer(ctx, encoding, buffer_total_size);
         encoding = NULL;
@@ -211,7 +211,7 @@ int use_low_level_api(KMIP *ctx, BIO *bio, enum query_function queries[], size_t
         return(encode_result);
     }
 
-    kmip_print_request_message(&rm);
+    kmip_print_request_message(stdout, &rm);
     printf("\n");
 
     char *response = NULL;
@@ -230,11 +230,11 @@ int use_low_level_api(KMIP *ctx, BIO *bio, enum query_function queries[], size_t
         printf("An error occurred in query request.\n");
         printf("Error Code: %d\n", result);
         printf("Error Name: ");
-        kmip_print_error_string(result);
+        kmip_print_error_string(stderr, result);
         printf("\n");
         printf("Context Error: %s\n", ctx->error_message);
         printf("Stack trace:\n");
-        kmip_print_stack_trace(ctx);
+        kmip_print_stack_trace(stderr, ctx);
 
         kmip_free_buffer(ctx, encoding, buffer_total_size);
         kmip_free_buffer(ctx, response, response_size);
@@ -252,10 +252,11 @@ int use_low_level_api(KMIP *ctx, BIO *bio, enum query_function queries[], size_t
         FILE* out = fopen( "/tmp/kmip_query.dat", "w" );
         if (out)
         {
-            int len = fwrite( response, response_size, 1, out );
+            if (fwrite( response, response_size, 1, out ) != 1 )
+                fprintf(stderr, "failed writing dat file\n");
             fclose(out);
         }
-        kmip_print_buffer(response, response_size);
+        kmip_print_buffer(stdout, response, response_size);
     }
 
     printf("bio query free encoding =  %p\n", encoding);
@@ -271,11 +272,11 @@ int use_low_level_api(KMIP *ctx, BIO *bio, enum query_function queries[], size_t
         printf("An error occurred while decoding the Query response.\n");
         printf("Error Code: %d\n", decode_result);
         printf("Error Name: ");
-        kmip_print_error_string(decode_result);
+        kmip_print_error_string(stderr, decode_result);
         printf("\n");
         printf("Context Error: %s\n", ctx->error_message);
         printf("Stack trace:\n");
-        kmip_print_stack_trace(ctx);
+        kmip_print_stack_trace(stderr, ctx);
 
         kmip_free_response_message(ctx, &resp_m);
         kmip_free_buffer(ctx, response, response_size);
@@ -285,7 +286,7 @@ int use_low_level_api(KMIP *ctx, BIO *bio, enum query_function queries[], size_t
         return(decode_result);
     }
 
-    kmip_print_response_message(&resp_m);
+    kmip_print_response_message(stdout, &resp_m);
     printf("\n");
 
     if(resp_m.batch_count != 1 || resp_m.batch_items == NULL)
@@ -304,7 +305,7 @@ int use_low_level_api(KMIP *ctx, BIO *bio, enum query_function queries[], size_t
 
     printf("The KMIP operation was executed with no errors.\n");
     printf("Result: ");
-    kmip_print_result_status_enum(result);
+    kmip_print_result_status_enum(stdout, result);
     printf(" (%d)\n\n", result);
 
     if(result == KMIP_STATUS_SUCCESS)
@@ -312,7 +313,7 @@ int use_low_level_api(KMIP *ctx, BIO *bio, enum query_function queries[], size_t
         kmip_copy_query_result(query_result, (QueryResponsePayload*) req.response_payload);
     }
 
-    printf("bio query free response resp_m =  %p, response = %p\n", &resp_m, response);
+    //printf("bio query free response resp_m =  %p, response = %p\n", (void*)&resp_m, response);
 
     /* Clean up the response message, the response buffer, and the KMIP */
     /* context.                                                         */
@@ -360,17 +361,17 @@ use_mid_level_api(BIO* bio,
         printf("An error occurred while running the query.");
         printf("Error Code: %d\n", result);
         printf("Error Name: ");
-        kmip_print_error_string(result);
+        kmip_print_error_string(stderr, result);
         printf("\n");
         printf("Context Error: %s\n", kmip_context.error_message);
         printf("Stack trace:\n");
-        kmip_print_stack_trace(&kmip_context);
+        kmip_print_stack_trace(stderr, &kmip_context);
     }
     else if(result >= 0)
     {
         printf("The KMIP operation was executed with no errors.\n");
         printf("Result: ");
-        kmip_print_result_status_enum(result);
+        kmip_print_result_status_enum(stdout, result);
         printf(" (%d)\n", result);
         
         if(result == KMIP_STATUS_SUCCESS)
@@ -431,8 +432,8 @@ main(int argc, char **argv)
         {
             printf("Query results: ");
             printf("vendor: %s\n", query_result.vendor_identification);
-            printf("num ops: %d\n", query_result.operations_size);
-            printf("num objs: %d\n", query_result.objects_size);
+            printf("num ops: %zu\n", query_result.operations_size);
+            printf("num objs: %zu\n", query_result.objects_size);
             printf("server info: %d\n", query_result.server_information_valid );
             printf("\n");
         }
@@ -455,8 +456,8 @@ main(int argc, char **argv)
         {
             printf("Query results: ");
             printf("vendor: %s\n", query_result.vendor_identification);
-            printf("num ops: %d\n", query_result.operations_size);
-            printf("num objs: %d\n", query_result.objects_size);
+            printf("num ops: %zu\n", query_result.operations_size);
+            printf("num objs: %zu\n", query_result.objects_size);
             printf("server info: %d\n", query_result.server_information_valid );
             printf("\n");
         }

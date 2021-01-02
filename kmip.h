@@ -1348,7 +1348,6 @@ void kmip_init_request_batch_item(RequestBatchItem *);
 Printing Functions
 */
 
-<<<<<<< HEAD
 void kmip_print_buffer(FILE *, void *, int);
 void kmip_print_stack_trace(FILE *, KMIP *);
 void kmip_print_error_string(FILE *, int);

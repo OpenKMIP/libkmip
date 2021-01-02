@@ -83,13 +83,13 @@ typedef struct locate_response
     char             ids[MAX_LOCATE_IDS][MAX_LOCATE_LEN];
 } LocateResponse;
 
-void kmip_print_locate_request_payload(int, LocateRequestPayload *);
+void kmip_print_locate_request_payload(FILE*, int, LocateRequestPayload *);
 void kmip_free_locate_request_payload(KMIP *, LocateRequestPayload *);
 int kmip_compare_locate_request_payload(const LocateRequestPayload *, const LocateRequestPayload *);
 int kmip_encode_locate_request_payload(KMIP *, const LocateRequestPayload *);
 int kmip_decode_locate_request_payload(KMIP *, LocateRequestPayload *);
 
-void kmip_print_locate_response_payload(int, LocateResponsePayload *);
+void kmip_print_locate_response_payload(FILE*, int, LocateResponsePayload *);
 void kmip_free_locate_response_payload(KMIP *, LocateResponsePayload *);
 int kmip_compare_locate_response_payload(const LocateResponsePayload *, const LocateResponsePayload *);
 int kmip_encode_locate_response_payload(KMIP *, const LocateResponsePayload *);
@@ -97,7 +97,7 @@ int kmip_decode_locate_response_payload(KMIP *, LocateResponsePayload *);
 
 
 
-void kmip_print_unique_identifiers(int indent, UniqueIdentifiers* value);
+void kmip_print_unique_identifiers(FILE*, int indent, UniqueIdentifiers* value);
 void kmip_free_unique_identifiers(KMIP *ctx, UniqueIdentifiers* value);
 int kmip_decode_unique_identifiers(KMIP* ctx, UniqueIdentifiers* value);
 
