@@ -5,4 +5,5 @@
 demo_create
 demo_get
 demo_destroy
+demo_query
 tests

@@ -12,6 +12,24 @@
 #include <openssl/ssl.h>
 #include "kmip.h"
 
+typedef struct query_response QueryResponse;
+typedef struct locate_response LocateResponse;
+
+typedef struct last_result
+{
+    enum operation operation;
+    enum result_status result_status;
+    enum result_reason result_reason;
+    char result_message[128];
+} LastResult;
+
+int kmip_set_last_result(ResponseBatchItem*);
+const LastResult* kmip_get_last_result(void);
+int kmip_last_reason(void);
+const char* kmip_last_message(void);
+void kmip_clear_last_result(void);
+
+
 /*
 OpenSSH BIO API
 */
@@ -24,6 +42,7 @@ int kmip_bio_create_symmetric_key_with_context(KMIP *, BIO *, TemplateAttribute 
 int kmip_bio_get_symmetric_key_with_context(KMIP *, BIO *, char *, int, char **, int *);
 int kmip_bio_destroy_symmetric_key_with_context(KMIP *, BIO *, char *, int);
 
+int kmip_bio_query_with_context(KMIP *ctx, BIO *bio, enum query_function queries[], size_t query_count, QueryResponse* query_result);
 int kmip_bio_send_request_encoding(KMIP *, BIO *, char *, int, char **, int *);
 
 #endif  /* KMIP_BIO_H */

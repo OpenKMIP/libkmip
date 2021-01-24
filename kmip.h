@@ -414,10 +414,64 @@ enum object_type
 
 enum operation
 {
-    /* KMIP 1.0 */
-    KMIP_OP_CREATE  = 0x01,
-    KMIP_OP_GET     = 0x0A,
-    KMIP_OP_DESTROY = 0x14
+    // # KMIP 1.0
+    KMIP_OP_CREATE               = 0x01,
+    KMIP_OP_CREATE_KEY_PAIR      = 0x02,
+    KMIP_OP_REGISTER             = 0x03,
+    KMIP_OP_REKEY                = 0x04,
+    KMIP_OP_DERIVE_KEY           = 0x05,
+    KMIP_OP_CERTIFY              = 0x06,
+    KMIP_OP_RECERTIFY            = 0x07,
+    KMIP_OP_LOCATE               = 0x08,
+    KMIP_OP_CHECK                = 0x09,
+    KMIP_OP_GET                  = 0x0A,
+    KMIP_OP_GET_ATTRIBUTES       = 0x0B,
+    KMIP_OP_GET_ATTRIBUTE_LIST   = 0x0C,
+    KMIP_OP_ADD_ATTRIBUTE        = 0x0D,
+    KMIP_OP_MODIFY_ATTRIBUTE     = 0x0E,
+    KMIP_OP_DELETE_ATTRIBUTE     = 0x0F,
+    KMIP_OP_OBTAIN_LEASE         = 0x10,
+    KMIP_OP_GET_USAGE_ALLOCATION = 0x11,
+    KMIP_OP_ACTIVATE             = 0x12,
+    KMIP_OP_REVOKE               = 0x13,
+    KMIP_OP_DESTROY              = 0x14,
+    KMIP_OP_ARCHIVE              = 0x15,
+    KMIP_OP_RECOVER              = 0x16,
+    KMIP_OP_VALIDATE             = 0x17,
+    KMIP_OP_QUERY                = 0x18,
+    KMIP_OP_CANCEL               = 0x19,
+    KMIP_OP_POLL                 = 0x1A,
+    KMIP_OP_NOTIFY               = 0x1B,
+    KMIP_OP_PUT                  = 0x1C,
+    // # KMIP 1.1
+    KMIP_OP_REKEY_KEY_PAIR       = 0x1D,
+    KMIP_OP_DISCOVER_VERSIONS    = 0x1E,
+    //# KMIP 1.2
+    KMIP_OP_ENCRYPT              = 0x1F,
+    KMIP_OP_DECRYPT              = 0x20,
+    KMIP_OP_SIGN                 = 0x21,
+    KMIP_OP_SIGNATURE_VERIFY     = 0x22,
+    KMIP_OP_MAC                  = 0x23,
+    KMIP_OP_MAC_VERIFY           = 0x24,
+    KMIP_OP_RNG_RETRIEVE         = 0x25,
+    KMIP_OP_RNG_SEED             = 0x26,
+    KMIP_OP_HASH                 = 0x27,
+    KMIP_OP_CREATE_SPLIT_KEY     = 0x28,
+    KMIP_OP_JOIN_SPLIT_KEY       = 0x29,
+    // # KMIP 1.4
+    KMIP_OP_IMPORT               = 0x2A,
+    KMIP_OP_EXPORT               = 0x2B,
+    // # KMIP 2.0
+    KMIP_OP_LOG                  = 0x2C,
+    KMIP_OP_LOGIN                = 0x2D,
+    KMIP_OP_LOGOUT               = 0x2E,
+    KMIP_OP_DELEGATED_LOGIN      = 0x2F,
+    KMIP_OP_ADJUST_ATTRIBUTE     = 0x30,
+    KMIP_OP_SET_ATTRIBUTE        = 0x31,
+    KMIP_OP_SET_ENDPOINT_ROLE    = 0x32,
+    KMIP_OP_PKCS_11              = 0x33,
+    KMIP_OP_INTEROP              = 0x34,
+    KMIP_OP_REPROVISION          = 0x35,
 };
 
 enum padding_method
@@ -452,6 +506,29 @@ enum protection_storage_mask
     KMIP_PROTECT_OUTSOURCED        = 0x00000800,
     KMIP_PROTECT_VALIDATED         = 0x00001000,
     KMIP_PROTECT_SAME_JURISDICTION = 0x00002000
+};
+
+enum query_function
+{
+    /* KMIP 1.0 */
+    KMIP_QUERY_OPERATIONS                  = 0x0001,
+    KMIP_QUERY_OBJECTS                     = 0x0002,
+    KMIP_QUERY_SERVER_INFORMATION          = 0x0003,
+    KMIP_QUERY_APPLICATION_NAMESPACES      = 0x0004,
+    /* KMIP 1.1 */
+    KMIP_QUERY_EXTENSION_LIST              = 0x0005,
+    KMIP_QUERY_EXTENSION_MAP               = 0x0006,
+    /* KMIP 1.2 */
+    KMIP_QUERY_ATTESTATION_TYPES           = 0x0007,
+    /* KMIP 1.3 */
+    KMIP_QUERY_RNGS                        = 0x0008,
+    KMIP_QUERY_VALIDATIONS                 = 0x0009,
+    KMIP_QUERY_PROFILES                    = 0x000A,
+    KMIP_QUERY_CAPABILITIES                = 0x000B,
+    KMIP_QUERY_CLIENT_REGISTRATION_METHODS = 0x000C,
+    /* KMIP 2.0 */
+    KMIP_QUERY_DEFAULTS_INFORMATION        = 0x000D,
+    KMIP_QUERY_STORAGE_PROTECTION_MASKS    = 0x000E
 };
 
 enum result_reason
@@ -600,6 +677,7 @@ enum tag
     KMIP_TAG_KEY_WRAPPING_SPECIFICATION       = 0x420047,
     KMIP_TAG_MAC_SIGNATURE                    = 0x42004D,
     KMIP_TAG_MAC_SIGNATURE_KEY_INFORMATION    = 0x42004E,
+    KMIP_TAG_MAXIMUM_ITEMS                    = 0x42004F,
     KMIP_TAG_MAXIMUM_RESPONSE_SIZE            = 0x420050,
     KMIP_TAG_NAME                             = 0x420053,
     KMIP_TAG_NAME_TYPE                        = 0x420054,
@@ -616,6 +694,7 @@ enum tag
     KMIP_TAG_PROTOCOL_VERSION_MAJOR           = 0x42006A,
     KMIP_TAG_PROTOCOL_VERSION_MINOR           = 0x42006B,
     KMIP_TAG_PUBLIC_KEY                       = 0x42006D,
+    KMIP_TAG_QUERY_FUNCTION                   = 0x420074,
     KMIP_TAG_REQUEST_HEADER                   = 0x420077,
     KMIP_TAG_REQUEST_MESSAGE                  = 0x420078,
     KMIP_TAG_REQUEST_PAYLOAD                  = 0x420079,
@@ -626,13 +705,16 @@ enum tag
     KMIP_TAG_RESULT_REASON                    = 0x42007E,
     KMIP_TAG_RESULT_STATUS                    = 0x42007F,
     KMIP_TAG_KEY_ROLE_TYPE                    = 0x420083,
+    KMIP_TAG_SERVER_INFORMATION               = 0x420088,
     KMIP_TAG_STATE                            = 0x42008D,
+    KMIP_TAG_STORAGE_STATUS_MASK              = 0x42008E,
     KMIP_TAG_SYMMETRIC_KEY                    = 0x42008F,
     KMIP_TAG_TEMPLATE_ATTRIBUTE               = 0x420091,
     KMIP_TAG_TIME_STAMP                       = 0x420092,
     KMIP_TAG_UNIQUE_BATCH_ITEM_ID             = 0x420093,
     KMIP_TAG_UNIQUE_IDENTIFIER                = 0x420094,
     KMIP_TAG_USERNAME                         = 0x420099,
+    KMIP_TAG_VENDOR_IDENTIFICATION            = 0x42009D,
     KMIP_TAG_WRAPPING_METHOD                  = 0x42009E,
     KMIP_TAG_PASSWORD                         = 0x4200A1,
     /* KMIP 1.1 */
@@ -669,6 +751,15 @@ enum tag
     KMIP_TAG_SERVER_CORRELATION_VALUE         = 0x420106,
     /* KMIP 2.0 */
     KMIP_TAG_ATTRIBUTES                       = 0x420125,
+    KMIP_TAG_SERVER_NAME                      = 0x42012D,  /* KMIP 2.0 */
+    KMIP_TAG_SERVER_SERIAL_NUMBER             = 0x42012E,
+    KMIP_TAG_SERVER_VERSION                   = 0x42012F,
+    KMIP_TAG_SERVER_LOAD                      = 0x420130,
+    KMIP_TAG_PRODUCT_NAME                     = 0x420131,
+    KMIP_TAG_BUILD_LEVEL                      = 0x420132,
+    KMIP_TAG_BUILD_DATE                       = 0x420133,
+    KMIP_TAG_CLUSTER_INFO                     = 0x420134,
+    KMIP_TAG_ALTERNATE_FAILOVER_ENDPOINTS     = 0x420135,
     KMIP_TAG_EPHEMERAL                        = 0x420154,
     KMIP_TAG_SERVER_HASHED_PASSWORD           = 0x420155,
     KMIP_TAG_PROTECTION_STORAGE_MASK          = 0x42015E,
@@ -1092,6 +1183,84 @@ typedef struct response_message
     size_t batch_count;
 } ResponseMessage;
 
+typedef struct operations
+{
+    LinkedList *operation_list;
+} Operations;
+
+typedef struct object_types
+{
+    LinkedList *object_list;
+} ObjectTypes;
+
+typedef struct server_information
+{
+    TextString* server_name;
+    TextString* server_serial_number;
+    TextString* server_version;
+    TextString* server_load;
+    TextString* product_name;
+    TextString* build_level;
+    TextString* build_date;
+    TextString* cluster_info;
+ // LinkedList* alternative_failover_endpoints;   MAY be repeated
+ // Vendor-Specific               Any, MAY be repeated
+} ServerInformation;
+
+
+/*
+typedef struct application_namespaces
+{
+    LinkedList *app_namespace_list;
+} ApplicationNamespaces;
+*/
+
+typedef struct query_request_payload
+{
+    LinkedList *functions;
+} QueryRequestPayload;
+
+typedef struct query_response_payload
+{
+    Operations*             operations;              // Specifies an Operation that is supported by the server.
+    ObjectTypes*            objects;                 // Specifies a Managed Object Type that is supported by the server.
+    TextString*             vendor_identification;   // SHALL be returned if Query Server Information is requested. The Vendor Identification SHALL be a text string that uniquely identifies the vendor.
+    ServerInformation*      server_information;      // Contains vendor-specific information possibly be of interest to the client.
+ // ApplicationNamespaces*  application_namespaces;  // Specifies an Application Namespace supported by the server.
+ // Extension Information         No, MAY be repeated  // SHALL be returned if Query Extension List or Query Extension Map is requested and supported by the server.
+ // Attestation Type              No, MAY be repeated  // Specifies an Attestation Type that is supported by the server.
+ // RNG Parameters                No, MAY be repeated  // Specifies the RNG that is supported by the server.
+ // Profile Information           No, MAY be repeated  // Specifies the Profiles that are supported by the server.
+ // Validation Information        No, MAY be repeated  // Specifies the validations that are supported by the server.
+ // Capability Information        No, MAY be repeated  // Specifies the capabilities that are supported by the server.
+ // Client Registration Method    No, MAY be repeated  // Specifies a Client Registration Method that is supported by the server.
+ // Defaults Information          No                   // Specifies the defaults that the server will use if the client omits them.
+ // Protection Storage Masks      Yes                  // Specifies the list of Protection Storage Mask values supported by the server. A server MAY elect to provide an empty list in the Response if it is unable or unwilling to provide this information.
+} QueryResponsePayload;
+
+
+#define MAX_QUERY_LEN    128
+#define MAX_QUERY_OPS   0x40
+#define MAX_QUERY_OBJS  0x20
+
+typedef struct query_response
+{
+    size_t           operations_size;
+    int              operations[MAX_QUERY_OPS];
+    size_t           objects_size;
+    int              objects[MAX_QUERY_OBJS];
+    char             vendor_identification[MAX_QUERY_LEN];
+    bool32           server_information_valid;
+    char             server_name[MAX_QUERY_LEN];
+    char             server_serial_number[MAX_QUERY_LEN];
+    char             server_version[MAX_QUERY_LEN];
+    char             server_load[MAX_QUERY_LEN];
+    char             product_name[MAX_QUERY_LEN];
+    char             build_level[MAX_QUERY_LEN];
+    char             build_date[MAX_QUERY_LEN];
+    char             cluster_info[MAX_QUERY_LEN];
+} QueryResponse;
+
 /*
 Macros
 */
@@ -1376,6 +1545,10 @@ void kmip_print_request_header(FILE *, int, RequestHeader *);
 void kmip_print_response_header(FILE *, int, ResponseHeader *);
 void kmip_print_request_message(FILE *, RequestMessage *);
 void kmip_print_response_message(FILE *, ResponseMessage *);
+void kmip_print_query_function_enum(FILE*, int indent, enum query_function value);
+void kmip_print_query_functions(FILE*, int indent, QueryRequestPayload* value);
+void kmip_print_query_request_payload(FILE*, int, QueryRequestPayload *);
+void kmip_print_query_response_payload(FILE*, int, QueryResponsePayload *);
 
 /*
 Freeing Functions
@@ -1421,6 +1594,12 @@ void kmip_free_request_header(KMIP *, RequestHeader *);
 void kmip_free_response_header(KMIP *, ResponseHeader *);
 void kmip_free_request_message(KMIP *, RequestMessage *);
 void kmip_free_response_message(KMIP *, ResponseMessage *);
+void kmip_free_query_functions(KMIP *ctx, QueryRequestPayload* value);
+void kmip_free_query_request_payload(KMIP *, QueryRequestPayload *);
+void kmip_free_query_response_payload(KMIP *, QueryResponsePayload *);
+void kmip_free_operations(KMIP *ctx, Operations *value);
+void kmip_free_objects(KMIP *ctx, ObjectTypes* value);
+void kmip_free_server_information(KMIP* ctx, ServerInformation* value);
 
 /*
 Copying Functions
@@ -1434,6 +1613,10 @@ Name * kmip_deep_copy_name(KMIP *, const Name *);
 CryptographicParameters * kmip_deep_copy_cryptographic_parameters(KMIP *, const CryptographicParameters *);
 ApplicationSpecificInformation * kmip_deep_copy_application_specific_information(KMIP *, const ApplicationSpecificInformation *);
 Attribute * kmip_deep_copy_attribute(KMIP *, const Attribute *);
+char* kmip_copy_textstring(char* dest, TextString* src, size_t size);
+void kmip_copy_objects(int objs[], size_t* objs_size, ObjectTypes *value, unsigned max_objs);
+void kmip_copy_operations(int ops[], size_t* ops_size, Operations *value, unsigned max_ops);
+void kmip_copy_query_result(QueryResponse* query_result, QueryResponsePayload *pld);
 
 /*
 Comparison Functions
@@ -1479,6 +1662,9 @@ int kmip_compare_request_header(const RequestHeader *, const RequestHeader *);
 int kmip_compare_response_header(const ResponseHeader *, const ResponseHeader *);
 int kmip_compare_request_message(const RequestMessage *, const RequestMessage *);
 int kmip_compare_response_message(const ResponseMessage *, const ResponseMessage *);
+int kmip_compare_query_functions(const QueryRequestPayload* a, const QueryRequestPayload* b);
+int kmip_compare_query_request_payload(const QueryRequestPayload *, const QueryRequestPayload *);
+int kmip_compare_query_response_payload(const QueryResponsePayload *, const QueryResponsePayload *);
 
 /*
 Encoding Functions
@@ -1537,6 +1723,9 @@ int kmip_encode_request_batch_item(KMIP *, const RequestBatchItem *);
 int kmip_encode_response_batch_item(KMIP *, const ResponseBatchItem *);
 int kmip_encode_request_message(KMIP *, const RequestMessage *);
 int kmip_encode_response_message(KMIP *, const ResponseMessage *);
+int kmip_encode_query_functions(KMIP *ctx, const QueryRequestPayload* value);
+int kmip_encode_query_request_payload(KMIP *, const QueryRequestPayload *);
+int kmip_encode_query_response_payload(KMIP *, const QueryResponsePayload *);
 
 /*
 Decoding Functions
@@ -1594,5 +1783,9 @@ int kmip_decode_request_header(KMIP *, RequestHeader *);
 int kmip_decode_response_header(KMIP *, ResponseHeader *);
 int kmip_decode_request_message(KMIP *, RequestMessage *);
 int kmip_decode_response_message(KMIP *, ResponseMessage *);
+int kmip_decode_query_functions(KMIP *ctx, QueryRequestPayload* value);
+int kmip_decode_query_request_payload(KMIP *, QueryRequestPayload *);
+int kmip_decode_query_response_payload(KMIP *, QueryResponsePayload *);
+
 
 #endif  /* KMIP_H */

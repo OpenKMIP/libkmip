@@ -22,7 +22,7 @@ CC      = cc
 CFLAGS  = -std=c11 -pedantic -g3 -Wall -Wextra
 LOFLAGS = -fPIC
 SOFLAGS = -shared -Wl,-soname,$(SONAME)
-LDFLAGS = -L/usr/local/lib
+LDFLAGS = -L/usr/local/lib64 -L/usr/local/lib
 LDLIBS  = -lssl -lcrypto
 AR      = ar csrv
 DESTDIR = 
@@ -31,6 +31,7 @@ KMIP    = kmip
 
 OFILES  = kmip.o kmip_memset.o kmip_bio.o
 LOFILES = kmip.lo kmip_memset.lo kmip_bio.lo
+DEMOS   = demo_create demo_get demo_destroy demo_query
 
 all: demos tests $(LIBS)
 
@@ -72,15 +73,17 @@ uninstall_html_docs:
 docs: html_docs
 html_docs:
 	cd $(SRCDIR)/docs && make html && cd -
-demos: demo_create demo_get demo_destroy
+demos: $(DEMOS)
 demo_get: demo_get.o $(OFILES)
-	$(CC) $(LDFLAGS) -o demo_get $? $(LDLIBS)
+	$(CC) $(LDFLAGS) -o demo_get $^ $(LDLIBS)
 demo_create: demo_create.o $(OFILES)
-	$(CC) $(LDFLAGS) -o demo_create $? $(LDLIBS)
+	$(CC) $(LDFLAGS) -o demo_create $^ $(LDLIBS)
 demo_destroy: demo_destroy.o $(OFILES)
-	$(CC) $(LDFLAGS) -o demo_destroy $? $(LDLIBS)
+	$(CC) $(LDFLAGS) -o demo_destroy $^ $(LDLIBS)
+demo_query: demo_query.o ssl_connect.o $(OFILES)
+	$(CC) $(LDFLAGS) -o $@ $^ $(LDLIBS)
 tests: tests.o kmip.o kmip_memset.o
-	$(CC) $(LDFLAGS) -o tests tests.o kmip.o kmip_memset.o
+	$(CC) $(LDFLAGS) -o tests $^
 
 demo_get.o: demo_get.c kmip_memset.h kmip.h
 demo_create.o: demo_create.c kmip_memset.h kmip.h
@@ -100,12 +103,15 @@ kmip_memset.lo: kmip_memset.c kmip_memset.h
 kmip_bio.o: kmip_bio.c kmip_bio.h
 kmip_bio.lo: kmip_bio.c kmip_bio.h
 
+ssl_connect.o: ssl_connect.c ssl_connect.h
+ssl_connect.lo: ssl_connect.c ssl_connect.h
+
 clean:
 	rm -f *.o *.lo
 clean_html_docs:
 	cd docs && make clean && cd ..
 cleanest:
-	rm -f demo_create demo_get demo_destroy tests *.o $(LOFILES) $(LIBS)
+	rm -f $(DEMOS) tests *.o $(LOFILES) $(LIBS)
 	cd docs && make clean && cd ..
 
 .SUFFIXES: .c .o .lo .so
