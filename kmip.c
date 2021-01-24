@@ -15,6 +15,7 @@
 #include "kmip.h"
 #include "kmip_memset.h"
 
+
 /*
 Miscellaneous Utilities
 */
@@ -868,6 +869,7 @@ kmip_check_enum_value(enum kmip_version version, enum tag t, int value)
             case KMIP_OP_CREATE:
             case KMIP_OP_GET:
             case KMIP_OP_DESTROY:
+            case KMIP_OP_QUERY:
             return(KMIP_OK);
             break;
             
@@ -1132,6 +1134,56 @@ kmip_check_enum_value(enum kmip_version version, enum tag t, int value)
         };
         break;
         
+        case KMIP_TAG_QUERY_FUNCTION:
+        switch (value)
+        {
+        /* KMIP 1.0 */
+        case KMIP_QUERY_OPERATIONS:
+        case KMIP_QUERY_OBJECTS:
+        case KMIP_QUERY_SERVER_INFORMATION:
+        case KMIP_QUERY_APPLICATION_NAMESPACES:
+            return(KMIP_OK);
+            break;
+        /* KMIP 1.1 */
+        case KMIP_QUERY_EXTENSION_LIST:
+        case KMIP_QUERY_EXTENSION_MAP:
+            if(version >= KMIP_1_1)
+                return(KMIP_OK);
+            else
+                return(KMIP_INVALID_FOR_VERSION);
+            break;
+        /* KMIP 1.2 */
+        case KMIP_QUERY_ATTESTATION_TYPES:
+            if(version >= KMIP_1_2)
+                return(KMIP_OK);
+            else
+                return(KMIP_INVALID_FOR_VERSION);
+            break;
+        /* KMIP 1.3 */
+        case KMIP_QUERY_RNGS:
+        case KMIP_QUERY_VALIDATIONS:
+        case KMIP_QUERY_PROFILES:
+        case KMIP_QUERY_CAPABILITIES:
+        case KMIP_QUERY_CLIENT_REGISTRATION_METHODS:
+            if(version >= KMIP_1_3)
+                return(KMIP_OK);
+            else
+                return(KMIP_INVALID_FOR_VERSION);
+            break;
+        /* KMIP 2.0 */
+        case KMIP_QUERY_DEFAULTS_INFORMATION:
+        case KMIP_QUERY_STORAGE_PROTECTION_MASKS:
+            if(version >= KMIP_2_0)
+                return(KMIP_OK);
+            else
+                return(KMIP_INVALID_FOR_VERSION);
+            break;
+        default:
+            return(KMIP_ENUM_MISMATCH);
+            break;
+        }
+        break;
+        
         default:
         return(KMIP_ENUM_UNSUPPORTED);
         break;
@@ -1152,7 +1204,7 @@ kmip_clear_errors(KMIP *ctx)
     
     for(size_t i = 0; i < ARRAY_LENGTH(ctx->errors); i++)
     {
-        ctx->errors[i] = (ErrorFrame){0};
+        ctx->errors[i] = (ErrorFrame){{0},0};
     }
     ctx->frame_index = ctx->errors;
     
@@ -1953,15 +2005,219 @@ kmip_print_operation_enum(FILE *f, enum operation value)
         case KMIP_OP_CREATE:
         fprintf(f, "Create");
         break;
-        
+
+        case KMIP_OP_CREATE_KEY_PAIR:
+        fprintf(f, "Create_key_pair");
+        break;
+
+        case KMIP_OP_REGISTER:
+        fprintf(f, "Register");
+        break;
+
+        case KMIP_OP_REKEY:
+        fprintf(f, "Rekey");
+        break;
+
+        case KMIP_OP_DERIVE_KEY:
+        fprintf(f, "Derive_key");
+        break;
+
+        case KMIP_OP_CERTIFY:
+        fprintf(f, "Certify");
+        break;
+
+        case KMIP_OP_RECERTIFY:
+        fprintf(f, "Recertify");
+        break;
+
+        case KMIP_OP_LOCATE:
+        fprintf(f, "Locate");
+        break;
+
+        case KMIP_OP_CHECK:
+        fprintf(f, "Check");
+        break;
+
         case KMIP_OP_GET:
         fprintf(f, "Get");
         break;
-        
+
+        case KMIP_OP_GET_ATTRIBUTES:
+        fprintf(f, "Get_attributes");
+        break;
+
+        case KMIP_OP_GET_ATTRIBUTE_LIST:
+        fprintf(f, "Get_attribute_list");
+        break;
+
+        case KMIP_OP_ADD_ATTRIBUTE:
+        fprintf(f, "Add_attribute");
+        break;
+
+        case KMIP_OP_MODIFY_ATTRIBUTE:
+        fprintf(f, "Modify_attribute");
+        break;
+
+        case KMIP_OP_DELETE_ATTRIBUTE:
+        fprintf(f, "Delete_attribute");
+        break;
+
+        case KMIP_OP_OBTAIN_LEASE:
+        fprintf(f, "Obtain_lease");
+        break;
+
+        case KMIP_OP_GET_USAGE_ALLOCATION:
+        fprintf(f, "Get_usage_allocation");
+        break;
+
+        case KMIP_OP_ACTIVATE:
+        fprintf(f, "Activate");
+        break;
+
+        case KMIP_OP_REVOKE:
+        fprintf(f, "Revoke");
+        break;
+
         case KMIP_OP_DESTROY:
         fprintf(f, "Destroy");
         break;
-        
+
+        case KMIP_OP_ARCHIVE:
+        fprintf(f, "Archive");
+        break;
+
+        case KMIP_OP_RECOVER:
+        fprintf(f, "Recover");
+        break;
+
+        case KMIP_OP_VALIDATE:
+        fprintf(f, "Validate");
+        break;
+
+        case KMIP_OP_QUERY:
+        printf("Query");
+        break;
+
+        case KMIP_OP_CANCEL:
+        fprintf(f, "Cancel");
+        break;
+
+        case KMIP_OP_POLL:
+        fprintf(f, "Poll");
+        break;
+
+        case KMIP_OP_NOTIFY:
+        fprintf(f, "Notify");
+        break;
+
+        case KMIP_OP_PUT:
+        fprintf(f, "Put");
+        break;
+
+        // # KMIP 1.1
+        case KMIP_OP_REKEY_KEY_PAIR:
+        fprintf(f, "Rekey_key_pair");
+        break;
+
+        case KMIP_OP_DISCOVER_VERSIONS:
+        fprintf(f, "Discover_versions");
+        break;
+
+        //# KMIP 1.2
+        case KMIP_OP_ENCRYPT:
+        fprintf(f, "Encrypt");
+        break;
+
+        case KMIP_OP_DECRYPT:
+        fprintf(f, "Decrypt");
+        break;
+
+        case KMIP_OP_SIGN:
+        fprintf(f, "Sign");
+        break;
+
+        case KMIP_OP_SIGNATURE_VERIFY:
+        fprintf(f, "Signature_verify");
+        break;
+
+        case KMIP_OP_MAC:
+        fprintf(f, "MAC");
+        break;
+
+        case KMIP_OP_MAC_VERIFY:
+        fprintf(f, "MAC_verify");
+        break;
+
+        case KMIP_OP_RNG_RETRIEVE:
+        fprintf(f, "RNG_retrieve");
+        break;
+
+        case KMIP_OP_RNG_SEED:
+        fprintf(f, "RNG_seed");
+        break;
+
+        case KMIP_OP_HASH:
+        fprintf(f, "Hash");
+        break;
+
+        case KMIP_OP_CREATE_SPLIT_KEY:
+        fprintf(f, "Create_split_key");
+        break;
+
+        case KMIP_OP_JOIN_SPLIT_KEY:
+        fprintf(f, "Split_key");
+        break;
+
+        // # KMIP 1.4
+        case KMIP_OP_IMPORT:
+        fprintf(f, "Import");
+        break;
+
+        case KMIP_OP_EXPORT:
+        fprintf(f, "Export");
+        break;
+
+        // # KMIP 2.0
+        case KMIP_OP_LOG:
+        fprintf(f, "Log");
+        break;
+
+        case KMIP_OP_LOGIN:
+        fprintf(f, "Login");
+        break;
+
+        case KMIP_OP_LOGOUT:
+        fprintf(f, "Logout");
+        break;
+
+        case KMIP_OP_DELEGATED_LOGIN:
+        fprintf(f, "Delegated_login");
+        break;
+
+        case KMIP_OP_ADJUST_ATTRIBUTE:
+        fprintf(f, "Adjust_attribute");
+        break;
+
+        case KMIP_OP_SET_ATTRIBUTE:
+        fprintf(f, "Set_attribute");
+        break;
+
+        case KMIP_OP_SET_ENDPOINT_ROLE:
+        fprintf(f, "Set_endpoint_role");
+        break;
+
+        case KMIP_OP_PKCS_11:
+        fprintf(f, "PKCS_11");
+        break;
+
+        case KMIP_OP_INTEROP:
+        fprintf(f, "Interop");
+        break;
+
+        case KMIP_OP_REPROVISION:
+        fprintf(f, "Reprovision");
+        break;
+
         default:
         fprintf(f, "Unknown");
         break;
@@ -4347,6 +4603,10 @@ kmip_print_request_payload(FILE *f, int indent, enum operation type, void *value
         kmip_print_destroy_request_payload(f, indent, value);
         break;
         
+        case KMIP_OP_QUERY:
+        kmip_print_query_request_payload(f, indent, value);
+        break;
+
         default:
         fprintf(f, "%*sUnknown Payload @ %p\n", indent, "", value);
         break;
@@ -4370,6 +4630,10 @@ kmip_print_response_payload(FILE *f, int indent, enum operation type, void *valu
         kmip_print_destroy_response_payload(f, indent, value);
         break;
         
+        case KMIP_OP_QUERY:
+        kmip_print_query_response_payload(f, indent, value);
+        break;
+
         default:
         fprintf(f, "%*sUnknown Payload @ %p\n", indent, "", value);
         break;
@@ -4629,6 +4893,176 @@ kmip_print_response_message(FILE *f, ResponseMessage *value)
     
     return;
 }
+
+void
+kmip_print_query_function_enum(FILE* f, int indent, enum query_function value)
+{
+    if(value == 0)
+    {
+        fprintf(f, "%*s-", indent, "");
+        return;
+    }
+
+    switch(value)
+    {
+        /* KMIP 1.0 */
+        case KMIP_QUERY_OPERATIONS:
+            fprintf(f, "%*sOperations", indent, "");
+            break;
+        case KMIP_QUERY_OBJECTS:
+            fprintf(f, "%*sObjects", indent, "");
+            break;
+        case KMIP_QUERY_SERVER_INFORMATION:
+            fprintf(f, "%*sServer Information", indent, "");
+            break;
+        case KMIP_QUERY_APPLICATION_NAMESPACES:
+            fprintf(f, "%*sApplication namespaces", indent, "");
+            break;
+        /* KMIP 1.1 */
+        case KMIP_QUERY_EXTENSION_LIST:
+            fprintf(f, "%*sExtension list", indent, "");
+            break;
+        case KMIP_QUERY_EXTENSION_MAP:
+            fprintf(f, "%*sExtension Map", indent, "");
+            break;
+        /* KMIP 1.2 */
+        case KMIP_QUERY_ATTESTATION_TYPES:
+            fprintf(f, "%*sAttestation Types", indent, "");
+            break;
+        /* KMIP 1.3 */
+        case KMIP_QUERY_RNGS:
+            fprintf(f, "%*sRNGS", indent, "");
+            break;
+        case KMIP_QUERY_VALIDATIONS:
+            fprintf(f, "%*sValidations", indent, "");
+            break;
+        case KMIP_QUERY_PROFILES:
+            fprintf(f, "%*sProfiles", indent, "");
+            break;
+        case KMIP_QUERY_CAPABILITIES:
+            fprintf(f, "%*sCapabilities", indent, "");
+            break;
+        case KMIP_QUERY_CLIENT_REGISTRATION_METHODS:
+            fprintf(f, "%*sRegistration Methods", indent, "");
+            break;
+        /* KMIP 2.0 */
+        case KMIP_QUERY_DEFAULTS_INFORMATION:
+            fprintf(f, "%*sDefaults Information", indent, "");
+            break;
+        case KMIP_QUERY_STORAGE_PROTECTION_MASKS:
+            fprintf(f, "%*sStorage Protection Masks", indent, "");
+            break;
+
+        default:
+        fprintf(f, "%*sUnknown", indent, "");
+        break;
+    };
+}
+
+void
+kmip_print_query_functions(FILE* f, int indent, QueryRequestPayload* value)
+{
+    fprintf(f, "%*sQuery Functions @ %p\n", indent, "", (void *)value);
+
+    if(value != NULL)
+    {
+        fprintf(f, "%*sFunctions: %zu\n", indent + 2, "", value->functions->size);
+        LinkedListItem *curr = value->functions->head;
+        size_t count = 1;
+        while(curr != NULL)
+        {
+            fprintf(f, "%*sFunction: %zu: ", indent + 4, "", count);
+            int32 func = *(int32 *)curr->data;
+            kmip_print_query_function_enum(f, indent + 6, func);
+            fprintf(f, "\n");
+
+            curr = curr->next;
+            count++;
+        }
+    }
+}
+
+
+void
+kmip_print_operations(FILE* f, int indent, Operations *value)
+{
+    fprintf(f, "%*sOperations @ %p\n", indent, "", (void *)value);
+
+    if(value != NULL)
+    {
+        fprintf(f, "%*sOperations: %zu\n", indent + 2, "", value->operation_list->size);
+        LinkedListItem *curr = value->operation_list->head;
+        size_t count = 1;
+        while(curr != NULL)
+        {
+            fprintf(f, "%*sOperation: %zu: ", indent + 4, "", count);
+            int32 oper = *(int32 *)curr->data;
+            kmip_print_operation_enum(f, oper);
+            fprintf(f, "\n");
+
+            curr = curr->next;
+            count++;
+        }
+    }
+}
+
+void
+kmip_print_object_types(FILE* f, int indent, ObjectTypes* value)
+{
+    fprintf(f, "%*sObjects @ %p\n", indent, "", (void *)value);
+
+    if(value != NULL)
+    {
+        fprintf(f, "%*sObjects: %zu\n", indent + 2, "", value->object_list->size);
+        LinkedListItem *curr = value->object_list->head;
+        size_t count = 1;
+        while(curr != NULL)
+        {
+            fprintf(f, "%*sObject: %zu: ", indent + 4, "", count);
+            int32 obj = *(int32 *)curr->data;
+            kmip_print_object_type_enum(f, obj);
+            fprintf(f, "\n");
+
+            curr = curr->next;
+            count++;
+        }
+    }
+}
+
+void
+kmip_print_server_information(FILE* f, int indent, ServerInformation* value)
+{
+    fprintf(f,"%*sServer Information @ %p\n", indent, "", (void *)value);
+
+    if(value != NULL)
+    {
+        kmip_print_text_string(f,indent + 2, "Server Name", value->server_name);
+        kmip_print_text_string(f,indent + 2, "Server Serial Number", value->server_serial_number);
+        kmip_print_text_string(f,indent + 2, "Server Version", value->server_version);
+        kmip_print_text_string(f,indent + 2, "Server Load", value->server_load);
+        kmip_print_text_string(f,indent + 2, "Product Name", value->product_name);
+        kmip_print_text_string(f,indent + 2, "Build Llevel", value->build_level);
+        kmip_print_text_string(f,indent + 2, "Build Date", value->build_date);
+        kmip_print_text_string(f,indent + 2, "Cluster info", value->cluster_info);
+    }
+}
+
+
+void
+kmip_print_query_response_payload(FILE* f, int indent, QueryResponsePayload *value)
+{
+    kmip_print_operations(f,indent, value->operations);
+    kmip_print_object_types(f,indent, value->objects);
+    kmip_print_text_string(f,indent, "Vendor ID", value->vendor_identification);
+    kmip_print_server_information(f,indent, value->server_information);
+}
+
+void
+kmip_print_query_request_payload(FILE* f, int indent, QueryRequestPayload *value)
+{
+    kmip_print_query_functions(f, indent, value);
+}
+
 
 /*
 Freeing Functions
@@ -5415,6 +5849,10 @@ kmip_free_request_batch_item(KMIP *ctx, RequestBatchItem *value)
                 kmip_free_destroy_request_payload(ctx, (DestroyRequestPayload *)value->request_payload);
                 break;
                 
+                case KMIP_OP_QUERY:
+                kmip_free_query_request_payload(ctx, (QueryRequestPayload *)value->request_payload);
+                break;
+
                 default:
                 /* NOTE (ph) Hitting this case means that we don't know    */
                 /*      what the actual type, size, or value of            */
@@ -5480,6 +5918,10 @@ kmip_free_response_batch_item(KMIP *ctx, ResponseBatchItem *value)
                 kmip_free_destroy_response_payload(ctx, (DestroyResponsePayload *)value->response_payload);
                 break;
                 
+                case KMIP_OP_QUERY:
+                kmip_free_query_response_payload(ctx, (QueryResponsePayload *)value->response_payload);
+                break;
+
                 default:
                 /* NOTE (ph) Hitting this case means that we don't know    */
                 /*      what the actual type, size, or value of            */
@@ -5877,6 +6319,145 @@ kmip_free_response_message(KMIP *ctx, ResponseMessage *value)
 }
 
 /*
+void
+kmip_free_query_functions(KMIP *ctx, QueryRequestPayload* value)
+{
+    if(value != NULL)
+    {
+        if(value->functions != NULL)
+        {
+            LinkedListItem *curr = kmip_linked_list_pop(value->functions);
+            while(curr != NULL)
+            {
+                ctx->free_func(ctx->state, curr->data);
+                curr->data = NULL;
+                ctx->free_func(ctx->state, curr);
+                curr = kmip_linked_list_pop(value->functions);
+            }
+            ctx->free_func(ctx->state, value->functions);
+            value->functions = NULL;
+        }
+    }
+
+    return;
+}
+*/
+
+void
+kmip_free_query_response_payload(KMIP *ctx, QueryResponsePayload *value)
+{
+    if (value->operations)
+    {
+        kmip_free_operations(ctx, value->operations);
+        ctx->free_func(ctx->state, value->operations);
+        value->operations = NULL;
+    }
+    if (value->objects)
+    {
+        kmip_free_objects(ctx, value->objects);
+        ctx->free_func(ctx->state, value->objects);
+        value->objects = NULL;
+    }
+
+    if (value->vendor_identification)
+    {
+        kmip_free_text_string(ctx, value->vendor_identification);
+        ctx->free_func(ctx->state, value->vendor_identification);
+        value->vendor_identification = NULL;
+    }
+
+    if (value->server_information)
+    {
+        kmip_free_server_information(ctx, value->server_information);
+        ctx->free_func(ctx->state, value->server_information);
+        value->server_information = NULL;
+    }
+}
+
+
+void
+kmip_free_query_request_payload(KMIP *ctx, QueryRequestPayload *value)
+{
+    if(ctx == NULL || value == NULL)
+    {
+        return;
+    }
+
+    LinkedListItem *item = kmip_linked_list_pop(value->functions);
+    while(item != NULL)
+    {
+        ctx->memset_func(item, 0, sizeof(LinkedListItem));
+        ctx->free_func(ctx->state, item);
+
+        item = kmip_linked_list_pop(value->functions);
+    }
+
+    ctx->free_func(ctx->state, value->functions);
+    value->functions = NULL;
+
+    return;
+}
+void
+kmip_free_operations(KMIP *ctx, Operations *value)
+{
+
+    if(value != NULL)
+    {
+        if(value->operation_list != NULL)
+        {
+            LinkedListItem *curr = kmip_linked_list_pop(value->operation_list);
+            while(curr != NULL)
+            {
+                ctx->free_func(ctx->state, curr->data);
+                curr->data = NULL;
+                ctx->free_func(ctx->state, curr);
+                curr = kmip_linked_list_pop(value->operation_list);
+            }
+            ctx->free_func(ctx->state, value->operation_list);
+            value->operation_list = NULL;
+        }
+    }
+
+    return;
+}
+void
+kmip_free_objects(KMIP *ctx, ObjectTypes* value)
+{
+    if(value != NULL)
+    {
+        if(value->object_list != NULL)
+        {
+            LinkedListItem *curr = kmip_linked_list_pop(value->object_list);
+            while(curr != NULL)
+            {
+                ctx->free_func(ctx->state, curr->data);
+                curr->data = NULL;
+                ctx->free_func(ctx->state, curr);
+                curr = kmip_linked_list_pop(value->object_list);
+            }
+            ctx->free_func(ctx->state, value->object_list);
+            value->object_list = NULL;
+        }
+    }
+
+    return;
+}
+
+
+void
+kmip_free_server_information(KMIP* ctx, ServerInformation* value)
+{
+    kmip_free_text_string(ctx, value->server_name);
+    kmip_free_text_string(ctx, value->server_serial_number);
+    kmip_free_text_string(ctx, value->server_version);
+    kmip_free_text_string(ctx, value->server_load);
+    kmip_free_text_string(ctx, value->product_name);
+    kmip_free_text_string(ctx, value->build_level);
+    kmip_free_text_string(ctx, value->build_date);
+    kmip_free_text_string(ctx, value->cluster_info);
+}
+
+/*
 Copying Functions
 */
 
@@ -6185,6 +6766,88 @@ kmip_deep_copy_attribute(KMIP *ctx, const Attribute *value)
 
     return(copy);
 }
+
+#define min(a,b) (((a) < (b)) ? (a) : (b))
+
+char*
+kmip_copy_textstring(char* dest, TextString* src, size_t size)
+{
+    if(src && src->value != NULL)
+    {
+        size_t len = min(size, src->size);
+        memcpy(dest, src->value, len);
+        dest[len] = 0;
+    }
+    else
+        *dest = 0;
+
+    return dest;
+}
+
+void
+kmip_copy_operations(int ops[], size_t* ops_size, Operations *value, unsigned max_ops)
+{
+    if(value != NULL)
+    {
+        *ops_size = value->operation_list->size;
+
+        LinkedListItem *curr = value->operation_list->head;
+        size_t idx = 0;
+        while(curr != NULL && idx < max_ops )
+        {
+            ops[idx] = *(int32 *)curr->data;
+            curr = curr->next;
+            idx++;
+        }
+    }
+}
+
+void
+kmip_copy_objects(int objs[], size_t* objs_size, ObjectTypes *value, unsigned max_objs)
+{
+    if(value != NULL)
+    {
+        *objs_size = value->object_list->size;
+
+        LinkedListItem *curr = value->object_list->head;
+        size_t idx = 0;
+        while(curr != NULL && idx < max_objs )
+        {
+            objs[idx] = *(int32 *)curr->data;
+            curr = curr->next;
+            idx++;
+        }
+    }
+}
+
+void
+kmip_copy_query_result(QueryResponse* query_result, QueryResponsePayload *pld)
+{
+    if(pld != NULL)
+    {
+        kmip_copy_operations(query_result->operations, &query_result->operations_size, pld->operations, MAX_QUERY_OPS);
+        kmip_copy_objects(query_result->objects, &query_result->objects_size, pld->objects, MAX_QUERY_OBJS);
+
+        if(pld->vendor_identification)
+        {
+            kmip_copy_textstring(query_result->vendor_identification, pld->vendor_identification, sizeof(query_result->vendor_identification)-1);
+        }
+
+        if(pld->server_information)
+        {
+            ServerInformation* srv = pld->server_information;
+            query_result->server_information_valid = 1;
+            kmip_copy_textstring(query_result->server_name, srv->server_name, MAX_QUERY_LEN-1);
+            kmip_copy_textstring(query_result->server_serial_number, srv->server_serial_number, MAX_QUERY_LEN-1);
+            kmip_copy_textstring(query_result->server_version, srv->server_version, MAX_QUERY_LEN-1);
+            kmip_copy_textstring(query_result->server_load, srv->server_load, MAX_QUERY_LEN-1);
+            kmip_copy_textstring(query_result->product_name, srv->product_name, MAX_QUERY_LEN-1);
+            kmip_copy_textstring(query_result->build_level, srv->build_level, MAX_QUERY_LEN-1);
+            kmip_copy_textstring(query_result->build_date, srv->build_date, MAX_QUERY_LEN-1);
+        }
+    }
+}
+
 
 /*
 Comparison Functions
@@ -7597,6 +8260,13 @@ kmip_compare_request_batch_item(const RequestBatchItem *a, const RequestBatchIte
                 }
                 break;
                 
+                case KMIP_OP_QUERY:
+                if(kmip_compare_query_request_payload((QueryRequestPayload *)a->request_payload, (QueryRequestPayload *)b->request_payload) == KMIP_FALSE)
+                {
+                    return(KMIP_FALSE);
+                }
+                break;
+                
                 default:
                 /* NOTE (ph) Unsupported payloads cannot be compared. */
                 return(KMIP_FALSE);
@@ -7702,6 +8372,13 @@ kmip_compare_response_batch_item(const ResponseBatchItem *a, const ResponseBatch
                 }
                 break;
                 
+                case KMIP_OP_QUERY:
+                if(kmip_compare_query_response_payload((QueryResponsePayload *)a->response_payload, (QueryResponsePayload *)b->response_payload) == KMIP_FALSE)
+                {
+                    return(KMIP_FALSE);
+                }
+                break;
+
                 default:
                 /* NOTE (ph) Unsupported payloads cannot be compared. */
                 return(KMIP_FALSE);
@@ -8376,6 +9053,76 @@ kmip_compare_response_message(const ResponseMessage *a, const ResponseMessage *b
     
     return(KMIP_TRUE);
 }
+
+int
+kmip_compare_query_functions(const QueryRequestPayload* a, const QueryRequestPayload* b)
+{
+    if(a != b)
+    {
+        if((a == NULL) || (b == NULL))
+        {
+            return(KMIP_FALSE);
+        }
+
+        if((a->functions != b->functions ))
+        {
+            if((a->functions == NULL) || (b->functions == NULL))
+            {
+                return(KMIP_FALSE);
+            }
+
+            if((a->functions->size != b->functions->size))
+            {
+                return(KMIP_FALSE);
+            }
+
+            LinkedListItem *a_item = a->functions->head;
+            LinkedListItem *b_item = b->functions->head;
+            while((a_item != NULL) || (b_item != NULL))
+            {
+                if(a_item != b_item)
+                {
+                    if(!a_item || !b_item)
+                        break;
+
+                    int32 a_data = *(int32 *)a_item->data;
+                    int32 b_data = *(int32 *)b_item->data;
+                    if(a_data != b_data)
+                    {
+                        return(KMIP_FALSE);
+                    }
+                }
+
+                a_item = a_item->next;
+                b_item = b_item->next;
+            }
+
+            if(a_item != b_item)
+            {
+                return(KMIP_FALSE);
+            }
+        }
+    }
+
+    return(KMIP_TRUE);
+}
+
+int
+kmip_compare_query_request_payload(const QueryRequestPayload *a, const QueryRequestPayload *b)
+{
+    (void) a;
+    (void) b;
+    return(KMIP_NOT_IMPLEMENTED);
+}
+
+int
+kmip_compare_query_response_payload(const QueryResponsePayload *a, const QueryResponsePayload *b)
+{
+    (void) a;
+    (void) b;
+    return(KMIP_NOT_IMPLEMENTED);
+}
+
 
 /*
 Encoding Functions
@@ -10473,6 +11220,10 @@ kmip_encode_request_batch_item(KMIP *ctx, const RequestBatchItem *value)
         result = kmip_encode_destroy_request_payload(ctx, (DestroyRequestPayload*)value->request_payload);
         break;
         
+        case KMIP_OP_QUERY:
+        result = kmip_encode_query_request_payload(ctx, (QueryRequestPayload*)value->request_payload);
+        break;
+
         default:
         kmip_push_error_frame(ctx, __func__, __LINE__);
         return(KMIP_NOT_IMPLEMENTED);
@@ -10545,6 +11296,10 @@ kmip_encode_response_batch_item(KMIP *ctx, const ResponseBatchItem *value)
         result = kmip_encode_destroy_response_payload(ctx, (DestroyResponsePayload*)value->response_payload);
         break;
         
+        case KMIP_OP_QUERY:
+        result = kmip_encode_query_response_payload(ctx, (QueryResponsePayload*)value->response_payload);
+        break;
+
         default:
         kmip_push_error_frame(ctx, __func__, __LINE__);
         return(KMIP_NOT_IMPLEMENTED);
@@ -10621,6 +11376,62 @@ kmip_encode_response_message(KMIP *ctx, const ResponseMessage *value)
     ctx->index = curr_index;
     
     return(KMIP_OK);
+}
+
+int
+kmip_encode_query_functions(KMIP *ctx, const QueryRequestPayload* value)
+{
+    CHECK_ENCODE_ARGS(ctx, value);
+
+    int result = 0;
+
+    if(value->functions != NULL)
+    {
+        LinkedListItem *curr = value->functions->head;
+        while(curr != NULL)
+        {
+            result = kmip_encode_enum(ctx, KMIP_TAG_QUERY_FUNCTION, *(int32 *)curr->data);
+            CHECK_RESULT(ctx, result);
+
+            curr = curr->next;
+        }
+    }
+
+    return(KMIP_OK);
+}
+int
+kmip_encode_query_request_payload(KMIP *ctx, const QueryRequestPayload *value)
+{
+    int result = 0;
+    result = kmip_encode_int32_be(ctx, TAG_TYPE(KMIP_TAG_REQUEST_PAYLOAD, KMIP_TYPE_STRUCTURE));
+    CHECK_RESULT(ctx, result);
+
+    uint8 *length_index = ctx->index;
+    uint8 *value_index = ctx->index += 4;
+
+    if(value->functions != NULL)
+    {
+        result = kmip_encode_query_functions(ctx, value);
+        CHECK_RESULT(ctx, result);
+    }
+
+    uint8 *curr_index = ctx->index;
+    ctx->index = length_index;
+
+    kmip_encode_int32_be(ctx, curr_index - value_index);
+
+    ctx->index = curr_index;
+
+    return(KMIP_OK);
+}
+
+
+int
+kmip_encode_query_response_payload(KMIP *ctx, const QueryResponsePayload *value)
+{
+    (void) ctx;
+    (void) value;
+    return(KMIP_NOT_IMPLEMENTED);
 }
 
 /*
@@ -12575,6 +13386,12 @@ kmip_decode_request_batch_item(KMIP *ctx, RequestBatchItem *value)
         result = kmip_decode_destroy_request_payload(ctx, (DestroyRequestPayload*)value->request_payload);
         break;
         
+        case KMIP_OP_QUERY:
+        value->request_payload = ctx->calloc_func(ctx->state, 1, sizeof(QueryRequestPayload));
+        CHECK_NEW_MEMORY(ctx, value->request_payload, sizeof(QueryRequestPayload), "QueryRequestPayload structure");
+        result = kmip_decode_query_request_payload(ctx, (QueryRequestPayload*)value->request_payload);
+        break;
+
         default:
         kmip_push_error_frame(ctx, __func__, __LINE__);
         return(KMIP_NOT_IMPLEMENTED);
@@ -12668,6 +13485,12 @@ kmip_decode_response_batch_item(KMIP *ctx, ResponseBatchItem *value)
             result = kmip_decode_destroy_response_payload(ctx, value->response_payload);
             break;
             
+            case KMIP_OP_QUERY:
+            value->response_payload = ctx->calloc_func(ctx->state, 1, sizeof(QueryResponsePayload));
+            CHECK_NEW_MEMORY(ctx, value->response_payload, sizeof(QueryResponsePayload), "QueryResponsePayload structure");
+            result = kmip_decode_query_response_payload(ctx, value->response_payload);
+            break;
+
             default:
             kmip_push_error_frame(ctx, __func__, __LINE__);
             return(KMIP_NOT_IMPLEMENTED);
@@ -13218,3 +14041,248 @@ kmip_decode_response_message(KMIP *ctx, ResponseMessage *value)
     
     return(KMIP_OK);
 }
+
+int
+kmip_decode_query_functions(KMIP *ctx, QueryRequestPayload* value)
+{
+    CHECK_DECODE_ARGS(ctx, value);
+    CHECK_BUFFER_FULL(ctx, 8);
+
+    int result = 0;
+    int32 tag_type = 0;
+    uint32 length = 0;
+
+    result = kmip_decode_int32_be(ctx, &tag_type);
+    CHECK_RESULT(ctx, result);
+    CHECK_TAG_TYPE(ctx, tag_type, KMIP_TAG_QUERY_FUNCTION, KMIP_TYPE_STRUCTURE);
+
+    result = kmip_decode_int32_be(ctx, &length);
+    CHECK_RESULT(ctx, result);
+    CHECK_BUFFER_FULL(ctx, length);
+
+    value->functions = ctx->calloc_func(ctx->state, 1, sizeof(LinkedList));
+    CHECK_NEW_MEMORY(ctx, value->functions, sizeof(LinkedList), "LinkedList");
+
+    uint32 tag = kmip_peek_tag(ctx);
+    while(tag == KMIP_TAG_QUERY_FUNCTION)
+    {
+        LinkedListItem *item = ctx->calloc_func(ctx->state, 1, sizeof(LinkedListItem));
+        CHECK_NEW_MEMORY(ctx, item, sizeof(LinkedListItem), "LinkedListItem");
+        kmip_linked_list_enqueue(value->functions, item);
+
+        item->data = ctx->calloc_func(ctx->state, 1, sizeof(int32));
+        CHECK_NEW_MEMORY(ctx, item->data, sizeof(int32), "Query Function");
+
+        result = kmip_decode_enum(ctx, KMIP_TAG_QUERY_FUNCTION, (int32 *)item->data);
+        CHECK_RESULT(ctx, result);
+
+        tag = kmip_peek_tag(ctx);
+    }
+
+    return(KMIP_OK);
+}
+
+int
+kmip_decode_query_request_payload(KMIP *ctx, QueryRequestPayload *value)
+{
+    (void) ctx;
+    (void) value;
+    return(KMIP_NOT_IMPLEMENTED);
+}
+
+
+int
+kmip_decode_operations(KMIP *ctx, Operations *value)
+{
+    int result = 0;
+
+    value->operation_list = ctx->calloc_func(ctx->state, 1, sizeof(LinkedList));
+    CHECK_NEW_MEMORY(ctx, value->operation_list, sizeof(LinkedList), "LinkedList");
+
+    uint32 tag = kmip_peek_tag(ctx);
+    while(tag == KMIP_TAG_OPERATION)
+    {
+        LinkedListItem *item = ctx->calloc_func(ctx->state, 1, sizeof(LinkedListItem));
+        CHECK_NEW_MEMORY(ctx, item, sizeof(LinkedListItem), "LinkedListItem");
+        kmip_linked_list_enqueue(value->operation_list, item);
+
+        item->data = ctx->calloc_func(ctx->state, 1, sizeof(int32));
+        CHECK_NEW_MEMORY(ctx, item->data, sizeof(int32), "Operation");
+
+
+        result = kmip_decode_enum(ctx, KMIP_TAG_OPERATION, (int32 *)item->data);
+        CHECK_RESULT(ctx, result);
+
+        tag = kmip_peek_tag(ctx);
+    }
+
+    return(KMIP_OK);
+}
+
+int
+kmip_decode_object_types(KMIP *ctx, ObjectTypes *value)
+{
+    int result = 0;
+
+    value->object_list = ctx->calloc_func(ctx->state, 1, sizeof(LinkedList));
+    CHECK_NEW_MEMORY(ctx, value->object_list, sizeof(LinkedList), "LinkedList");
+
+    uint32 tag = kmip_peek_tag(ctx);
+    while(tag == KMIP_TAG_OBJECT_TYPE)
+    {
+        LinkedListItem *item = ctx->calloc_func(ctx->state, 1, sizeof(LinkedListItem));
+        CHECK_NEW_MEMORY(ctx, item, sizeof(LinkedListItem), "LinkedListItem");
+        kmip_linked_list_enqueue(value->object_list, item);
+
+        item->data = ctx->calloc_func(ctx->state, 1, sizeof(int32));
+        CHECK_NEW_MEMORY(ctx, item->data, sizeof(int32), "Object");
+
+        result = kmip_decode_enum(ctx, KMIP_TAG_OBJECT_TYPE, (int32 *)item->data);
+        CHECK_RESULT(ctx, result);
+
+        tag = kmip_peek_tag(ctx);
+    }
+
+    return(KMIP_OK);
+}
+
+int
+kmip_decode_server_information(KMIP *ctx, ServerInformation *value)
+{
+    CHECK_BUFFER_FULL(ctx, 8);
+
+    int result = 0;
+    int32 tag_type = 0;
+    uint32 length = 0;
+
+    kmip_decode_int32_be(ctx, &tag_type);
+    CHECK_TAG_TYPE(ctx, tag_type, KMIP_TAG_SERVER_INFORMATION, KMIP_TYPE_STRUCTURE);
+
+    kmip_decode_int32_be(ctx, &length);
+    CHECK_BUFFER_FULL(ctx, length);
+
+    if(kmip_is_tag_next(ctx, KMIP_TAG_SERVER_NAME))
+    {
+        value->server_name = ctx->calloc_func(ctx->state, 1, sizeof(TextString));
+        CHECK_NEW_MEMORY(ctx, value->server_name, sizeof(TextString), "ServerName text string");
+
+        result = kmip_decode_text_string(ctx, KMIP_TAG_SERVER_NAME, value->server_name);
+        CHECK_RESULT(ctx, result);
+    }
+
+    if(kmip_is_tag_next(ctx, KMIP_TAG_SERVER_SERIAL_NUMBER))
+    {
+        value->server_serial_number = ctx->calloc_func(ctx->state, 1, sizeof(TextString));
+        CHECK_NEW_MEMORY(ctx, value->server_serial_number, sizeof(TextString), "ServerSerialNumber text string");
+
+        result = kmip_decode_text_string(ctx, KMIP_TAG_SERVER_SERIAL_NUMBER, value->server_serial_number);
+        CHECK_RESULT(ctx, result);
+    }
+
+    if(kmip_is_tag_next(ctx, KMIP_TAG_SERVER_VERSION))
+    {
+        value->server_version = ctx->calloc_func(ctx->state, 1, sizeof(TextString));
+        CHECK_NEW_MEMORY(ctx, value->server_version, sizeof(TextString), "ServerVersion text string");
+
+        result = kmip_decode_text_string(ctx, KMIP_TAG_SERVER_VERSION, value->server_version);
+        CHECK_RESULT(ctx, result);
+    }
+
+    if(kmip_is_tag_next(ctx, KMIP_TAG_SERVER_LOAD))
+    {
+        value->server_load = ctx->calloc_func(ctx->state, 1, sizeof(TextString));
+        CHECK_NEW_MEMORY(ctx, value->server_load, sizeof(TextString), "ServerLoad text string");
+
+        result = kmip_decode_text_string(ctx, KMIP_TAG_SERVER_LOAD, value->server_load);
+        CHECK_RESULT(ctx, result);
+    }
+
+
+    if(kmip_is_tag_next(ctx, KMIP_TAG_PRODUCT_NAME))
+    {
+        value->product_name = ctx->calloc_func(ctx->state, 1, sizeof(TextString));
+        CHECK_NEW_MEMORY(ctx, value->product_name, sizeof(TextString), "ProductName text string");
+
+        result = kmip_decode_text_string(ctx, KMIP_TAG_PRODUCT_NAME, value->product_name);
+        CHECK_RESULT(ctx, result);
+    }
+
+    if(kmip_is_tag_next(ctx, KMIP_TAG_BUILD_LEVEL))
+    {
+        value->build_level = ctx->calloc_func(ctx->state, 1, sizeof(TextString));
+        CHECK_NEW_MEMORY(ctx, value->build_level, sizeof(TextString), "BuildLevel text string");
+
+        result = kmip_decode_text_string(ctx, KMIP_TAG_BUILD_LEVEL, value->build_level);
+        CHECK_RESULT(ctx, result);
+    }
+
+    if(kmip_is_tag_next(ctx, KMIP_TAG_BUILD_DATE))
+    {
+        value->build_date = ctx->calloc_func(ctx->state, 1, sizeof(TextString));
+        CHECK_NEW_MEMORY(ctx, value->build_date, sizeof(TextString), "BuildDate text string");
+
+        result = kmip_decode_text_string(ctx, KMIP_TAG_BUILD_DATE, value->build_date);
+        CHECK_RESULT(ctx, result);
+    }
+
+    if(kmip_is_tag_next(ctx, KMIP_TAG_CLUSTER_INFO))
+    {
+        value->cluster_info = ctx->calloc_func(ctx->state, 1, sizeof(TextString));
+        CHECK_NEW_MEMORY(ctx, value->cluster_info, sizeof(TextString), "ClusterInfo text string");
+
+        result = kmip_decode_text_string(ctx, KMIP_TAG_CLUSTER_INFO, value->cluster_info);
+        CHECK_RESULT(ctx, result);
+    }
+
+    return(KMIP_OK);
+}
+
+int
+kmip_decode_query_response_payload(KMIP *ctx, QueryResponsePayload *value)
+{
+    int result = 0;
+
+    int32 tag_type = 0;
+    uint32 length = 0;
+
+    kmip_decode_int32_be(ctx, &tag_type);
+    CHECK_TAG_TYPE(ctx, tag_type, KMIP_TAG_RESPONSE_PAYLOAD, KMIP_TYPE_STRUCTURE);
+
+    kmip_decode_int32_be(ctx, &length);
+    CHECK_BUFFER_FULL(ctx, length);
+
+    if(kmip_is_tag_next(ctx, KMIP_TAG_OPERATION))
+    {
+        value->operations = ctx->calloc_func(ctx->state, 1, sizeof(Operations));
+        CHECK_NEW_MEMORY(ctx, value->operations, sizeof(Operations), "Operations");
+        result = kmip_decode_operations(ctx, value->operations);
+        CHECK_RESULT(ctx, result);
+    }
+
+    if(kmip_is_tag_next(ctx, KMIP_TAG_OBJECT_TYPE))
+    {
+        value->objects = ctx->calloc_func(ctx->state, 1, sizeof(ObjectTypes));
+        CHECK_NEW_MEMORY(ctx, value->objects, sizeof(ObjectTypes), "Object_Types");
+        result = kmip_decode_object_types(ctx, value->objects);
+        CHECK_RESULT(ctx, result);
+    }
+
+    if(kmip_is_tag_next(ctx, KMIP_TAG_VENDOR_IDENTIFICATION))
+    {
+        value->vendor_identification = ctx->calloc_func(ctx->state, 1, sizeof(TextString));
+        CHECK_NEW_MEMORY(ctx, value->vendor_identification, sizeof(TextString), "Vendor Identifier text string");
+        result = kmip_decode_text_string(ctx, KMIP_TAG_VENDOR_IDENTIFICATION, (TextString*)value->vendor_identification);
+        CHECK_RESULT(ctx, result);
+    }
+
+    if(kmip_is_tag_next(ctx, KMIP_TAG_SERVER_INFORMATION))
+    {
+        value->server_information = ctx->calloc_func(ctx->state, 1, sizeof(ServerInformation));
+        CHECK_NEW_MEMORY(ctx, value->server_information, sizeof(ServerInformation), "Server Information");
+        result = kmip_decode_server_information(ctx, value->server_information);
+        CHECK_RESULT(ctx, result);
+    }
+
+    return(KMIP_OK);
+}
+
