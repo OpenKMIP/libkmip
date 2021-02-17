@@ -80,7 +80,7 @@ demo_create: demo_create.o $(OFILES)
 	$(CC) $(LDFLAGS) -o demo_create $^ $(LDLIBS)
 demo_destroy: demo_destroy.o $(OFILES)
 	$(CC) $(LDFLAGS) -o demo_destroy $^ $(LDLIBS)
-demo_query: demo_query.o ssl_connect.o $(OFILES)
+demo_query: demo_query.o $(OFILES)
 	$(CC) $(LDFLAGS) -o $@ $^ $(LDLIBS)
 tests: tests.o kmip.o kmip_memset.o
 	$(CC) $(LDFLAGS) -o tests $^
@@ -102,9 +102,6 @@ kmip_memset.lo: kmip_memset.c kmip_memset.h
 
 kmip_bio.o: kmip_bio.c kmip_bio.h
 kmip_bio.lo: kmip_bio.c kmip_bio.h
-
-ssl_connect.o: ssl_connect.c ssl_connect.h
-ssl_connect.lo: ssl_connect.c ssl_connect.h
 
 clean:
 	rm -f *.o *.lo
