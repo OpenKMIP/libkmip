@@ -1,4 +1,4 @@
-/* Copyright (c) 2018 The Johns Hopkins University/Applied Physics Labora`tory
+/* Copyright (c) 2018 The Johns Hopkins University/Applied Physics Laboratory
  * All Rights Reserved.
  *
  * This file is dual licensed under the terms of the Apache 2.0 License and
@@ -15,7 +15,6 @@
 #include "kmip.h"
 #include "kmip_bio.h"
 #include "kmip_memset.h"
-#include "ssl_connect.h"
 
 
 void
@@ -129,8 +128,6 @@ int use_low_level_api(KMIP *ctx, BIO *bio, enum query_function queries[], size_t
     kmip_set_buffer(ctx, encoding, buffer_total_size);
 
     /* Build the request message. */
-
-
     ProtocolVersion pv = {0};
     kmip_init_protocol_version(&pv, ctx->version);
 
@@ -149,8 +146,6 @@ int use_low_level_api(KMIP *ctx, BIO *bio, enum query_function queries[], size_t
         item->data = &queries[i];
         kmip_linked_list_enqueue(functions, item);
     }
-
-    //printf("functions = %p\n", (void*) functions);
 
     QueryRequestPayload qrp = {0};
     qrp.functions = functions;
@@ -218,10 +213,11 @@ int use_low_level_api(KMIP *ctx, BIO *bio, enum query_function queries[], size_t
 
     printf("bio query send request\n");
 
-    int result = kmip_bio_send_request_encoding(ctx, bio, (char *)encoding, ctx->index - ctx->buffer, &response, &response_size);
+    int result = kmip_bio_send_request_encoding(ctx, bio, (char *)encoding,
+                                                ctx->index - ctx->buffer,
+                                                &response, &response_size);
 
     printf("bio query response = %p\n", response);
-
 
     printf("\n");
     if(result < 0)
@@ -312,16 +308,14 @@ int use_low_level_api(KMIP *ctx, BIO *bio, enum query_function queries[], size_t
         kmip_copy_query_result(query_result, (QueryResponsePayload*) req.response_payload);
     }
 
-    //printf("bio query free response resp_m =  %p, response = %p\n", (void*)&resp_m, response);
-
     /* Clean up the response message, the response buffer, and the KMIP */
     /* context.                                                         */
     kmip_free_response_message(ctx, &resp_m);
     kmip_free_buffer(ctx, response, response_size);
     response = NULL;
 
-    //kmip_set_buffer(ctx, NULL, 0);
-   // kmip_destroy(ctx);
+    kmip_set_buffer(ctx, NULL, 0);
+    kmip_destroy(ctx);
 
     printf("bio query done \n");
 
@@ -336,10 +330,6 @@ use_mid_level_api(BIO* bio,
     /* Set up the KMIP context and send the request message. */
     KMIP kmip_context = {0};
 
-    //kmip_context.calloc_func = &demo_calloc;
-    //kmip_context.realloc_func = &demo_realloc;
-    //kmip_context.free_func = &demo_free;
-
     kmip_init(&kmip_context, NULL, 0, KMIP_1_0);
     
     enum query_function queries[] =
@@ -351,7 +341,6 @@ use_mid_level_api(BIO* bio,
     };
 
     int result = kmip_bio_query_with_context(&kmip_context, bio, queries, ARRAY_LENGTH(queries), query_result);
-    //int result = use_low_level_api(&kmip_context, bio, queries, ARRAY_LENGTH(queries), query_result);
     
     /* Handle the response results. */
     printf("\n");
@@ -398,8 +387,11 @@ main(int argc, char **argv)
     char *client_key = NULL;
     char *ca_certificate = NULL;
     int help = 0;
+    int result = 1;
     
-    int error = parse_arguments(argc, argv, &server_address, &server_port, &client_certificate, &client_key, &ca_certificate, &help);
+    int error = parse_arguments(argc, argv, &server_address, &server_port,
+                                &client_certificate, &client_key,
+                                &ca_certificate, &help);
     if(error)
     {
         return(error);
@@ -410,64 +402,77 @@ main(int argc, char **argv)
         return(0);
     }
 
-    ssl_initialize();
-    SSL_CTX* ctx = ssl_create_context(client_certificate, client_key, ca_certificate);
-    if (!ctx)
-        return 1;
+    /* Set up the TLS connection to the KMIP server. */
+    SSL_CTX *ctx = NULL;
+    SSL *ssl = NULL;
+    OPENSSL_init_ssl(0, NULL);
+    ctx = SSL_CTX_new(TLS_client_method());
 
-    SSL_SESSION* session = NULL;
-
+    printf("\n");
+    printf("Loading the client certificate: %s\n", client_certificate);
+    if(SSL_CTX_use_certificate_file(ctx, client_certificate, SSL_FILETYPE_PEM) != 1)
     {
-        BIO* bio = ssl_connect(ctx, server_address, server_port, &session);
-        if (!bio)
-        {
-            printf("error: %x, %s", ssl_error, ssl_saved_error);
-            return 1;
-        }
-
-        QueryResponse query_result = {0};
-        int result = use_mid_level_api(bio, &query_result);
-        if(result == KMIP_STATUS_SUCCESS)
-        {
-            printf("Query results: ");
-            printf("vendor: %s\n", query_result.vendor_identification);
-            printf("num ops: %zu\n", query_result.operations_size);
-            printf("num objs: %zu\n", query_result.objects_size);
-            printf("server info: %d\n", query_result.server_information_valid );
-            printf("\n");
-        }
-
-        ssl_disconnect(bio);
+        fprintf(stderr, "Loading the client certificate failed\n");
+        ERR_print_errors_fp(stderr);
+        SSL_CTX_free(ctx);
+        return(-1);
     }
 
-    // reuse session
+    printf("Loading the client key: %s\n", client_key);
+    if(SSL_CTX_use_PrivateKey_file(ctx, client_key, SSL_FILETYPE_PEM) != 1)
     {
-        BIO* bio = ssl_connect(ctx, server_address, server_port, &session);
-        if (!bio)
-        {
-            printf("error: %x, %s", ssl_error, ssl_saved_error);
-            return 1;
-        }
-
-        QueryResponse query_result = {0};
-        int result = use_mid_level_api(bio, &query_result);
-        if(result == KMIP_STATUS_SUCCESS)
-        {
-            printf("Query results: ");
-            printf("vendor: %s\n", query_result.vendor_identification);
-            printf("num ops: %zu\n", query_result.operations_size);
-            printf("num objs: %zu\n", query_result.objects_size);
-            printf("server info: %d\n", query_result.server_information_valid );
-            printf("\n");
-        }
-
-        ssl_disconnect(bio);
+        fprintf(stderr, "Loading the client key failed\n");
+        ERR_print_errors_fp(stderr);
+        SSL_CTX_free(ctx);
+        return(-1);
     }
 
-    if (session)
-        SSL_SESSION_free(session);
+    printf("Loading the CA certificate: %s\n", ca_certificate);
+    if(SSL_CTX_load_verify_locations(ctx, ca_certificate, NULL) != 1)
+    {
+        fprintf(stderr, "Loading the CA file failed\n");
+        ERR_print_errors_fp(stderr);
+        SSL_CTX_free(ctx);
+        return(-1);
+    }
 
+    BIO *bio = NULL;
+    bio = BIO_new_ssl_connect(ctx);
+    if(bio == NULL)
+    {
+        fprintf(stderr, "BIO_new_ssl_connect failed\n");
+        ERR_print_errors_fp(stderr);
+        SSL_CTX_free(ctx);
+        return(-1);
+    }
+
+    BIO_get_ssl(bio, &ssl);
+    SSL_set_mode(ssl, SSL_MODE_AUTO_RETRY);
+    BIO_set_conn_hostname(bio, server_address);
+    BIO_set_conn_port(bio, server_port);
+    if(BIO_do_connect(bio) != 1)
+    {
+        fprintf(stderr, "BIO_do_connect failed\n");
+        ERR_print_errors_fp(stderr);
+        BIO_free_all(bio);
+        SSL_CTX_free(ctx);
+        return(-1);
+    }
+
+    QueryResponse query_result = {0};
+    result = use_mid_level_api(bio, &query_result);
+    if(result == KMIP_STATUS_SUCCESS)
+    {
+        printf("Query results: ");
+        printf("vendor: %s\n", query_result.vendor_identification);
+        printf("num ops: %zu\n", query_result.operations_size);
+        printf("num objs: %zu\n", query_result.objects_size);
+        printf("server info: %d\n", query_result.server_information_valid );
+        printf("\n");
+    }
+
+    BIO_free_all(bio);
     SSL_CTX_free(ctx);
 
-    return(0);
+    return(result);
 }

@@ -1137,50 +1137,63 @@ kmip_check_enum_value(enum kmip_version version, enum tag t, int value)
         case KMIP_TAG_QUERY_FUNCTION:
         switch (value)
         {
-        /* KMIP 1.0 */
-        case KMIP_QUERY_OPERATIONS:
-        case KMIP_QUERY_OBJECTS:
-        case KMIP_QUERY_SERVER_INFORMATION:
-        case KMIP_QUERY_APPLICATION_NAMESPACES:
-            return(KMIP_OK);
-            break;
-        /* KMIP 1.1 */
-        case KMIP_QUERY_EXTENSION_LIST:
-        case KMIP_QUERY_EXTENSION_MAP:
-            if(version >= KMIP_1_1)
+            /* KMIP 1.0 */
+            case KMIP_QUERY_OPERATIONS:
+            case KMIP_QUERY_OBJECTS:
+            case KMIP_QUERY_SERVER_INFORMATION:
+            case KMIP_QUERY_APPLICATION_NAMESPACES:
                 return(KMIP_OK);
-            else
-                return(KMIP_INVALID_FOR_VERSION);
-            break;
-        /* KMIP 1.2 */
-        case KMIP_QUERY_ATTESTATION_TYPES:
-            if(version >= KMIP_1_2)
-                return(KMIP_OK);
-            else
-                return(KMIP_INVALID_FOR_VERSION);
-            break;
-        /* KMIP 1.3 */
-        case KMIP_QUERY_RNGS:
-        case KMIP_QUERY_VALIDATIONS:
-        case KMIP_QUERY_PROFILES:
-        case KMIP_QUERY_CAPABILITIES:
-        case KMIP_QUERY_CLIENT_REGISTRATION_METHODS:
-            if(version >= KMIP_1_3)
-                return(KMIP_OK);
-            else
-                return(KMIP_INVALID_FOR_VERSION);
-            break;
-        /* KMIP 2.0 */
-        case KMIP_QUERY_DEFAULTS_INFORMATION:
-        case KMIP_QUERY_STORAGE_PROTECTION_MASKS:
-            if(version >= KMIP_2_0)
-                return(KMIP_OK);
-            else
-                return(KMIP_INVALID_FOR_VERSION);
-            break;
-        default:
-            return(KMIP_ENUM_MISMATCH);
-            break;
+                break;
+
+            /* KMIP 1.1 */
+            case KMIP_QUERY_EXTENSION_LIST:
+            case KMIP_QUERY_EXTENSION_MAP:
+                {
+                    if(version >= KMIP_1_1)
+                        return(KMIP_OK);
+                    else
+                        return(KMIP_INVALID_FOR_VERSION);
+                }
+                break;
+
+            /* KMIP 1.2 */
+            case KMIP_QUERY_ATTESTATION_TYPES:
+                {
+                    if(version >= KMIP_1_2)
+                        return(KMIP_OK);
+                    else
+                        return(KMIP_INVALID_FOR_VERSION);
+                }
+                break;
+
+            /* KMIP 1.3 */
+            case KMIP_QUERY_RNGS:
+            case KMIP_QUERY_VALIDATIONS:
+            case KMIP_QUERY_PROFILES:
+            case KMIP_QUERY_CAPABILITIES:
+            case KMIP_QUERY_CLIENT_REGISTRATION_METHODS:
+                {
+                    if(version >= KMIP_1_3)
+                        return(KMIP_OK);
+                    else
+                        return(KMIP_INVALID_FOR_VERSION);
+                }
+                break;
+
+            /* KMIP 2.0 */
+            case KMIP_QUERY_DEFAULTS_INFORMATION:
+            case KMIP_QUERY_STORAGE_PROTECTION_MASKS:
+                {
+                    if(version >= KMIP_2_0)
+                        return(KMIP_OK);
+                    else
+                        return(KMIP_INVALID_FOR_VERSION);
+                }
+                break;
+
+            default:
+                return(KMIP_ENUM_MISMATCH);
+                break;
         }
         break;
         
@@ -2007,7 +2020,7 @@ kmip_print_operation_enum(FILE *f, enum operation value)
         break;
 
         case KMIP_OP_CREATE_KEY_PAIR:
-        fprintf(f, "Create_key_pair");
+        fprintf(f, "Create Key Pair");
         break;
 
         case KMIP_OP_REGISTER:
@@ -2019,7 +2032,7 @@ kmip_print_operation_enum(FILE *f, enum operation value)
         break;
 
         case KMIP_OP_DERIVE_KEY:
-        fprintf(f, "Derive_key");
+        fprintf(f, "Derive Key");
         break;
 
         case KMIP_OP_CERTIFY:
@@ -2043,31 +2056,31 @@ kmip_print_operation_enum(FILE *f, enum operation value)
         break;
 
         case KMIP_OP_GET_ATTRIBUTES:
-        fprintf(f, "Get_attributes");
+        fprintf(f, "Get Attributes");
         break;
 
         case KMIP_OP_GET_ATTRIBUTE_LIST:
-        fprintf(f, "Get_attribute_list");
+        fprintf(f, "Get Aattribute List");
         break;
 
         case KMIP_OP_ADD_ATTRIBUTE:
-        fprintf(f, "Add_attribute");
+        fprintf(f, "Add Attribute");
         break;
 
         case KMIP_OP_MODIFY_ATTRIBUTE:
-        fprintf(f, "Modify_attribute");
+        fprintf(f, "Modify Attribute");
         break;
 
         case KMIP_OP_DELETE_ATTRIBUTE:
-        fprintf(f, "Delete_attribute");
+        fprintf(f, "Delete Attribute");
         break;
 
         case KMIP_OP_OBTAIN_LEASE:
-        fprintf(f, "Obtain_lease");
+        fprintf(f, "Obtain Lease");
         break;
 
         case KMIP_OP_GET_USAGE_ALLOCATION:
-        fprintf(f, "Get_usage_allocation");
+        fprintf(f, "Get Usage Allocation");
         break;
 
         case KMIP_OP_ACTIVATE:
@@ -2116,11 +2129,11 @@ kmip_print_operation_enum(FILE *f, enum operation value)
 
         // # KMIP 1.1
         case KMIP_OP_REKEY_KEY_PAIR:
-        fprintf(f, "Rekey_key_pair");
+        fprintf(f, "Rekey Key Pair");
         break;
 
         case KMIP_OP_DISCOVER_VERSIONS:
-        fprintf(f, "Discover_versions");
+        fprintf(f, "Discover Versions");
         break;
 
         //# KMIP 1.2
@@ -2137,7 +2150,7 @@ kmip_print_operation_enum(FILE *f, enum operation value)
         break;
 
         case KMIP_OP_SIGNATURE_VERIFY:
-        fprintf(f, "Signature_verify");
+        fprintf(f, "Signature Verify");
         break;
 
         case KMIP_OP_MAC:
@@ -2145,15 +2158,15 @@ kmip_print_operation_enum(FILE *f, enum operation value)
         break;
 
         case KMIP_OP_MAC_VERIFY:
-        fprintf(f, "MAC_verify");
+        fprintf(f, "MAC Verify");
         break;
 
         case KMIP_OP_RNG_RETRIEVE:
-        fprintf(f, "RNG_retrieve");
+        fprintf(f, "RNG Retrieve");
         break;
 
         case KMIP_OP_RNG_SEED:
-        fprintf(f, "RNG_seed");
+        fprintf(f, "RNG Seed");
         break;
 
         case KMIP_OP_HASH:
@@ -2161,11 +2174,11 @@ kmip_print_operation_enum(FILE *f, enum operation value)
         break;
 
         case KMIP_OP_CREATE_SPLIT_KEY:
-        fprintf(f, "Create_split_key");
+        fprintf(f, "Create Split Key");
         break;
 
         case KMIP_OP_JOIN_SPLIT_KEY:
-        fprintf(f, "Split_key");
+        fprintf(f, "Split Key");
         break;
 
         // # KMIP 1.4
@@ -2191,23 +2204,23 @@ kmip_print_operation_enum(FILE *f, enum operation value)
         break;
 
         case KMIP_OP_DELEGATED_LOGIN:
-        fprintf(f, "Delegated_login");
+        fprintf(f, "Delegated Login");
         break;
 
         case KMIP_OP_ADJUST_ATTRIBUTE:
-        fprintf(f, "Adjust_attribute");
+        fprintf(f, "Adjust Attribute");
         break;
 
         case KMIP_OP_SET_ATTRIBUTE:
-        fprintf(f, "Set_attribute");
+        fprintf(f, "Set Attribute");
         break;
 
         case KMIP_OP_SET_ENDPOINT_ROLE:
-        fprintf(f, "Set_endpoint_role");
+        fprintf(f, "Set Endpoint Role");
         break;
 
         case KMIP_OP_PKCS_11:
-        fprintf(f, "PKCS_11");
+        fprintf(f, "PKCS11");
         break;
 
         case KMIP_OP_INTEROP:
@@ -6767,14 +6780,12 @@ kmip_deep_copy_attribute(KMIP *ctx, const Attribute *value)
     return(copy);
 }
 
-#define min(a,b) (((a) < (b)) ? (a) : (b))
-
 char*
 kmip_copy_textstring(char* dest, TextString* src, size_t size)
 {
     if(src && src->value != NULL)
     {
-        size_t len = min(size, src->size);
+        size_t len = KMIP_MIN(size, src->size);
         memcpy(dest, src->value, len);
         dest[len] = 0;
     }
@@ -9110,6 +9121,7 @@ kmip_compare_query_functions(const QueryRequestPayload* a, const QueryRequestPay
 int
 kmip_compare_query_request_payload(const QueryRequestPayload *a, const QueryRequestPayload *b)
 {
+    //TODO
     (void) a;
     (void) b;
     return(KMIP_NOT_IMPLEMENTED);
@@ -9118,6 +9130,7 @@ kmip_compare_query_request_payload(const QueryRequestPayload *a, const QueryRequ
 int
 kmip_compare_query_response_payload(const QueryResponsePayload *a, const QueryResponsePayload *b)
 {
+    //TODO
     (void) a;
     (void) b;
     return(KMIP_NOT_IMPLEMENTED);
@@ -11429,6 +11442,7 @@ kmip_encode_query_request_payload(KMIP *ctx, const QueryRequestPayload *value)
 int
 kmip_encode_query_response_payload(KMIP *ctx, const QueryResponsePayload *value)
 {
+    //TODO
     (void) ctx;
     (void) value;
     return(KMIP_NOT_IMPLEMENTED);
@@ -14085,6 +14099,7 @@ kmip_decode_query_functions(KMIP *ctx, QueryRequestPayload* value)
 int
 kmip_decode_query_request_payload(KMIP *ctx, QueryRequestPayload *value)
 {
+    // TODO
     (void) ctx;
     (void) value;
     return(KMIP_NOT_IMPLEMENTED);
