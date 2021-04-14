@@ -139,16 +139,18 @@ int use_low_level_api(KMIP *ctx, BIO *bio, enum query_function queries[], size_t
     rh.time_stamp = time(NULL);
     rh.batch_count = 1;
 
-    LinkedList *functions = ctx->calloc_func(ctx->state, 1, sizeof(LinkedList));
+    LinkedList *list_1 = ctx->calloc_func(ctx->state, 1, sizeof(LinkedList));
     for(size_t i = 0; i < query_count; i++)
     {
         LinkedListItem *item = ctx->calloc_func(ctx->state, 1, sizeof(LinkedListItem));
         item->data = &queries[i];
-        kmip_linked_list_enqueue(functions, item);
+        kmip_linked_list_enqueue(list_1, item);
     }
+    Functions functions = {0};
+    functions.function_list = list_1;
 
     QueryRequestPayload qrp = {0};
-    qrp.functions = functions;
+    qrp.functions = &functions;
 
     RequestBatchItem rbi = {0};
     kmip_init_request_batch_item(&rbi);

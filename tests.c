@@ -11901,6 +11901,222 @@ test_decode_response_header_kmip_2_0(TestTracker *tracker)
     return(result);
 }
 
+int
+test_encode_query_functions(TestTracker *tracker)
+{
+    TRACK_TEST(tracker);
+
+    /* This encoding matches the following set of values:
+    *  Query Functions
+          Query Operations
+          Query Objects
+    */
+    uint8 expected[32] = {
+        0x42, 0x00, 0x74, 0x05, 0x00, 0x00, 0x00, 0x04,
+        0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00,
+        0x42, 0x00, 0x74, 0x05, 0x00, 0x00, 0x00, 0x04,
+        0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00
+    };
+
+    uint8 observed[32] = {0};
+    KMIP ctx = {0};
+    kmip_init(&ctx, observed, ARRAY_LENGTH(observed), KMIP_1_0);
+
+    LinkedList list = {0};
+    LinkedListItem item_1 = {0};
+    int32 funct_1 = KMIP_QUERY_OPERATIONS;
+    item_1.data = &funct_1;
+
+    LinkedListItem item_2 = {0};
+    int32 funct_2 = KMIP_QUERY_OBJECTS;
+    item_2.data = &funct_2;
+
+    kmip_linked_list_enqueue(&list, &item_1);
+    kmip_linked_list_enqueue(&list, &item_2);
+
+    Functions qf = {0};
+    qf.function_list = &list;
+
+    int result = kmip_encode_query_functions(&ctx, &qf);
+    result = report_encoding_test_result(tracker, &ctx, expected, observed, result, __func__);
+
+    kmip_destroy(&ctx);
+
+    return(result);
+}
+
+int
+test_decode_query_functions(TestTracker *tracker)
+{
+    TRACK_TEST(tracker);
+
+    /* This encoding matches the following set of values:
+    *  Query Functions
+          Query Operations
+          Query Objects
+    */
+    uint8 encoding[32] = {
+        0x42, 0x00, 0x74, 0x05, 0x00, 0x00, 0x00, 0x04,
+        0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00,
+        0x42, 0x00, 0x74, 0x05, 0x00, 0x00, 0x00, 0x04,
+        0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00
+    };
+
+    KMIP ctx = {0};
+    kmip_init(&ctx, encoding, ARRAY_LENGTH(encoding), KMIP_1_0);
+
+    LinkedList list_1 = {0};
+    LinkedListItem item_1 = {0};
+    int32 funct_1 = KMIP_QUERY_OPERATIONS;
+    item_1.data = &funct_1;
+
+    LinkedListItem item_2 = {0};
+    int32 funct_2 = KMIP_QUERY_OBJECTS;
+    item_2.data = &funct_2;
+
+    kmip_linked_list_enqueue(&list_1, &item_1);
+    kmip_linked_list_enqueue(&list_1, &item_2);
+
+    Functions expected = {0};
+    expected.function_list = &list_1;
+
+    Functions observed = {0};
+
+    int result = kmip_decode_query_functions(&ctx, &observed);
+    int comparison = kmip_compare_query_functions(&expected, &observed);
+    if(!comparison)
+    {
+        kmip_print_query_functions(stderr, 1, &expected);
+        kmip_print_query_functions(stderr, 1, &observed);
+    }
+    result = report_decoding_test_result(tracker, &ctx, comparison, result, __func__);
+
+    kmip_free_query_functions(&ctx, &observed);
+    kmip_destroy(&ctx);
+
+    return(result);
+}
+
+int
+test_decode_operations(TestTracker *tracker)
+{
+    TRACK_TEST(tracker);
+
+    /* This encoding matches the following set of values:
+    *  Operations
+          OP_CREATE               = 0x01,
+          OP_CREATE_KEY_PAIR      = 0x02,
+    */
+    uint8 encoding[32] = {
+        0x42, 0x00, 0x5C, 0x05, 0x00, 0x00, 0x00, 0x04,
+        0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00,
+        0x42, 0x00, 0x5C, 0x05, 0x00, 0x00, 0x00, 0x04,
+        0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00
+    };
+
+    KMIP ctx = {0};
+    kmip_init(&ctx, encoding, ARRAY_LENGTH(encoding), KMIP_1_0);
+
+    LinkedList list_1  = {0};
+    LinkedListItem item_1 = {0};
+    int32 op_1 = KMIP_OP_CREATE;
+    item_1.data = &op_1;
+
+    LinkedListItem item_2 = {0};
+    int32 op_2 = KMIP_OP_CREATE_KEY_PAIR;
+    item_2.data = &op_2;
+
+    kmip_linked_list_enqueue(&list_1, &item_1);
+    kmip_linked_list_enqueue(&list_1, &item_2);
+
+    Operations expected = {0};
+    expected.operation_list = &list_1;
+
+    Operations observed = {0};
+    int result = kmip_decode_operations(&ctx, &observed);
+    int comparison = kmip_compare_operations(&expected, &observed);
+    if(!comparison)
+    {
+        kmip_print_operations(stderr, 1, &expected);
+        kmip_print_operations(stderr, 1, &observed);
+    }
+    result = report_decoding_test_result(tracker, &ctx, comparison, result, __func__);
+
+    kmip_free_operations(&ctx, &observed);
+    kmip_destroy(&ctx);
+
+    return(result);
+}
+int
+test_encode_query_request_payload(TestTracker *tracker)
+{
+    TRACK_TEST(tracker);
+
+    /* This encoding matches the following set of values:
+    *  Request Payload
+    *      Object Type - Query
+    *      Query Functions
+               Query Operations)
+               Query Objects)
+               Query Server Information)
+
+    Tag: Request Payload (0x420079), Type: Structure (0x01), Data:
+      Tag: Query Function (0x420074), Type: Enumeration (0x05), Data: 0x00000001 (Query Operations)
+      Tag: Query Function (0x420074), Type: Enumeration (0x05), Data: 0x00000002 (Query Objects)
+      Tag: Query Function (0x420074), Type: Enumeration (0x05), Data: 0x00000003 (Query Server Information)
+    */
+
+    uint8 expected[56] = {
+        0x42, 0x00, 0x79, 0x01, 0x00, 0x00, 0x00, 0x30,
+        0x42, 0x00, 0x74, 0x05, 0x00, 0x00, 0x00, 0x04,
+        0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00,
+        0x42, 0x00, 0x74, 0x05, 0x00, 0x00, 0x00, 0x04,
+        0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00,
+        0x42, 0x00, 0x74, 0x05, 0x00, 0x00, 0x00, 0x04,
+        0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x00
+    };
+
+    uint8 observed[56] = {0};
+    struct kmip ctx = {0};
+    kmip_init(&ctx, observed, ARRAY_LENGTH(observed), KMIP_1_0);
+
+    LinkedList list_1 = {0};
+
+    LinkedListItem item_1 = {0};
+    int32 funct_1 = KMIP_QUERY_OPERATIONS;
+    item_1.data = &funct_1;
+
+    LinkedListItem item_2 = {0};
+    int32 funct_2 = KMIP_QUERY_OBJECTS;
+    item_2.data = &funct_2;
+
+    LinkedListItem item_3 = {0};
+    int32 funct_3 = KMIP_QUERY_SERVER_INFORMATION;
+    item_3.data = &funct_3;
+
+    kmip_linked_list_enqueue(&list_1, &item_1);
+    kmip_linked_list_enqueue(&list_1, &item_2);
+    kmip_linked_list_enqueue(&list_1, &item_3);
+
+    Functions functions = {0};
+    functions.function_list = &list_1;
+
+    QueryRequestPayload qrp = {0};
+    qrp.functions = &functions;
+
+    int result = kmip_encode_query_request_payload(&ctx, &qrp);
+    result = report_encoding_test_result(
+        tracker,
+        &ctx,
+        expected,
+        observed,
+        result,
+        __func__);
+
+    return(result);
+}
+
+
 /*
 The following tests are taken verbatim from the KMIP 1.1 Test Cases
 documentation, available here:
@@ -12529,6 +12745,8 @@ run_tests(void)
     test_decode_request_batch_item_get_payload(&tracker);
     test_decode_request_message_get(&tracker);
     test_decode_response_message_get(&tracker);
+    test_decode_query_functions(&tracker);
+    test_decode_operations(&tracker);
     
     printf("\n");
     test_encode_integer(&tracker);
@@ -12590,6 +12808,8 @@ run_tests(void)
     test_encode_request_message_get(&tracker);
     test_encode_response_message_get(&tracker);
     test_encode_template_attribute(&tracker);
+    test_encode_query_functions(&tracker);
+    test_encode_query_request_payload(&tracker);
     
     printf("\nKMIP 1.1 Feature Tests\n");
     printf("----------------------\n");

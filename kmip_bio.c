@@ -1481,7 +1481,6 @@ int kmip_bio_query_with_context(KMIP *ctx, BIO *bio, enum query_function queries
     uint8 *encoding = ctx->calloc_func(ctx->state, buffer_blocks, buffer_block_size);
     if(encoding == NULL)
     {
-        kmip_destroy(ctx);
         return(KMIP_MEMORY_ALLOC_FAILED);
     }
     kmip_set_buffer(ctx, encoding, buffer_total_size);
@@ -1500,16 +1499,18 @@ int kmip_bio_query_with_context(KMIP *ctx, BIO *bio, enum query_function queries
     rh.time_stamp = time(NULL);
     rh.batch_count = 1;
 
-    LinkedList *functions = ctx->calloc_func(ctx->state, 1, sizeof(LinkedList));
+    LinkedList *funclist = ctx->calloc_func(ctx->state, 1, sizeof(LinkedList));
     for(size_t i = 0; i < query_count; i++)
     {
         LinkedListItem *item = ctx->calloc_func(ctx->state, 1, sizeof(LinkedListItem));
         item->data = &queries[i];
-        kmip_linked_list_enqueue(functions, item);
+        kmip_linked_list_enqueue(funclist, item);
     }
+    Functions functions = {0};
+    functions.function_list = funclist;
 
     QueryRequestPayload qrp = {0};
-    qrp.functions = functions;
+    qrp.functions = &functions;
 
     RequestBatchItem rbi = {0};
     kmip_init_request_batch_item(&rbi);
@@ -1536,7 +1537,6 @@ int kmip_bio_query_with_context(KMIP *ctx, BIO *bio, enum query_function queries
         encoding = ctx->calloc_func(ctx->state, buffer_blocks, buffer_block_size);
         if(encoding == NULL)
         {
-            kmip_destroy(ctx);
             return(KMIP_MEMORY_ALLOC_FAILED);
         }
         kmip_set_buffer(ctx, encoding, buffer_total_size);
@@ -1548,7 +1548,6 @@ int kmip_bio_query_with_context(KMIP *ctx, BIO *bio, enum query_function queries
         kmip_free_buffer(ctx, encoding, buffer_total_size);
         encoding = NULL;
         kmip_set_buffer(ctx, NULL, 0);
-        kmip_destroy(ctx);
         return(encode_result);
     }
 
@@ -1563,7 +1562,6 @@ int kmip_bio_query_with_context(KMIP *ctx, BIO *bio, enum query_function queries
         encoding = NULL;
         response = NULL;
         kmip_set_buffer(ctx, NULL, 0);
-        kmip_destroy(ctx);
         return(result);
     }
 
@@ -1593,7 +1591,6 @@ int kmip_bio_query_with_context(KMIP *ctx, BIO *bio, enum query_function queries
         kmip_free_buffer(ctx, response, response_size);
         response = NULL;
         kmip_set_buffer(ctx, NULL, 0);
-        kmip_destroy(ctx);
         return(decode_result);
     }
 
@@ -1603,7 +1600,6 @@ int kmip_bio_query_with_context(KMIP *ctx, BIO *bio, enum query_function queries
         kmip_free_buffer(ctx, response, response_size);
         response = NULL;
         kmip_set_buffer(ctx, NULL, 0);
-        kmip_destroy(ctx);
         return(KMIP_MALFORMED_RESPONSE);
     }
 
