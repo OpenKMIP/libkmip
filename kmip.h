@@ -1185,6 +1185,11 @@ typedef struct response_message
     size_t batch_count;
 } ResponseMessage;
 
+typedef struct functions
+{
+    LinkedList *function_list;
+} Functions;
+
 typedef struct operations
 {
     LinkedList *operation_list;
@@ -1219,7 +1224,7 @@ typedef struct application_namespaces
 
 typedef struct query_request_payload
 {
-    LinkedList *functions;
+    Functions* functions;
 } QueryRequestPayload;
 
 typedef struct query_response_payload
@@ -1547,8 +1552,9 @@ void kmip_print_request_header(FILE *, int, RequestHeader *);
 void kmip_print_response_header(FILE *, int, ResponseHeader *);
 void kmip_print_request_message(FILE *, RequestMessage *);
 void kmip_print_response_message(FILE *, ResponseMessage *);
-void kmip_print_query_function_enum(FILE*, int indent, enum query_function value);
-void kmip_print_query_functions(FILE*, int indent, QueryRequestPayload* value);
+void kmip_print_query_function_enum(FILE*, int, enum query_function);
+void kmip_print_query_functions(FILE*, int, Functions*);
+void kmip_print_operations(FILE* f, int, Operations *);
 void kmip_print_query_request_payload(FILE*, int, QueryRequestPayload *);
 void kmip_print_query_response_payload(FILE*, int, QueryResponsePayload *);
 
@@ -1596,7 +1602,7 @@ void kmip_free_request_header(KMIP *, RequestHeader *);
 void kmip_free_response_header(KMIP *, ResponseHeader *);
 void kmip_free_request_message(KMIP *, RequestMessage *);
 void kmip_free_response_message(KMIP *, ResponseMessage *);
-void kmip_free_query_functions(KMIP *ctx, QueryRequestPayload* value);
+void kmip_free_query_functions(KMIP *ctx, Functions*);
 void kmip_free_query_request_payload(KMIP *, QueryRequestPayload *);
 void kmip_free_query_response_payload(KMIP *, QueryResponsePayload *);
 void kmip_free_operations(KMIP *ctx, Operations *value);
@@ -1664,7 +1670,8 @@ int kmip_compare_request_header(const RequestHeader *, const RequestHeader *);
 int kmip_compare_response_header(const ResponseHeader *, const ResponseHeader *);
 int kmip_compare_request_message(const RequestMessage *, const RequestMessage *);
 int kmip_compare_response_message(const ResponseMessage *, const ResponseMessage *);
-int kmip_compare_query_functions(const QueryRequestPayload* a, const QueryRequestPayload* b);
+int kmip_compare_query_functions(const Functions* a, const Functions* b);
+int kmip_compare_operations(const Operations *a, const Operations *b);
 int kmip_compare_query_request_payload(const QueryRequestPayload *, const QueryRequestPayload *);
 int kmip_compare_query_response_payload(const QueryResponsePayload *, const QueryResponsePayload *);
 
@@ -1725,7 +1732,7 @@ int kmip_encode_request_batch_item(KMIP *, const RequestBatchItem *);
 int kmip_encode_response_batch_item(KMIP *, const ResponseBatchItem *);
 int kmip_encode_request_message(KMIP *, const RequestMessage *);
 int kmip_encode_response_message(KMIP *, const ResponseMessage *);
-int kmip_encode_query_functions(KMIP *ctx, const QueryRequestPayload* value);
+int kmip_encode_query_functions(KMIP *ctx, const Functions*);
 int kmip_encode_query_request_payload(KMIP *, const QueryRequestPayload *);
 int kmip_encode_query_response_payload(KMIP *, const QueryResponsePayload *);
 
@@ -1785,7 +1792,8 @@ int kmip_decode_request_header(KMIP *, RequestHeader *);
 int kmip_decode_response_header(KMIP *, ResponseHeader *);
 int kmip_decode_request_message(KMIP *, RequestMessage *);
 int kmip_decode_response_message(KMIP *, ResponseMessage *);
-int kmip_decode_query_functions(KMIP *ctx, QueryRequestPayload* value);
+int kmip_decode_query_functions(KMIP *ctx, Functions*);
+int kmip_decode_operations(KMIP *ctx, Operations *);
 int kmip_decode_query_request_payload(KMIP *, QueryRequestPayload *);
 int kmip_decode_query_response_payload(KMIP *, QueryResponsePayload *);
 
