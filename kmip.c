@@ -5045,6 +5045,29 @@ kmip_print_object_types(FILE* f, int indent, ObjectTypes* value)
 }
 
 void
+kmip_print_alternative_endpoints(FILE* f, int indent, AltEndpoints* value)
+{
+    fprintf(f, "%*sAlt Endpointss @ %p\n", indent, "", (void *)value);
+
+    if(value != NULL)
+    {
+        fprintf(f, "%*sAlt Endpoints: %zu\n", indent + 2, "", value->endpoint_list->size);
+        LinkedListItem *curr = value->endpoint_list->head;
+        size_t count = 1;
+        while(curr != NULL)
+        {
+            fprintf(f, "%*sEndpoint: %zu: ", indent + 4, "", count);
+            TextString* endpoint = (TextString*)curr->data;
+            kmip_print_text_string(f, indent + 2, "Endpoint", endpoint);
+            fprintf(f, "\n");
+
+            curr = curr->next;
+            count++;
+        }
+    }
+}
+
+void
 kmip_print_server_information(FILE* f, int indent, ServerInformation* value)
 {
     fprintf(f,"%*sServer Information @ %p\n", indent, "", (void *)value);
@@ -5056,9 +5079,11 @@ kmip_print_server_information(FILE* f, int indent, ServerInformation* value)
         kmip_print_text_string(f,indent + 2, "Server Version", value->server_version);
         kmip_print_text_string(f,indent + 2, "Server Load", value->server_load);
         kmip_print_text_string(f,indent + 2, "Product Name", value->product_name);
-        kmip_print_text_string(f,indent + 2, "Build Llevel", value->build_level);
+        kmip_print_text_string(f,indent + 2, "Build Level", value->build_level);
         kmip_print_text_string(f,indent + 2, "Build Date", value->build_date);
         kmip_print_text_string(f,indent + 2, "Cluster info", value->cluster_info);
+
+        kmip_print_alternative_endpoints(f,indent+2, value->alternative_failover_endpoints);
     }
 }
 
@@ -9102,6 +9127,33 @@ kmip_compare_linklist_items_int32(const LinkedListItem *a_item, const LinkedList
 }
 
 int
+kmip_compare_linklist_items_textstring(const LinkedListItem *a_item, const LinkedListItem *b_item)
+{
+    while((a_item != NULL) && (b_item != NULL))
+    {
+        if(a_item != b_item)
+        {
+            TextString *a_data = (TextString *)a_item->data;
+            TextString *b_data = (TextString *)b_item->data;
+            if(kmip_compare_text_string(a_data, b_data) == KMIP_FALSE)
+            {
+                return(KMIP_FALSE);
+            }
+        }
+
+        a_item = a_item->next;
+        b_item = b_item->next;
+    }
+
+    if(a_item != b_item)
+    {
+        return(KMIP_FALSE);
+    }
+
+    return(KMIP_TRUE);
+}
+
+int
 kmip_compare_query_functions(const Functions* a, const Functions* b)
 {
     if(a != b )
@@ -9205,11 +9257,99 @@ kmip_compare_objects(const ObjectTypes *a, const ObjectTypes *b)
 }
 
 int
+kmip_compare_alternative_endpoints(const AltEndpoints* a, const AltEndpoints* b)
+{
+    if(a != b)
+    {
+        if((a == NULL) || (b == NULL))
+        {
+            return(KMIP_FALSE);
+        }
+
+        if((a->endpoint_list != b->endpoint_list))
+        {
+            if((a->endpoint_list == NULL) || (b->endpoint_list == NULL))
+            {
+                return(KMIP_FALSE);
+            }
+
+            if((a->endpoint_list->size != b->endpoint_list->size))
+            {
+                return(KMIP_FALSE);
+            }
+
+            LinkedListItem *a_item = a->endpoint_list->head;
+            LinkedListItem *b_item = b->endpoint_list->head;
+            if (kmip_compare_linklist_items_textstring(a_item, b_item) == KMIP_FALSE)
+            {
+                return(KMIP_FALSE);
+            }
+        }
+    }
+
+    return(KMIP_TRUE);
+}
+
+int
 kmip_compare_server_information(const ServerInformation* a, const ServerInformation* b)
 {
-    // TODO
-    (void) a;
-    (void) b;
+    if(a != b)
+    {
+        if((a == NULL) || (b == NULL))
+        {
+            return(KMIP_FALSE);
+        }
+
+        if(kmip_compare_text_string(a->server_name, b->server_name) == KMIP_FALSE)
+        {
+            return(KMIP_FALSE);
+        }
+
+        if(kmip_compare_text_string(a->server_serial_number, b->server_serial_number) == KMIP_FALSE)
+        {
+            return(KMIP_FALSE);
+        }
+
+        if(kmip_compare_text_string(a->server_version, b->server_version) == KMIP_FALSE)
+        {
+            return(KMIP_FALSE);
+        }
+
+        if(kmip_compare_text_string(a->server_load, b->server_load) == KMIP_FALSE)
+        {
+            return(KMIP_FALSE);
+        }
+        if(kmip_compare_text_string(a->product_name, b->product_name) == KMIP_FALSE)
+        {
+            return(KMIP_FALSE);
+        }
+        if(kmip_compare_text_string(a->build_level, b->build_level) == KMIP_FALSE)
+        {
+            return(KMIP_FALSE);
+        }
+        if(kmip_compare_text_string(a->build_date, b->build_date) == KMIP_FALSE)
+        {
+            return(KMIP_FALSE);
+        }
+
+        if(a->alternative_failover_endpoints != b->alternative_failover_endpoints )
+        {
+            if(kmip_compare_alternative_endpoints(a->alternative_failover_endpoints, b->alternative_failover_endpoints) == KMIP_FALSE)
+            {
+                return(KMIP_FALSE);
+            }
+        }
+
+//      if(a->vendor_specific != b->vendor_specific )
+//      {
+//          if(kmip_compare_vendor_specifi(a->vendor_specific, b->vendor_specific) == KMIP_FALSE)
+//          {
+//              return(KMIP_FALSE);
+//          }
+//      }
+
+    }
+
     return(KMIP_TRUE);
 }
 
@@ -14340,6 +14480,33 @@ kmip_decode_object_types(KMIP *ctx, ObjectTypes *value)
 }
 
 int
+kmip_decode_alternative_endpoints(KMIP *ctx, AltEndpoints* value)
+{
+    int result = 0;
+
+    value->endpoint_list = ctx->calloc_func(ctx->state, 1, sizeof(LinkedList));
+    CHECK_NEW_MEMORY(ctx, value->endpoint_list, sizeof(LinkedList), "LinkedList");
+
+    uint32 tag = kmip_peek_tag(ctx);
+    while(tag == KMIP_TAG_ALTERNATE_FAILOVER_ENDPOINTS)
+    {
+        LinkedListItem *item = ctx->calloc_func(ctx->state, 1, sizeof(LinkedListItem));
+        CHECK_NEW_MEMORY(ctx, item, sizeof(LinkedListItem), "LinkedListItem");
+        kmip_linked_list_enqueue(value->endpoint_list, item);
+
+        item->data = ctx->calloc_func(ctx->state, 1, sizeof(TextString));
+        CHECK_NEW_MEMORY(ctx, item->data, sizeof(TextString), "Endpoint text string");
+
+        result = kmip_decode_text_string(ctx, KMIP_TAG_ALTERNATE_FAILOVER_ENDPOINTS, item->data);
+        CHECK_RESULT(ctx, result);
+
+        tag = kmip_peek_tag(ctx);
+    }
+
+    return(KMIP_OK);
+}
+
+int
 kmip_decode_server_information(KMIP *ctx, ServerInformation *value)
 {
     CHECK_BUFFER_FULL(ctx, 8);
@@ -14424,6 +14591,14 @@ kmip_decode_server_information(KMIP *ctx, ServerInformation *value)
         CHECK_NEW_MEMORY(ctx, value->cluster_info, sizeof(TextString), "ClusterInfo text string");
 
         result = kmip_decode_text_string(ctx, KMIP_TAG_CLUSTER_INFO, value->cluster_info);
+        CHECK_RESULT(ctx, result);
+    }
+
+    if(kmip_is_tag_next(ctx, KMIP_TAG_ALTERNATE_FAILOVER_ENDPOINTS))
+    {
+        value->alternative_failover_endpoints= ctx->calloc_func(ctx->state, 1, sizeof(AltEndpoints));
+        CHECK_NEW_MEMORY(ctx, value->alternative_failover_endpoints, sizeof(AltEndpoints), "Alt Endpoints");
+        result = kmip_decode_alternative_endpoints(ctx, value->alternative_failover_endpoints);
         CHECK_RESULT(ctx, result);
     }
 
