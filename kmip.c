@@ -5026,7 +5026,8 @@ kmip_print_object_types(FILE* f, int indent, ObjectTypes* value)
 {
     fprintf(f, "%*sObjects @ %p\n", indent, "", (void *)value);
 
-    if(value != NULL)
+    if(value != NULL &&
+       value->object_list != NULL )
     {
         fprintf(f, "%*sObjects: %zu\n", indent + 2, "", value->object_list->size);
         LinkedListItem *curr = value->object_list->head;
@@ -5049,7 +5050,8 @@ kmip_print_alternative_endpoints(FILE* f, int indent, AltEndpoints* value)
 {
     fprintf(f, "%*sAlt Endpointss @ %p\n", indent, "", (void *)value);
 
-    if(value != NULL)
+    if(value != NULL &&
+       value->endpoint_list != NULL )
     {
         fprintf(f, "%*sAlt Endpoints: %zu\n", indent + 2, "", value->endpoint_list->size);
         LinkedListItem *curr = value->endpoint_list->head;

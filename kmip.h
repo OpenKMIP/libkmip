@@ -1563,6 +1563,7 @@ void kmip_print_operations(FILE*, int, Operations *);
 void kmip_print_object_types(FILE*, int, ObjectTypes*);
 void kmip_print_query_request_payload(FILE*, int, QueryRequestPayload *);
 void kmip_print_query_response_payload(FILE*, int, QueryResponsePayload *);
+void kmip_print_server_information(FILE*, int, ServerInformation*);
 
 /*
 Freeing Functions
