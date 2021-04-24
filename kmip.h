@@ -1200,6 +1200,11 @@ typedef struct object_types
     LinkedList *object_list;
 } ObjectTypes;
 
+typedef struct alternative_endpoints
+{
+    LinkedList *endpoint_list;
+} AltEndpoints;
+
 typedef struct server_information
 {
     TextString* server_name;
@@ -1210,8 +1215,8 @@ typedef struct server_information
     TextString* build_level;
     TextString* build_date;
     TextString* cluster_info;
- // LinkedList* alternative_failover_endpoints;   MAY be repeated
- // Vendor-Specific               Any, MAY be repeated
+    AltEndpoints* alternative_failover_endpoints;
+    // Vendor-Specific               Any, MAY be repeated
 } ServerInformation;
 
 
@@ -1554,7 +1559,8 @@ void kmip_print_request_message(FILE *, RequestMessage *);
 void kmip_print_response_message(FILE *, ResponseMessage *);
 void kmip_print_query_function_enum(FILE*, int, enum query_function);
 void kmip_print_query_functions(FILE*, int, Functions*);
-void kmip_print_operations(FILE* f, int, Operations *);
+void kmip_print_operations(FILE*, int, Operations *);
+void kmip_print_object_types(FILE*, int, ObjectTypes*);
 void kmip_print_query_request_payload(FILE*, int, QueryRequestPayload *);
 void kmip_print_query_response_payload(FILE*, int, QueryResponsePayload *);
 
@@ -1670,8 +1676,11 @@ int kmip_compare_request_header(const RequestHeader *, const RequestHeader *);
 int kmip_compare_response_header(const ResponseHeader *, const ResponseHeader *);
 int kmip_compare_request_message(const RequestMessage *, const RequestMessage *);
 int kmip_compare_response_message(const ResponseMessage *, const ResponseMessage *);
-int kmip_compare_query_functions(const Functions* a, const Functions* b);
-int kmip_compare_operations(const Operations *a, const Operations *b);
+int kmip_compare_query_functions(const Functions *, const Functions *);
+int kmip_compare_operations(const Operations *, const Operations *);
+int kmip_compare_objects(const ObjectTypes *, const ObjectTypes *);
+int kmip_compare_server_information(const ServerInformation *a, const ServerInformation *b);
+int kmip_compare_alternative_endpoints(const AltEndpoints* a, const AltEndpoints* b);
 int kmip_compare_query_request_payload(const QueryRequestPayload *, const QueryRequestPayload *);
 int kmip_compare_query_response_payload(const QueryResponsePayload *, const QueryResponsePayload *);
 
@@ -1793,9 +1802,11 @@ int kmip_decode_response_header(KMIP *, ResponseHeader *);
 int kmip_decode_request_message(KMIP *, RequestMessage *);
 int kmip_decode_response_message(KMIP *, ResponseMessage *);
 int kmip_decode_query_functions(KMIP *ctx, Functions*);
-int kmip_decode_operations(KMIP *ctx, Operations *);
+int kmip_decode_operations(KMIP *, Operations *);
+int kmip_decode_object_types(KMIP *, ObjectTypes *);
 int kmip_decode_query_request_payload(KMIP *, QueryRequestPayload *);
 int kmip_decode_query_response_payload(KMIP *, QueryResponsePayload *);
+int kmip_decode_server_information(KMIP *ctx, ServerInformation *);
 
 
 #endif  /* KMIP_H */
