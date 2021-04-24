@@ -11902,6 +11902,53 @@ test_decode_response_header_kmip_2_0(TestTracker *tracker)
 }
 
 int
+test_compare_query_functions(TestTracker *tracker)
+{
+    TRACK_TEST(tracker);
+
+    uint8 encoding[32] = {
+        0x42, 0x00, 0x74, 0x05, 0x00, 0x00, 0x00, 0x04,
+        0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00,
+        0x42, 0x00, 0x74, 0x05, 0x00, 0x00, 0x00, 0x04,
+        0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00
+    };
+
+    KMIP ctx = {0};
+    kmip_init(&ctx, encoding, ARRAY_LENGTH(encoding), KMIP_1_0);
+
+    LinkedList list_1 = {0};
+    LinkedListItem item_1 = {0};
+    int32 funct_1 = KMIP_QUERY_OPERATIONS;
+    item_1.data = &funct_1;
+
+    LinkedListItem item_2 = {0};
+    int32 funct_2 = KMIP_QUERY_SERVER_INFORMATION;
+    item_2.data = &funct_2;
+
+    kmip_linked_list_enqueue(&list_1, &item_1);
+    kmip_linked_list_enqueue(&list_1, &item_2);
+
+    Functions expected = {0};
+    expected.function_list = &list_1;
+
+    Functions observed = {0};
+
+    int result = kmip_decode_query_functions(&ctx, &observed);
+    int comparison = kmip_compare_query_functions(&expected, &observed);
+    if(!comparison)
+    {
+        // comparision is expected to fail
+        comparison = KMIP_TRUE;
+    }
+    result = report_decoding_test_result(tracker, &ctx, comparison, result, __func__);
+
+    kmip_free_query_functions(&ctx, &observed);
+    kmip_destroy(&ctx);
+
+    return (result);
+}
+
+int
 test_encode_query_functions(TestTracker *tracker)
 {
     TRACK_TEST(tracker);
@@ -12261,6 +12308,95 @@ test_encode_query_request_payload(TestTracker *tracker)
     return(result);
 }
 
+int
+test_decode_query_response_payload(TestTracker *tracker)
+{
+    TRACK_TEST(tracker);
+
+    uint8 encoding[176] = {
+        0x42, 0x00, 0x7C, 0x01, 0x00, 0x00, 0x00, 0x58,
+
+        0x42, 0x00, 0x5C, 0x05, 0x00, 0x00, 0x00, 0x04,
+        0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00,
+        0x42, 0x00, 0x5C, 0x05, 0x00, 0x00, 0x00, 0x04,
+        0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00,
+
+        0x42, 0x00, 0x57, 0x05, 0x00, 0x00, 0x00, 0x04,
+        0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00,
+        0x42, 0x00, 0x57, 0x05, 0x00, 0x00, 0x00, 0x04,
+        0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x00,
+
+        0x42, 0x00, 0x9D, 0x07, 0x00, 0x00, 0x00, 0x0A,
+        0x56, 0x65, 0x6E, 0x64, 0x6F, 0x72, 0x20, 0x4F,
+        0x6E, 0x65, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    };
+
+    struct kmip ctx = {0};
+    kmip_init(&ctx, encoding, ARRAY_LENGTH(encoding), KMIP_1_0);
+
+    struct text_string vendor = {0};
+    vendor.value = "Vendor One";
+    vendor.size = 10;
+
+    // operations
+    LinkedList oper_1  = {0};
+    LinkedListItem item_1 = {0};
+    int32 op_1 = KMIP_OP_CREATE;
+    item_1.data = &op_1;
+
+    LinkedListItem item_2 = {0};
+    int32 op_2 = KMIP_OP_CREATE_KEY_PAIR;
+    item_2.data = &op_2;
+
+    kmip_linked_list_enqueue(&oper_1, &item_1);
+    kmip_linked_list_enqueue(&oper_1, &item_2);
+
+    Operations operations = {0};
+    operations.operation_list = &oper_1;
+
+
+    // objects
+    LinkedList objlist  = {0};
+    LinkedListItem obj_item_1 = {0};
+    int32 obj_1 = KMIP_OBJTYPE_CERTIFICATE;
+    obj_item_1.data = &obj_1;
+
+    LinkedListItem obj_item_2 = {0};
+    int32 obj_2 = KMIP_OBJTYPE_PUBLIC_KEY;
+    obj_item_2.data = &obj_2;
+
+    kmip_linked_list_enqueue(&objlist, &obj_item_1);
+    kmip_linked_list_enqueue(&objlist, &obj_item_2);
+
+    ObjectTypes objects = {0};
+    objects.object_list = &objlist;
+
+    struct query_response_payload expected = {0};
+    expected.operations = &operations;
+    expected.objects = &objects;
+    expected.vendor_identification = &vendor;
+
+    struct query_response_payload observed = {0};
+
+    int result = kmip_decode_query_response_payload(&ctx, &observed);
+    int comparison = kmip_compare_query_response_payload(&expected, &observed);
+    if (!comparison)
+    {
+        kmip_print_query_response_payload(stderr, 1, &observed);
+        kmip_print_query_response_payload(stderr, 1, &expected);
+    }
+    result = report_decoding_test_result(
+        tracker,
+        &ctx,
+        comparison,
+        result,
+        __func__);
+    kmip_free_query_response_payload(&ctx, &observed);
+    kmip_destroy(&ctx);
+
+
+    return (result);
+}
 
 /*
 The following tests are taken verbatim from the KMIP 1.1 Test Cases
@@ -12893,6 +13029,8 @@ run_tests(void)
     test_decode_query_functions(&tracker);
     test_decode_operations(&tracker);
     test_decode_object_types(&tracker);
+    test_compare_query_functions(&tracker);
+    test_decode_query_response_payload(&tracker);
     
     printf("\n");
     test_encode_integer(&tracker);
