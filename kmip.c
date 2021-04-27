@@ -3946,7 +3946,8 @@ kmip_print_protection_storage_masks(FILE *f, int indent, ProtectionStorageMasks 
 {
     fprintf(f, "%*sProtection Storage Masks @ %p\n", indent, "", (void *)value);
 
-    if(value != NULL)
+    if(value != NULL &&
+       value->masks != NULL)
     {
         fprintf(f, "%*sMasks: %zu\n", indent + 2, "", value->masks->size);
         LinkedListItem *curr = value->masks->head;
@@ -4466,7 +4467,8 @@ kmip_print_attributes(FILE *f, int indent, Attributes *value)
 {
     fprintf(f, "%*sAttributes @ %p\n", indent, "", (void *)value);
 
-    if(value != NULL)
+    if(value != NULL &&
+       value->attribute_list != NULL)
     {
         fprintf(f, "%*sAttributes: %zu\n", indent + 2, "", value->attribute_list->size);
         LinkedListItem *curr = value->attribute_list->head;
@@ -6827,7 +6829,8 @@ kmip_copy_textstring(char* dest, TextString* src, size_t size)
 void
 kmip_copy_operations(int ops[], size_t* ops_size, Operations *value, unsigned max_ops)
 {
-    if(value != NULL)
+    if(value != NULL &&
+       value->operation_list != NULL)
     {
         *ops_size = value->operation_list->size;
 
@@ -6845,7 +6848,8 @@ kmip_copy_operations(int ops[], size_t* ops_size, Operations *value, unsigned ma
 void
 kmip_copy_objects(int objs[], size_t* objs_size, ObjectTypes *value, unsigned max_objs)
 {
-    if(value != NULL)
+    if(value != NULL &&
+       value->object_list != NULL)
     {
         *objs_size = value->object_list->size;
 
