@@ -11906,15 +11906,8 @@ test_compare_query_functions(TestTracker *tracker)
 {
     TRACK_TEST(tracker);
 
-    uint8 encoding[32] = {
-        0x42, 0x00, 0x74, 0x05, 0x00, 0x00, 0x00, 0x04,
-        0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00,
-        0x42, 0x00, 0x74, 0x05, 0x00, 0x00, 0x00, 0x04,
-        0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00
-    };
-
     KMIP ctx = {0};
-    kmip_init(&ctx, encoding, ARRAY_LENGTH(encoding), KMIP_1_0);
+    kmip_init(&ctx, NULL, 0, KMIP_1_0);
 
     LinkedList list_1 = {0};
     LinkedListItem item_1 = {0};
@@ -11931,18 +11924,24 @@ test_compare_query_functions(TestTracker *tracker)
     Functions expected = {0};
     expected.function_list = &list_1;
 
+    LinkedList list_2 = {0};
+    LinkedListItem item_3 = {0};
+    int32 funct_3 = KMIP_QUERY_OPERATIONS;
+    item_3.data = &funct_3;
+
+    LinkedListItem item_4 = {0};
+    int32 funct_4 = KMIP_QUERY_SERVER_INFORMATION;
+    item_4.data = &funct_4;
+
+    kmip_linked_list_enqueue(&list_2, &item_3);
+    kmip_linked_list_enqueue(&list_2, &item_4);
+
     Functions observed = {0};
+    observed.function_list = &list_2;
 
-    int result = kmip_decode_query_functions(&ctx, &observed);
     int comparison = kmip_compare_query_functions(&expected, &observed);
-    if(!comparison)
-    {
-        // comparision is expected to fail
-        comparison = KMIP_TRUE;
-    }
-    result = report_decoding_test_result(tracker, &ctx, comparison, result, __func__);
+    int result = report_decoding_test_result(tracker, &ctx, comparison, KMIP_OK, __func__);
 
-    kmip_free_query_functions(&ctx, &observed);
     kmip_destroy(&ctx);
 
     return (result);
