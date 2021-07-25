@@ -7,3 +7,4 @@ demo_get
 demo_destroy
 demo_query
 tests
+demo_locate

@@ -31,7 +31,7 @@ KMIP    = kmip
 
 OFILES  = kmip.o kmip_memset.o kmip_bio.o
 LOFILES = kmip.lo kmip_memset.lo kmip_bio.lo
-DEMOS   = demo_create demo_get demo_destroy demo_query
+DEMOS   = demo_create demo_get demo_destroy demo_query demo_locate
 
 all: demos tests $(LIBS)
 
@@ -81,6 +81,8 @@ demo_create: demo_create.o $(OFILES)
 demo_destroy: demo_destroy.o $(OFILES)
 	$(CC) $(LDFLAGS) -o demo_destroy $^ $(LDLIBS)
 demo_query: demo_query.o $(OFILES)
+	$(CC) $(LDFLAGS) -o $@ $^ $(LDLIBS)
+demo_locate: demo_locate.o $(OFILES)
 	$(CC) $(LDFLAGS) -o $@ $^ $(LDLIBS)
 tests: tests.o kmip.o kmip_memset.o
 	$(CC) $(LDFLAGS) -o tests $^

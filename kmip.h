@@ -533,6 +533,13 @@ enum query_function
     KMIP_QUERY_STORAGE_PROTECTION_MASKS    = 0x000E
 };
 
+enum group_member_option
+{
+    group_member_fresh       =  0x00000001,
+    group_member_default     =  0x00000002
+};
+
+
 enum result_reason
 {
     /* KMIP 1.0 */
@@ -725,6 +732,7 @@ enum tag
     KMIP_TAG_MACHINE_IDENTIFIER               = 0x4200A9,
     KMIP_TAG_MEDIA_IDENTIFIER                 = 0x4200AA,
     KMIP_TAG_NETWORK_IDENTIFIER               = 0x4200AB,
+    KMIP_TAG_OBJECT_GROUP_MEMBER              = 0x4200AC,
     KMIP_TAG_DIGITAL_SIGNATURE_ALGORITHM      = 0x4200AE,
     KMIP_TAG_DEVICE_SERIAL_NUMBER             = 0x4200B0,
     /* KMIP 1.2 */
@@ -742,6 +750,8 @@ enum tag
     KMIP_TAG_INITIAL_COUNTER_VALUE            = 0x4200D1,
     KMIP_TAG_INVOCATION_FIELD_LENGTH          = 0x4200D2,
     KMIP_TAG_ATTESTATION_CAPABLE_INDICATOR    = 0x4200D3,
+    KMIP_TAG_OFFSET_ITEMS                     = 0x4200D4,
+    KMIP_TAG_LOCATED_ITEMS                    = 0x4200D5,
     /* KMIP 1.4 */
     KMIP_TAG_KEY_WRAP_TYPE                    = 0x4200F8,
     KMIP_TAG_SALT_LENGTH                      = 0x420100,
@@ -1273,6 +1283,39 @@ typedef struct query_response
     char             cluster_info[MAX_QUERY_LEN];
 } QueryResponse;
 
+
+typedef struct locate_request_payload
+{
+    int32  maximum_items;      // An Integer object that indicates the maximum number of object identifiers the server MAY return.
+    int32  offset_items;       // An Integer object that indicates the number of object identifiers to skip that satisfy the identification criteria specified in the request.
+    int32  storage_status_mask; // An Integer object (used as a bit mask) that indicates whether only on-line objects, only archived objects, destroyed objects or any combination of these, are to be searched. If omitted, then only on-line objects SHALL be returned.
+    enum   group_member_option group_member_option; // An Enumeration object that indicates the object group member type.
+    LinkedList* attribute_list; // Specifies an attribute and its value(s) that are REQUIRED to match those in a candidate object (according to the matching rules defined above).
+} LocateRequestPayload;
+
+
+typedef struct unique_identifiers
+{
+    LinkedList *unique_identifier_list;
+} UniqueIdentifiers;
+
+typedef struct locate_response_payload
+{
+    int32 located_items;      // Note that this may not equal the number of object identifiers returned in this payload
+    UniqueIdentifiers* unique_ids;
+} LocateResponsePayload;
+
+
+#define MAX_LOCATE_IDS   32
+#define MAX_LOCATE_LEN   128
+
+typedef struct locate_response
+{
+    int              located_items;
+    size_t           ids_size;
+    char             ids[MAX_LOCATE_IDS][MAX_LOCATE_LEN];
+} LocateResponse;
+
 /*
 Macros
 */
@@ -1564,6 +1607,9 @@ void kmip_print_object_types(FILE*, int, ObjectTypes*);
 void kmip_print_query_request_payload(FILE*, int, QueryRequestPayload *);
 void kmip_print_query_response_payload(FILE*, int, QueryResponsePayload *);
 void kmip_print_server_information(FILE*, int, ServerInformation*);
+void kmip_print_locate_request_payload(FILE*, int, LocateRequestPayload *);
+void kmip_print_locate_response_payload(FILE*, int, LocateResponsePayload *);
+void kmip_print_unique_identifiers(FILE*, int indent, UniqueIdentifiers* value);
 
 /*
 Freeing Functions
@@ -1615,6 +1661,9 @@ void kmip_free_query_response_payload(KMIP *, QueryResponsePayload *);
 void kmip_free_operations(KMIP *ctx, Operations *value);
 void kmip_free_objects(KMIP *ctx, ObjectTypes* value);
 void kmip_free_server_information(KMIP* ctx, ServerInformation* value);
+void kmip_free_locate_request_payload(KMIP *, LocateRequestPayload *);
+void kmip_free_locate_response_payload(KMIP *, LocateResponsePayload *);
+void kmip_free_unique_identifiers(KMIP *ctx, UniqueIdentifiers* value);
 
 /*
 Copying Functions
@@ -1632,6 +1681,7 @@ char* kmip_copy_textstring(char* dest, TextString* src, size_t size);
 void kmip_copy_objects(int objs[], size_t* objs_size, ObjectTypes *value, unsigned max_objs);
 void kmip_copy_operations(int ops[], size_t* ops_size, Operations *value, unsigned max_ops);
 void kmip_copy_query_result(QueryResponse* query_result, QueryResponsePayload *pld);
+void kmip_copy_locate_result(LocateResponse* locate_result, LocateResponsePayload *pld);
 
 /*
 Comparison Functions
@@ -1684,6 +1734,8 @@ int kmip_compare_server_information(const ServerInformation *a, const ServerInfo
 int kmip_compare_alternative_endpoints(const AltEndpoints* a, const AltEndpoints* b);
 int kmip_compare_query_request_payload(const QueryRequestPayload *, const QueryRequestPayload *);
 int kmip_compare_query_response_payload(const QueryResponsePayload *, const QueryResponsePayload *);
+int kmip_compare_locate_request_payload(const LocateRequestPayload *, const LocateRequestPayload *);
+int kmip_compare_locate_response_payload(const LocateResponsePayload *, const LocateResponsePayload *);
 
 /*
 Encoding Functions
@@ -1745,6 +1797,8 @@ int kmip_encode_response_message(KMIP *, const ResponseMessage *);
 int kmip_encode_query_functions(KMIP *ctx, const Functions*);
 int kmip_encode_query_request_payload(KMIP *, const QueryRequestPayload *);
 int kmip_encode_query_response_payload(KMIP *, const QueryResponsePayload *);
+int kmip_encode_locate_request_payload(KMIP *, const LocateRequestPayload *);
+int kmip_encode_locate_response_payload(KMIP *, const LocateResponsePayload *);
 
 /*
 Decoding Functions
@@ -1808,6 +1862,9 @@ int kmip_decode_object_types(KMIP *, ObjectTypes *);
 int kmip_decode_query_request_payload(KMIP *, QueryRequestPayload *);
 int kmip_decode_query_response_payload(KMIP *, QueryResponsePayload *);
 int kmip_decode_server_information(KMIP *ctx, ServerInformation *);
+int kmip_decode_locate_request_payload(KMIP *, LocateRequestPayload *);
+int kmip_decode_locate_response_payload(KMIP *, LocateResponsePayload *);
+int kmip_decode_unique_identifiers(KMIP* ctx, UniqueIdentifiers* value);
 
 
 #endif  /* KMIP_H */
