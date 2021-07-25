@@ -12398,6 +12398,65 @@ test_decode_query_response_payload(TestTracker *tracker)
     return (result);
 }
 
+int
+test_decode_locate_response_payload(TestTracker *tracker)
+{
+    TRACK_TEST(tracker);
+
+    uint8 encoding[] = {
+        0x42, 0x00, 0x7c, 0x01, 0x00, 0x00, 0x00, 0x20,   // KMIP_TAG_RESPONSE_PAYLOAD
+        0x42, 0x00, 0x94, 0x07, 0x00, 0x00, 0x00, 0x01,   // KMIP_TAG_UNIQUE_IDENTIFIER
+        0x31, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x42, 0x00, 0x94, 0x07, 0x00, 0x00, 0x00, 0x01,   // KMIP_TAG_UNIQUE_IDENTIFIER
+        0x34, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    };
+
+    struct kmip ctx = {0};
+    kmip_init(&ctx, encoding, ARRAY_LENGTH(encoding), KMIP_1_0);
+
+    TextString uid_1 = {0};
+    uid_1.value = "1";
+    uid_1.size = 1;
+
+    TextString uid_2 = {0};
+    uid_2.value = "4";
+    uid_2.size = 1;
+
+    UniqueIdentifiers uids = {0};
+    LinkedList list_1 = {0};
+    LinkedListItem item_1 = {0};
+    LinkedListItem item_2 = {0};
+    item_1.data = &uid_1;
+    item_2.data = &uid_2;
+    kmip_linked_list_enqueue(&list_1, &item_1);
+    kmip_linked_list_enqueue(&list_1, &item_2);
+    uids.unique_identifier_list = &list_1;
+
+    LocateResponsePayload expected = {0};
+    expected.located_items = 0;
+    expected.unique_ids = &uids;
+
+    LocateResponsePayload observed = {0};
+
+    int result = kmip_decode_locate_response_payload(&ctx, &observed);
+    int comparison = kmip_compare_locate_response_payload(&expected, &observed);
+    if (!comparison)
+    {
+        kmip_print_locate_response_payload(stderr, 1, &observed);
+        kmip_print_locate_response_payload(stderr, 1, &expected);
+    }
+    result = report_decoding_test_result(
+        tracker,
+        &ctx,
+        comparison,
+        result,
+        __func__);
+    kmip_free_locate_response_payload(&ctx, &observed);
+    kmip_destroy(&ctx);
+
+    return (result);
+}
+
 /*
 The following tests are taken verbatim from the KMIP 1.1 Test Cases
 documentation, available here:
@@ -13031,6 +13090,7 @@ run_tests(void)
     test_decode_object_types(&tracker);
     test_compare_query_functions(&tracker);
     test_decode_query_response_payload(&tracker);
+    test_decode_locate_response_payload(&tracker);
     
     printf("\n");
     test_encode_integer(&tracker);
