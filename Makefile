@@ -29,8 +29,8 @@ DESTDIR =
 PREFIX  = /usr/local
 KMIP    = kmip
 
-OFILES  = kmip.o kmip_memset.o kmip_bio.o
-LOFILES = kmip.lo kmip_memset.lo kmip_bio.lo
+OFILES  = kmip.o kmip_io.c kmip_memset.o kmip_bio.o
+LOFILES = kmip.lo kmip_io.lo kmip_memset.lo kmip_bio.lo
 DEMOS   = demo_create demo_get demo_destroy demo_query
 
 all: demos tests $(LIBS)
@@ -82,7 +82,7 @@ demo_destroy: demo_destroy.o $(OFILES)
 	$(CC) $(LDFLAGS) -o demo_destroy $^ $(LDLIBS)
 demo_query: demo_query.o $(OFILES)
 	$(CC) $(LDFLAGS) -o $@ $^ $(LDLIBS)
-tests: tests.o kmip.o kmip_memset.o
+tests: tests.o kmip.o kmip_io.o kmip_memset.o
 	$(CC) $(LDFLAGS) -o tests $^
 
 demo_get.o: demo_get.c kmip_memset.h kmip.h
@@ -96,6 +96,9 @@ $(ARCNAME): $(OFILES)
 
 kmip.o: kmip.c kmip.h kmip_memset.h
 kmip.lo: kmip.c kmip.h kmip_memset.h
+
+kmip_io.o: kmip_io.c kmip_io.h kmip.h
+kmip_io.lo: kmip_io.c kmip_io.h kmip.h
 
 kmip_memset.o: kmip_memset.c kmip_memset.h
 kmip_memset.lo: kmip_memset.c kmip_memset.h
