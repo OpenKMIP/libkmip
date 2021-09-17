@@ -16,21 +16,32 @@ DOCS_DIR = docs
 PREFIX = /usr/local
 KMIP = kmip
 
-MAJOR    = 0
-MINOR    = 2
-MICRO    = 1
-VERSION  = $(MAJOR).$(MINOR).$(MICRO)
-ARC_NAME  = libkmip.a
-LINK_NAME = libkmip.so
-SO_NAME   = $(LINK_NAME).$(MAJOR)
-LIB_NAME  = $(LINK_NAME).$(VERSION)
-LIBS     = $(LIB_DIR)/$(LIB_NAME) $(LIB_DIR)/$(ARC_NAME)
+MAJOR   = 0
+MINOR   = 2
+MICRO   = 1
+VERSION = $(MAJOR).$(MINOR).$(MICRO)
+
+NAME      = libkmip
+CORE_NAME = $(NAME)-core
+
+ARC_NAME       = $(NAME).a
+LINK_NAME      = $(NAME).so
+SO_NAME        = $(LINK_NAME).$(MAJOR)
+LIB_NAME       = $(LINK_NAME).$(VERSION)
+
+ARC_CORE_NAME  = $(CORE_NAME).a
+LINK_CORE_NAME = $(CORE_NAME).so
+SO_CORE_NAME   = $(LINK_CORE_NAME).$(MAJOR)
+LIB_CORE_NAME  = $(LINK_CORE_NAME).$(VERSION)
+
+LIBS           = $(LIB_DIR)/$(LIB_NAME) $(LIB_DIR)/$(LIB_CORE_NAME) $(LIB_DIR)/$(ARC_NAME) $(LIB_DIR)/$(ARC_CORE_NAME)
 
 CC = cc
 AR = ar csrv
 CFLAGS  = -std=c11 -pedantic -g3 -Wall -Wextra
 LOFLAGS = -fPIC
 SOFLAGS = -shared -Wl,-soname,$(SO_NAME)
+SOCOREFLAGS = -shared -Wl,-soname,$(SO_CORE_NAME)
 LDFLAGS = -L/usr/local/lib64 -L/usr/local/lib
 LDLIBS  = -lssl -lcrypto 
 
@@ -41,12 +52,15 @@ SRC_C_FILES = $(SRC_DIR)/*.c
 DEMO_C_FILES = $(DEMO_DIR)/*.c
 TEST_C_FILES = $(TEST_DIR)/*.c
 
-SRC_O_FILES = $(OBJ_DIR)/kmip.o
+SRC_O_CORE_FILES = $(OBJ_DIR)/kmip.o
+SRC_O_CORE_FILES += $(OBJ_DIR)/kmip_memset.o
+
+SRC_O_FILES = $(SRC_O_CORE_FILES)
 SRC_O_FILES += $(OBJ_DIR)/kmip_io.o
-SRC_O_FILES += $(OBJ_DIR)/kmip_memset.o
 SRC_O_FILES += $(OBJ_DIR)/kmip_bio.o
 
 SRC_LO_FILES = $(SRC_O_FILES:.o=.lo)
+SRC_LO_CORE_FILES = $(SRC_O_CORE_FILES:.o=.lo)
 
 DEMO_O_FILES = $(OBJ_DIR)/demo_get.o
 DEMO_O_FILES += $(OBJ_DIR)/demo_create.o
@@ -122,6 +136,16 @@ $(OBJ_DIR)/kmip_memset.lo: $(SRC_DIR)/kmip_memset.c $(INC_DIR)/kmip_memset.h
 $(OBJ_DIR)/kmip_bio.lo: $(SRC_DIR)/kmip_bio.c $(INC_DIR)/kmip_bio.h
 	$(CC) $(CFLAGS) $(INC_FLAGS) $(LOFLAGS) -c $< -o $@
 
+### library build rules
+$(LIB_DIR)/$(LIB_NAME): $(SRC_LO_FILES)
+	$(CC) $(CFLAGS) $(SOFLAGS) -o $@ $(SRC_LO_FILES) $(LDLIBS)
+$(LIB_DIR)/$(LIB_CORE_NAME): $(SRC_LO_CORE_FILES)
+	$(CC) $(CFLAGS) $(SOCOREFLAGS) -o $@ $(SRC_LO_CORE_FILES)
+$(LIB_DIR)/$(ARC_NAME): $(SRC_O_FILES)
+	$(AR) $@ $(SRC_O_FILES)
+$(LIB_DIR)/$(ARC_CORE_NAME): $(SRC_O_CORE_FILES)
+	$(AR) $@ $(SRC_O_CORE_FILES)
+
 ## Target to run test suite
 test: tests
 	$(BIN_DIR)/tests
@@ -148,9 +172,11 @@ install: all
 	cp -r $(DOCS_DIR)/source/. $(DEST_DIR)$(PREFIX)/share/doc/$(KMIP)/src
 	cp $(SRC_DIR)/*.c $(DEST_DIR)$(PREFIX)/src/$(KMIP)
 	cp $(INC_DIR)/*.h $(DEST_DIR)$(PREFIX)/include/$(KMIP)
-	cp $(LIB_DIR)/$(LIB_NAME) $(DEST_DIR)$(PREFIX)/lib
-	cp $(LIB_DIR)/$(ARC_NAME) $(DEST_DIR)$(PREFIX)/lib
+	cp $(LIB_DIR)/* $(DEST_DIR)$(PREFIX)/lib
 	cd $(DEST_DIR)$(PREFIX)/lib && ln -s $(LIB_NAME) $(LINK_NAME) && cd -
+	cd $(DEST_DIR)$(PREFIX)/lib && ln -s $(LIB_NAME) $(SO_NAME) && cd -
+	cd $(DEST_DIR)$(PREFIX)/lib && ln -s $(LIB_CORE_NAME) $(LINK_CORE_NAME) && cd -
+	cd $(DEST_DIR)$(PREFIX)/lib && ln -s $(LIB_CORE_NAME) $(SO_CORE_NAME) && cd -
 
 install_html_docs: html_docs
 	mkdir -p $(DEST_DIR)$(PREFIX)/share/doc/$(KMIP)/html
@@ -162,7 +188,9 @@ uninstall:
 	rm -rf $(DEST_DIR)$(PREFIX)/src/$(KMIP)
 	rm -rf $(DEST_DIR)$(PREFIX)/share/doc/$(KMIP)
 	rm -r $(DEST_DIR)$(PREFIX)/lib/$(LINK_NAME)*
+	rm -r $(DEST_DIR)$(PREFIX)/lib/$(LINK_CORE_NAME)*
 	rm -r $(DEST_DIR)$(PREFIX)/lib/$(ARC_NAME)
+	rm -r $(DEST_DIR)$(PREFIX)/lib/$(ARC_CORE_NAME)
 
 uninstall_html_docs:
 	rm -rf $(DEST_DIR)$(PREFIX)/share/doc/$(KMIP)/html
@@ -170,11 +198,6 @@ uninstall_html_docs:
 docs: html_docs
 html_docs:
 	cd $(DOCS_DIR) && make html && cd -
-
-$(LIB_DIR)/$(LIB_NAME): $(SRC_LO_FILES)
-	$(CC) $(CFLAGS) $(SOFLAGS) -o $@ $(SRC_LO_FILES) $(LDLIBS)
-$(LIB_DIR)/$(ARC_NAME): $(SRC_O_FILES)
-	$(AR) $@ $(SRC_O_FILES)
 
 ## Clean up rules
 clean:
