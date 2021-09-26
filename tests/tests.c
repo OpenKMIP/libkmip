@@ -8,8 +8,9 @@
 
 #include <stdio.h>
 #include <string.h>
-#include "kmip.h"
 
+#include "kmip.h"
+#include "kmip_io.h"
 
 
 #define TEST_PASSED(A, B)       \
