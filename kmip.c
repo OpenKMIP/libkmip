@@ -6609,31 +6609,34 @@ kmip_free_attribute_list(KMIP* ctx, LinkedList* value)
 void
 kmip_free_locate_response_payload(KMIP* ctx, LocateResponsePayload *value)
 {
-    //printf("** free response payload\n");
-    if (value->unique_ids)
+    if(value != NULL)
     {
-        kmip_free_unique_identifiers(ctx, value->unique_ids);
-        ctx->free_func(ctx->state, value->unique_ids);
-        value->unique_ids = NULL;
+        if(value->unique_ids)
+        {
+            kmip_free_unique_identifiers(ctx, value->unique_ids);
+            ctx->free_func(ctx->state, value->unique_ids);
+            value->unique_ids = NULL;
+        }
     }
 }
 
 void
 kmip_free_locate_request_payload(KMIP* ctx, LocateRequestPayload *value)
 {
-    //printf("** free request payload\n");
-    if (value->attribute_list)
+    if(value != NULL)
     {
-        kmip_free_attribute_list(ctx, value->attribute_list);
-        ctx->free_func(ctx->state, value->attribute_list);
-        value->attribute_list = NULL;
+        if (value->attribute_list)
+        {
+            kmip_free_attribute_list(ctx, value->attribute_list);
+            ctx->free_func(ctx->state, value->attribute_list);
+            value->attribute_list = NULL;
+        }
     }
 }
 
 void
 kmip_free_unique_identifiers(KMIP *ctx, UniqueIdentifiers* value)
 {
-    //printf("** free uniq ids \n");
     if(value != NULL)
     {
         if(value->unique_identifier_list != NULL)
@@ -6651,7 +6654,6 @@ kmip_free_unique_identifiers(KMIP *ctx, UniqueIdentifiers* value)
             value->unique_identifier_list= NULL;
         }
     }
-
     return;
 }
 
@@ -7062,13 +7064,17 @@ kmip_copy_unique_ids(char ids[][MAX_LOCATE_LEN], size_t* id_size, UniqueIdentifi
             idx++;
         }
     }
-    *id_size = idx;
+    if (id_size != NULL)
+    {
+        *id_size = idx;
+    }
 }
 
 void
 kmip_copy_locate_result(LocateResponse* locate_result, LocateResponsePayload *pld)
 {
-    if(pld != NULL)
+    if(locate_result != NULL &&
+       pld != NULL)
     {
         locate_result->located_items = pld->located_items;
 
