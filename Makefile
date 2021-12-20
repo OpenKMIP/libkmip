@@ -173,10 +173,10 @@ install: all
 	cp $(SRC_DIR)/*.c $(DEST_DIR)$(PREFIX)/src/$(KMIP)
 	cp $(INC_DIR)/*.h $(DEST_DIR)$(PREFIX)/include/$(KMIP)
 	cp $(LIB_DIR)/* $(DEST_DIR)$(PREFIX)/lib
-	cd $(DEST_DIR)$(PREFIX)/lib && ln -s $(LIB_NAME) $(LINK_NAME) && cd -
-	cd $(DEST_DIR)$(PREFIX)/lib && ln -s $(LIB_NAME) $(SO_NAME) && cd -
-	cd $(DEST_DIR)$(PREFIX)/lib && ln -s $(LIB_CORE_NAME) $(LINK_CORE_NAME) && cd -
-	cd $(DEST_DIR)$(PREFIX)/lib && ln -s $(LIB_CORE_NAME) $(SO_CORE_NAME) && cd -
+	ln -sf $(LIB_NAME) $(DEST_DIR)$(PREFIX)/lib/$(LINK_NAME)
+	ln -sf $(LIB_NAME) $(DEST_DIR)$(PREFIX)/lib/$(SO_NAME)
+	ln -sf $(LIB_CORE_NAME) $(DEST_DIR)$(PREFIX)/lib/$(LINK_CORE_NAME)
+	ln -sf $(LIB_CORE_NAME) $(DEST_DIR)$(PREFIX)/lib/$(SO_CORE_NAME)
 
 install_html_docs: html_docs
 	mkdir -p $(DEST_DIR)$(PREFIX)/share/doc/$(KMIP)/html
