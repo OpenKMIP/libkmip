@@ -1669,7 +1669,7 @@ int kmip_bio_locate_with_context(KMIP *ctx, BIO *bio, Attribute* attribs, size_t
     lrp.offset_items = 0;
     lrp.storage_status_mask = 0;
     lrp.group_member_option = 0;
-    lrp.attribute_list = attribute_list;
+    lrp.attributes = attribute_list;
 
     RequestBatchItem rbi = {0};
     kmip_init_request_batch_item(&rbi);
