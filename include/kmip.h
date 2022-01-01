@@ -1290,7 +1290,7 @@ typedef struct locate_request_payload
     int32  offset_items;       // An Integer object that indicates the number of object identifiers to skip that satisfy the identification criteria specified in the request.
     int32  storage_status_mask; // An Integer object (used as a bit mask) that indicates whether only on-line objects, only archived objects, destroyed objects or any combination of these, are to be searched. If omitted, then only on-line objects SHALL be returned.
     enum   group_member_option group_member_option; // An Enumeration object that indicates the object group member type.
-    LinkedList* attribute_list; // Specifies an attribute and its value(s) that are REQUIRED to match those in a candidate object (according to the matching rules defined above).
+    Attributes *attributes;     // Specifies an attribute and its value(s) that are REQUIRED to match those in a candidate object (according to the matching rules defined above).
 } LocateRequestPayload;
 
 
@@ -1301,7 +1301,7 @@ typedef struct unique_identifiers
 
 typedef struct locate_response_payload
 {
-    int32 located_items;      // Note that this may not equal the number of object identifiers returned in this payload
+    int32 located_items;      // KMIP 1.3+, Optional; Note that this may not equal the number of object identifiers returned in this payload
     UniqueIdentifiers* unique_ids;
 } LocateResponsePayload;
 
@@ -1311,7 +1311,7 @@ typedef struct locate_response_payload
 
 typedef struct locate_response
 {
-    int              located_items;
+    int              located_items;    // KMIP 1.3+, optional
     size_t           ids_size;
     char             ids[MAX_LOCATE_IDS][MAX_LOCATE_LEN];
 } LocateResponse;
@@ -1649,6 +1649,7 @@ int kmip_compare_server_information(const ServerInformation *a, const ServerInfo
 int kmip_compare_alternative_endpoints(const AltEndpoints* a, const AltEndpoints* b);
 int kmip_compare_query_request_payload(const QueryRequestPayload *, const QueryRequestPayload *);
 int kmip_compare_query_response_payload(const QueryResponsePayload *, const QueryResponsePayload *);
+int kmip_compare_unique_identifiers(const UniqueIdentifiers*, const UniqueIdentifiers*);
 int kmip_compare_locate_request_payload(const LocateRequestPayload *, const LocateRequestPayload *);
 int kmip_compare_locate_response_payload(const LocateResponsePayload *, const LocateResponsePayload *);
 
@@ -1674,6 +1675,7 @@ int kmip_encode_attribute_v1(KMIP *, const Attribute *);
 int kmip_encode_attribute_v2(KMIP *, const Attribute *);
 int kmip_encode_attribute(KMIP *, const Attribute *);
 int kmip_encode_attributes(KMIP *, const Attributes *);
+int kmip_encode_attribute_list(KMIP *, const LinkedList*);
 int kmip_encode_template_attribute(KMIP *, const TemplateAttribute *);
 int kmip_encode_protocol_version(KMIP *, const ProtocolVersion *);
 int kmip_encode_protection_storage_masks(KMIP *, const ProtectionStorageMasks *);
@@ -1714,6 +1716,7 @@ int kmip_encode_query_request_payload(KMIP *, const QueryRequestPayload *);
 int kmip_encode_query_response_payload(KMIP *, const QueryResponsePayload *);
 int kmip_encode_locate_request_payload(KMIP *, const LocateRequestPayload *);
 int kmip_encode_locate_response_payload(KMIP *, const LocateResponsePayload *);
+int kmip_encode_unique_identifiers(KMIP *, const UniqueIdentifiers*);
 
 /*
 Decoding Functions

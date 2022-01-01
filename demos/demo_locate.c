@@ -13,6 +13,7 @@
 #include <time.h>
 
 #include "kmip.h"
+#include "kmip_io.h"
 #include "kmip_bio.h"
 #include "kmip_memset.h"
 
@@ -160,7 +161,7 @@ int use_low_level_api(KMIP *ctx, BIO *bio, Attribute* attribs, size_t attrib_cou
     lrp.offset_items = 0;
     lrp.storage_status_mask = 0;
     lrp.group_member_option = 0;
-    lrp.attribute_list = attribute_list;
+    lrp.attributes = attribute_list;
 
     RequestBatchItem rbi = {0};
     kmip_init_request_batch_item(&rbi);

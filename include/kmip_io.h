@@ -94,5 +94,8 @@ void kmip_print_object_types(FILE*, int, ObjectTypes*);
 void kmip_print_query_request_payload(FILE*, int, QueryRequestPayload *);
 void kmip_print_query_response_payload(FILE*, int, QueryResponsePayload *);
 void kmip_print_server_information(FILE*, int, ServerInformation*);
+void kmip_print_locate_request_payload(FILE*, int, LocateRequestPayload *);
+void kmip_print_locate_response_payload(FILE*, int, LocateResponsePayload *);
+void kmip_print_unique_identifiers(FILE*, int indent, UniqueIdentifiers* value);
 
 #endif  /* KMIP_IO_H */

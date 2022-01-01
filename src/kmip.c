@@ -3194,23 +3194,6 @@ kmip_free_server_information(KMIP* ctx, ServerInformation* value)
 
 
 void
-kmip_free_attribute_list(KMIP* ctx, LinkedList* value)
-{
-    if(value != NULL)
-    {
-        LinkedListItem *curr = kmip_linked_list_pop(value);
-        while(curr != NULL)
-        {
-            Attribute *attribute = (Attribute *)curr->data;
-            kmip_free_attribute(ctx, attribute);
-            ctx->free_func(ctx->state, attribute);
-            ctx->free_func(ctx->state, curr);
-            curr = kmip_linked_list_pop(value);
-        }
-    }
-}
-
-void
 kmip_free_locate_response_payload(KMIP* ctx, LocateResponsePayload *value)
 {
     if(value != NULL)
@@ -3229,11 +3212,11 @@ kmip_free_locate_request_payload(KMIP* ctx, LocateRequestPayload *value)
 {
     if(value != NULL)
     {
-        if (value->attribute_list)
+        if (value->attributes)
         {
-            kmip_free_attribute_list(ctx, value->attribute_list);
-            ctx->free_func(ctx->state, value->attribute_list);
-            value->attribute_list = NULL;
+            kmip_free_attributes(ctx, value->attributes);
+            ctx->free_func(ctx->state, value->attributes);
+            value->attributes = NULL;
         }
     }
 }
@@ -3260,6 +3243,7 @@ kmip_free_unique_identifiers(KMIP *ctx, UniqueIdentifiers* value)
     }
     return;
 }
+
 
 
 
@@ -3655,7 +3639,7 @@ kmip_copy_query_result(QueryResponse* query_result, QueryResponsePayload *pld)
 }
 
 void
-kmip_copy_unique_ids(char ids[][MAX_LOCATE_LEN], size_t* id_size, UniqueIdentifiers* value, unsigned max_ids)
+kmip_copy_unique_identifiers(char ids[][MAX_LOCATE_LEN], size_t* id_size, UniqueIdentifiers* value, unsigned max_ids)
 {
     size_t idx = 0;
     if(value != NULL)
@@ -3682,7 +3666,7 @@ kmip_copy_locate_result(LocateResponse* locate_result, LocateResponsePayload *pl
     {
         locate_result->located_items = pld->located_items;
 
-        kmip_copy_unique_ids(locate_result->ids, &locate_result->ids_size, pld->unique_ids, MAX_LOCATE_IDS);
+        kmip_copy_unique_identifiers(locate_result->ids, &locate_result->ids_size, pld->unique_ids, MAX_LOCATE_IDS);
     }
 }
 
@@ -6262,7 +6246,7 @@ kmip_compare_query_response_payload(const QueryResponsePayload *a, const QueryRe
 }
 
 int
-kmip_compare_unique_ids(const UniqueIdentifiers* a, const UniqueIdentifiers* b)
+kmip_compare_unique_identifiers(const UniqueIdentifiers* a, const UniqueIdentifiers* b)
 {
     if(a != b)
     {
@@ -6298,9 +6282,45 @@ kmip_compare_unique_ids(const UniqueIdentifiers* a, const UniqueIdentifiers* b)
 int
 kmip_compare_locate_request_payload(const LocateRequestPayload *a, const LocateRequestPayload *b)
 {
-    (void) a;
-    (void) b;
-    return(KMIP_NOT_IMPLEMENTED);
+    if(a != b)
+    {
+        if((a == NULL) || (b == NULL))
+        {
+            return(KMIP_FALSE);
+        }
+
+        if(a->maximum_items != b->maximum_items)
+        {
+            return(KMIP_FALSE);
+        }
+        if(a->offset_items != b->offset_items)
+        {
+            return(KMIP_FALSE);
+        }
+        if(a->storage_status_mask != b->storage_status_mask)
+        {
+            return(KMIP_FALSE);
+        }
+        if(a->group_member_option != b->group_member_option)
+        {
+            return(KMIP_FALSE);
+        }
+
+        if(a->attributes != b->attributes)
+        {
+            if((a->attributes == NULL) || (b->attributes == NULL))
+            {
+                return(KMIP_FALSE);
+            }
+
+            if(kmip_compare_attributes(a->attributes, b->attributes) == KMIP_FALSE)
+            {
+                return(KMIP_FALSE);
+            }
+        }
+    }
+
+    return(KMIP_TRUE);
 }
 int
 kmip_compare_locate_response_payload(const LocateResponsePayload *a, const LocateResponsePayload *b)
@@ -6324,7 +6344,7 @@ kmip_compare_locate_response_payload(const LocateResponsePayload *a, const Locat
                 return(KMIP_FALSE);
             }
 
-            if(kmip_compare_unique_ids(a->unique_ids, b->unique_ids) == KMIP_FALSE)
+            if(kmip_compare_unique_identifiers(a->unique_ids, b->unique_ids) == KMIP_FALSE)
             {
                 return(KMIP_FALSE);
             }
@@ -7022,18 +7042,8 @@ kmip_encode_attributes(KMIP *ctx, const Attributes *value)
     uint8 *length_index = ctx->index;
     uint8 *value_index = ctx->index += 4;
 
-    if(value->attribute_list != NULL)
-    {
-        LinkedListItem *curr = value->attribute_list->head;
-        while(curr != NULL)
-        {
-            Attribute *attribute = (Attribute *)curr->data;
-            result = kmip_encode_attribute(ctx, attribute);
-            CHECK_RESULT(ctx, result);
-
-            curr = curr->next;
-        }
-    }
+    result = kmip_encode_attribute_list(ctx, value->attribute_list);
+    CHECK_RESULT(ctx, result);
 
     uint8 *curr_index = ctx->index;
     ctx->index = length_index;
@@ -7042,6 +7052,26 @@ kmip_encode_attributes(KMIP *ctx, const Attributes *value)
     CHECK_RESULT(ctx, result);
 
     ctx->index = curr_index;
+
+    return(KMIP_OK);
+}
+
+int
+kmip_encode_attribute_list(KMIP *ctx, const LinkedList* value)
+{
+    CHECK_ENCODE_ARGS(ctx, value);
+
+    int result = 0;
+
+    LinkedListItem *curr = value->head;
+    while(curr != NULL)
+    {
+        Attribute *attribute = (Attribute *)curr->data;
+        result = kmip_encode_attribute(ctx, attribute);
+        CHECK_RESULT(ctx, result);
+
+        curr = curr->next;
+    }
 
     return(KMIP_OK);
 }
@@ -8654,21 +8684,18 @@ kmip_encode_query_response_payload(KMIP *ctx, const QueryResponsePayload *value)
     return(KMIP_NOT_IMPLEMENTED);
 }
 
-
 int
-kmip_encode_attribute_list(KMIP* ctx, LinkedList* value)
+kmip_encode_unique_identifiers(KMIP *ctx, const UniqueIdentifiers* value)
 {
     CHECK_ENCODE_ARGS(ctx, value);
 
     int result = 0;
-
-    if(value != NULL)
+    if (value->unique_identifier_list)
     {
-        LinkedListItem *curr = value->head;
+        LinkedListItem *curr = value->unique_identifier_list->head;
         while(curr != NULL)
         {
-            Attribute *attribute = (Attribute *)curr->data;
-            result = kmip_encode_attribute(ctx, attribute);
+            result = kmip_encode_text_string(ctx, KMIP_TAG_UNIQUE_IDENTIFIER, (TextString*)curr->data);
             CHECK_RESULT(ctx, result);
 
             curr = curr->next;
@@ -8676,7 +8703,6 @@ kmip_encode_attribute_list(KMIP* ctx, LinkedList* value)
     }
 
     return(KMIP_OK);
-
 }
 
 int
@@ -8713,37 +8739,11 @@ kmip_encode_locate_request_payload(KMIP* ctx, const LocateRequestPayload* value)
         CHECK_RESULT(ctx, result);
     }
 
-    if(ctx->version < KMIP_2_0)
+    if (value->attributes)
     {
-        if (value->attribute_list)
-        {
-            // copy input list to allow freeing
-            LinkedList *list = ctx->calloc_func(ctx->state, 1, sizeof(LinkedList));
-            LinkedListItem *curr = value->attribute_list->head;
-            while(curr != NULL)
-            {
-                LinkedListItem *item = ctx->calloc_func(ctx->state, 1, sizeof(LinkedListItem));
-                item->data = kmip_deep_copy_attribute(ctx, curr->data);
-                kmip_linked_list_enqueue(list, item);
-
-                curr = curr->next;
-            }
-
-            result = kmip_encode_attribute_list(ctx, list);
-
-            kmip_free_attribute_list(ctx, list);
-            ctx->free_func(ctx->state, list);
-
-            CHECK_RESULT(ctx, result);
-        }
+        result = kmip_encode_attribute_list(ctx, value->attributes->attribute_list);
+        CHECK_RESULT(ctx, result);
     }
-    else
-    {
-        // todo : copy attrib list into Attribute - see kmip.c
-
-
-    }
-
     uint8 *curr_index = ctx->index;
     ctx->index = length_index;
 
@@ -8757,9 +8757,39 @@ kmip_encode_locate_request_payload(KMIP* ctx, const LocateRequestPayload* value)
 int
 kmip_encode_locate_response_payload(KMIP* ctx, const LocateResponsePayload *value)
 {
-    (void) ctx;
-    (void) value;
-    return(KMIP_NOT_IMPLEMENTED);
+    CHECK_ENCODE_ARGS(ctx, value);
+    int result = 0;
+
+    result = kmip_encode_int32_be(ctx, TAG_TYPE(KMIP_TAG_RESPONSE_PAYLOAD, KMIP_TYPE_STRUCTURE));
+    CHECK_RESULT(ctx, result);
+
+    uint8 *length_index = ctx->index;
+    uint8 *value_index = ctx->index += 4;
+
+    if(ctx->version >= KMIP_1_3)
+    {
+        if (value->located_items)
+        {
+            result = kmip_encode_integer(ctx, KMIP_TAG_LOCATED_ITEMS, value->located_items);
+            CHECK_RESULT(ctx, result);
+        }
+    }
+
+    if (value->unique_ids)
+    {
+        result = kmip_encode_unique_identifiers(ctx, value->unique_ids);
+        CHECK_RESULT(ctx, result);
+    }
+
+    uint8 *curr_index = ctx->index;
+    ctx->index = length_index;
+
+    result = kmip_encode_length(ctx, curr_index - value_index);
+    CHECK_RESULT(ctx, result);
+
+    ctx->index = curr_index;
+
+    return (KMIP_OK);
 }
 
 /*
@@ -9642,6 +9672,33 @@ kmip_decode_attributes(KMIP *ctx, Attributes *value)
         LinkedListItem *item = ctx->calloc_func(ctx->state, 1, sizeof(LinkedListItem));
         CHECK_NEW_MEMORY(ctx, item, sizeof(LinkedListItem), "LinkedListItem");
         kmip_linked_list_enqueue(value->attribute_list, item);
+
+        item->data = ctx->calloc_func(ctx->state, 1, sizeof(Attribute));
+        CHECK_NEW_MEMORY(ctx, item->data, sizeof(Attribute), "Attribute");
+
+        result = kmip_decode_attribute(ctx, (Attribute *)item->data);
+        CHECK_RESULT(ctx, result);
+
+        tag = kmip_peek_tag(ctx);
+    }
+
+    return(KMIP_OK);
+}
+
+int
+kmip_decode_attribute_list(KMIP *ctx, LinkedList *value)
+{
+    CHECK_DECODE_ARGS(ctx, value);
+    CHECK_BUFFER_FULL(ctx, 8);
+
+    int result = 0;
+
+    uint32 tag = kmip_peek_tag(ctx);
+    while(tag == KMIP_TAG_ATTRIBUTE)
+    {
+        LinkedListItem *item = ctx->calloc_func(ctx->state, 1, sizeof(LinkedListItem));
+        CHECK_NEW_MEMORY(ctx, item, sizeof(LinkedListItem), "LinkedListItem");
+        kmip_linked_list_enqueue(value, item);
 
         item->data = ctx->calloc_func(ctx->state, 1, sizeof(Attribute));
         CHECK_NEW_MEMORY(ctx, item->data, sizeof(Attribute), "Attribute");
@@ -11673,9 +11730,57 @@ kmip_decode_query_response_payload(KMIP *ctx, QueryResponsePayload *value)
 int
 kmip_decode_locate_request_payload(KMIP* ctx, LocateRequestPayload *value)
 {
-    (void) ctx;
-    (void) value;
-    return(KMIP_NOT_IMPLEMENTED);
+    CHECK_BUFFER_FULL(ctx, 8);
+
+    int result = 0;
+    int32 tag_type = 0;
+    uint32 length = 0;
+
+    kmip_decode_int32_be(ctx, &tag_type);
+    CHECK_TAG_TYPE(ctx, tag_type, KMIP_TAG_REQUEST_PAYLOAD, KMIP_TYPE_STRUCTURE);
+
+    kmip_decode_length(ctx, &length);
+    CHECK_BUFFER_FULL(ctx, length);
+
+    if(kmip_is_tag_next(ctx, KMIP_TAG_MAXIMUM_ITEMS))
+    {
+        result = kmip_decode_integer(ctx, KMIP_TAG_MAXIMUM_ITEMS, &value->maximum_items);
+        CHECK_RESULT(ctx, result);
+    }
+    if(kmip_is_tag_next(ctx, KMIP_TAG_OFFSET_ITEMS))
+    {
+        result = kmip_decode_integer(ctx, KMIP_TAG_OFFSET_ITEMS, &value->offset_items);
+        CHECK_RESULT(ctx, result);
+    }
+    if(kmip_is_tag_next(ctx, KMIP_TAG_STORAGE_STATUS_MASK))
+    {
+        result = kmip_decode_integer(ctx, KMIP_TAG_STORAGE_STATUS_MASK, &value->storage_status_mask);
+        CHECK_RESULT(ctx, result);
+    }
+    if(kmip_is_tag_next(ctx, KMIP_TAG_OBJECT_GROUP_MEMBER))
+    {
+    }
+    uint32 tag = kmip_peek_tag(ctx);
+    if (tag == KMIP_TAG_ATTRIBUTE)
+    {
+        value->attributes = ctx->calloc_func(ctx->state, 1, sizeof(Attributes));
+        CHECK_NEW_MEMORY(ctx, value->attributes, sizeof(Attributes), "Attributes");
+
+        value->attributes->attribute_list = ctx->calloc_func(ctx->state, 1, sizeof(LinkedList));
+        CHECK_NEW_MEMORY(ctx, value->attributes->attribute_list, sizeof(LinkedList), "LinkedList");
+
+        result = kmip_decode_attribute_list(ctx, value->attributes->attribute_list);
+        if(result != KMIP_OK)
+        {
+            kmip_free_attributes(ctx, value->attributes);
+            ctx->free_func(ctx, value->attributes);
+            value->attributes = NULL;
+
+            HANDLE_FAILURE(ctx, result);
+        }
+    }
+
+    return(KMIP_OK);
 }
 
 int
