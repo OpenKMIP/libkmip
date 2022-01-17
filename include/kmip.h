@@ -883,6 +883,11 @@ typedef struct attributes
     LinkedList *attribute_list;
 } Attributes;
 
+typedef struct attribute_names
+{
+    LinkedList *name_list;
+} AttributeNames;
+
 typedef struct name
 {
     struct text_string *value;
@@ -1226,6 +1231,13 @@ typedef struct application_namespaces
     LinkedList *app_namespace_list;
 } ApplicationNamespaces;
 */
+typedef struct get_attributes_request_payload
+{
+    TextString *unique_identifier;
+    AttributeNames *attribute_names;
+} GetAttributesRequestPayload;
+
+
 
 typedef struct query_request_payload
 {
@@ -1530,9 +1542,11 @@ void kmip_free_response_message(KMIP *, ResponseMessage *);
 void kmip_free_query_functions(KMIP *ctx, Functions*);
 void kmip_free_query_request_payload(KMIP *, QueryRequestPayload *);
 void kmip_free_query_response_payload(KMIP *, QueryResponsePayload *);
-void kmip_free_operations(KMIP *ctx, Operations *value);
-void kmip_free_objects(KMIP *ctx, ObjectTypes* value);
-void kmip_free_server_information(KMIP* ctx, ServerInformation* value);
+void kmip_free_operations(KMIP *, Operations *);
+void kmip_free_objects(KMIP *, ObjectTypes*);
+void kmip_free_server_information(KMIP*, ServerInformation*);
+void kmip_free_attribute_names(KMIP *, AttributeNames*);
+void kmip_free_get_attributes_request_payload(KMIP *, GetAttributesRequestPayload*);
 
 /*
 Copying Functions
@@ -1602,6 +1616,8 @@ int kmip_compare_server_information(const ServerInformation *a, const ServerInfo
 int kmip_compare_alternative_endpoints(const AltEndpoints* a, const AltEndpoints* b);
 int kmip_compare_query_request_payload(const QueryRequestPayload *, const QueryRequestPayload *);
 int kmip_compare_query_response_payload(const QueryResponsePayload *, const QueryResponsePayload *);
+int kmip_compare_attribute_names(const AttributeNames*, const AttributeNames*);
+int kmip_compare_get_attributes_request_payload(const GetAttributesRequestPayload*, const GetAttributesRequestPayload*);
 
 /*
 Encoding Functions
@@ -1625,6 +1641,7 @@ int kmip_encode_attribute_v1(KMIP *, const Attribute *);
 int kmip_encode_attribute_v2(KMIP *, const Attribute *);
 int kmip_encode_attribute(KMIP *, const Attribute *);
 int kmip_encode_attributes(KMIP *, const Attributes *);
+int kmip_encode_attribute_names(KMIP *, const AttributeNames*);
 int kmip_encode_template_attribute(KMIP *, const TemplateAttribute *);
 int kmip_encode_protocol_version(KMIP *, const ProtocolVersion *);
 int kmip_encode_protection_storage_masks(KMIP *, const ProtectionStorageMasks *);
@@ -1660,6 +1677,7 @@ int kmip_encode_request_batch_item(KMIP *, const RequestBatchItem *);
 int kmip_encode_response_batch_item(KMIP *, const ResponseBatchItem *);
 int kmip_encode_request_message(KMIP *, const RequestMessage *);
 int kmip_encode_response_message(KMIP *, const ResponseMessage *);
+int kmip_encode_get_attributes_request_payload(KMIP *ctx, const GetAttributesRequestPayload *);
 int kmip_encode_query_functions(KMIP *ctx, const Functions*);
 int kmip_encode_query_request_payload(KMIP *, const QueryRequestPayload *);
 int kmip_encode_query_response_payload(KMIP *, const QueryResponsePayload *);
@@ -1685,6 +1703,7 @@ int kmip_decode_attribute_v1(KMIP *, Attribute *);
 int kmip_decode_attribute_v2(KMIP *, Attribute *);
 int kmip_decode_attribute(KMIP *, Attribute *);
 int kmip_decode_attributes(KMIP *, Attributes *);
+int kmip_decode_attribute_names(KMIP *ctx, AttributeNames*);
 int kmip_decode_template_attribute(KMIP *, TemplateAttribute *);
 int kmip_decode_protocol_version(KMIP *, ProtocolVersion *);
 int kmip_decode_transparent_symmetric_key(KMIP *, TransparentSymmetricKey *);
@@ -1726,6 +1745,7 @@ int kmip_decode_object_types(KMIP *, ObjectTypes *);
 int kmip_decode_query_request_payload(KMIP *, QueryRequestPayload *);
 int kmip_decode_query_response_payload(KMIP *, QueryResponsePayload *);
 int kmip_decode_server_information(KMIP *ctx, ServerInformation *);
+int kmip_decode_get_attributes_request_payload(KMIP *ctx, GetAttributesRequestPayload *);
 
 
 #endif  /* KMIP_H */

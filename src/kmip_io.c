@@ -3330,3 +3330,39 @@ kmip_print_query_request_payload(FILE* f, int indent, QueryRequestPayload *value
     if(value != NULL)
         kmip_print_query_functions(f, indent, value->functions);
 }
+
+void
+kmip_print_attribute_names(FILE* f, int indent, AttributeNames* value)
+{
+    fprintf(f, "%*sAttribute Names @ %p\n", indent, "", (void *)value);
+
+    if(value != NULL &&
+       value->name_list != NULL)
+    {
+        fprintf(f, "%*sNames: %zu\n", indent + 2, "", value->name_list->size);
+        LinkedListItem *curr = value->name_list->head;
+        size_t count = 1;
+        while(curr != NULL)
+        {
+            fprintf(f, "%*sName: %zu: ", indent + 4, "", count);
+            TextString* attrname = (TextString*)curr->data;
+            kmip_print_text_string(f, indent + 2, "Attribute Name", attrname);
+            fprintf(f, "\n");
+
+            curr = curr->next;
+            count++;
+        }
+    }
+}
+
+void
+kmip_print_get_attributes_request_payload(FILE* f, int indent, GetAttributesRequestPayload *value)
+{
+    fprintf(f,"%*sGet Attributes Request Payload @ %p\n", indent, "", (void *)value);
+
+    if(value != NULL)
+    {
+        kmip_print_text_string(f, indent + 2, "Unique Identifier", value->unique_identifier);
+        kmip_print_attribute_names(f, indent + 2, value->attribute_names);
+    }
+}

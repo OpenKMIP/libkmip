@@ -3911,6 +3911,54 @@ kmip_compare_attributes(const Attributes *a, const Attributes *b)
     return(KMIP_TRUE);
 }
 
+void
+kmip_free_attribute_names(KMIP *ctx, AttributeNames* value)
+{
+    if(value != NULL)
+    {
+        if(value->name_list != NULL)
+        {
+            LinkedListItem *curr = kmip_linked_list_pop(value->name_list);
+            while(curr != NULL)
+            {
+                kmip_free_text_string(ctx, curr->data);
+                ctx->free_func(ctx->state, curr->data);
+                curr->data = NULL;
+                ctx->free_func(ctx->state, curr);
+                curr = kmip_linked_list_pop(value->name_list);
+            }
+            ctx->free_func(ctx->state, value->name_list);
+            value->name_list= NULL;
+        }
+    }
+    return;
+}
+
+void
+kmip_free_get_attributes_request_payload(KMIP *ctx, GetAttributesRequestPayload* value)
+{
+    if(value != NULL)
+    {
+        if(value->unique_identifier != NULL)
+        {
+            kmip_free_text_string(ctx, value->unique_identifier);
+
+            ctx->free_func(ctx->state, value->unique_identifier);
+            value->unique_identifier = NULL;
+        }
+
+        if(value->attribute_names != NULL)
+        {
+            kmip_free_attribute_names(ctx, value->attribute_names);
+
+            ctx->free_func(ctx->state, value->attribute_names);
+            value->attribute_names = NULL;
+        }
+    }
+
+    return;
+}
+
 int
 kmip_compare_template_attribute(const TemplateAttribute *a, const TemplateAttribute *b)
 {
@@ -6134,6 +6182,81 @@ kmip_compare_query_response_payload(const QueryResponsePayload *a, const QueryRe
     return(KMIP_TRUE);
 }
 
+int
+kmip_compare_attribute_names(const AttributeNames* a, const AttributeNames* b)
+{
+    if(a != b)
+    {
+        if((a == NULL) || (b == NULL))
+        {
+            return(KMIP_FALSE);
+        }
+
+        if((a->name_list != b->name_list))
+        {
+            if((a->name_list == NULL) || (b->name_list == NULL))
+            {
+                return(KMIP_FALSE);
+            }
+
+            if((a->name_list->size != b->name_list->size))
+            {
+                return(KMIP_FALSE);
+            }
+
+            LinkedListItem *a_item = a->name_list->head;
+            LinkedListItem *b_item = b->name_list->head;
+            if (kmip_compare_linklist_items_textstring(a_item, b_item) == KMIP_FALSE)
+            {
+                return(KMIP_FALSE);
+            }
+        }
+    }
+
+    return(KMIP_TRUE);
+}
+
+int
+kmip_compare_get_attributes_request_payload(const GetAttributesRequestPayload* a, const GetAttributesRequestPayload* b)
+{
+    if(a != b)
+    {
+        if((a == NULL) || (b == NULL))
+        {
+            return(KMIP_FALSE);
+        }
+
+        if(a->unique_identifier != b->unique_identifier)
+        {
+            if((a->unique_identifier == NULL) || (b->unique_identifier == NULL))
+            {
+                return(KMIP_FALSE);
+            }
+
+            if(kmip_compare_text_string(a->unique_identifier, b->unique_identifier) == KMIP_FALSE)
+            {
+                return(KMIP_FALSE);
+            }
+        }
+
+        if(a->attribute_names != b->attribute_names)
+        {
+            if((a->attribute_names == NULL) ||
+               (b->attribute_names == NULL))
+            {
+                return(KMIP_FALSE);
+            }
+
+            if(kmip_compare_attribute_names(a->attribute_names, b->attribute_names) == KMIP_FALSE)
+            {
+                return(KMIP_FALSE);
+            }
+        }
+    }
+
+    return(KMIP_TRUE);
+}
+
 
 /*
 Encoding Functions
@@ -6498,6 +6621,29 @@ kmip_encode_attribute_name(KMIP *ctx, enum attribute_type value)
     result = kmip_encode_text_string(ctx, t, &attribute_name);
     CHECK_RESULT(ctx, result);
     
+    return(KMIP_OK);
+}
+
+int
+kmip_encode_attribute_names(KMIP *ctx, const AttributeNames *value)
+{
+    CHECK_ENCODE_ARGS(ctx, value);
+
+    int result = 0;
+
+    if(value->name_list != NULL)
+    {
+        LinkedListItem *curr = value->name_list->head;
+        while(curr != NULL)
+        {
+            TextString *attribute_name =(TextString*)curr->data;
+            result = kmip_encode_text_string(ctx, KMIP_TAG_ATTRIBUTE_NAME, attribute_name);
+            CHECK_RESULT(ctx, result);
+
+            curr = curr->next;
+        }
+    }
+
     return(KMIP_OK);
 }
 
@@ -8390,6 +8536,76 @@ kmip_encode_response_message(KMIP *ctx, const ResponseMessage *value)
 }
 
 int
+kmip_encode_get_attributes_request_payload(KMIP *ctx, const GetAttributesRequestPayload *value)
+{
+    int result = 0;
+    result = kmip_encode_int32_be(ctx, TAG_TYPE(KMIP_TAG_REQUEST_PAYLOAD, KMIP_TYPE_STRUCTURE));
+    CHECK_RESULT(ctx, result);
+
+    uint8 *length_index = ctx->index;
+    uint8 *value_index = ctx->index += 4;
+
+    if(value->unique_identifier != NULL)
+    {
+        result = kmip_encode_text_string(ctx, KMIP_TAG_UNIQUE_IDENTIFIER, value->unique_identifier);
+        CHECK_RESULT(ctx, result);
+    }
+
+    if (value->attribute_names)
+    {
+        result = kmip_encode_attribute_names(ctx, value->attribute_names);
+        CHECK_RESULT(ctx, result);
+    }
+
+    uint8 *curr_index = ctx->index;
+    ctx->index = length_index;
+
+    kmip_encode_int32_be(ctx, curr_index - value_index);
+
+    ctx->index = curr_index;
+
+    return(KMIP_OK);
+}
+
+int
+kmip_decode_get_attributes_request_payload(KMIP *ctx, GetAttributesRequestPayload *value)
+{
+    CHECK_DECODE_ARGS(ctx, value);
+    CHECK_BUFFER_FULL(ctx, 8);
+
+    int result = 0;
+    int32 tag_type = 0;
+    uint32 length = 0;
+
+    kmip_decode_int32_be(ctx, &tag_type);
+    CHECK_TAG_TYPE(ctx, tag_type, KMIP_TAG_REQUEST_PAYLOAD, KMIP_TYPE_STRUCTURE);
+
+    kmip_decode_length(ctx, &length);
+    CHECK_BUFFER_FULL(ctx, length);
+
+    if(kmip_is_tag_next(ctx, KMIP_TAG_UNIQUE_IDENTIFIER))
+    {
+        value->unique_identifier = ctx->calloc_func(ctx->state, 1, sizeof(TextString));
+        CHECK_NEW_MEMORY(ctx, value->unique_identifier, sizeof(TextString), "UniqueIdentifier text string");
+
+        result = kmip_decode_text_string(ctx, KMIP_TAG_UNIQUE_IDENTIFIER, value->unique_identifier);
+        CHECK_RESULT(ctx, result);
+    }
+
+    if(kmip_is_tag_next(ctx, KMIP_TAG_ATTRIBUTE_NAME))
+    {
+        value->attribute_names = ctx->calloc_func(ctx->state, 1, sizeof(AttributeNames));
+        CHECK_NEW_MEMORY(ctx, value->attribute_names, sizeof(AttributeNames), "AttributeNames structure");
+
+        result = kmip_decode_attribute_names(ctx, value->attribute_names);
+        CHECK_RESULT(ctx, result);
+    }
+
+    return(KMIP_OK);
+}
+
+
+int
 kmip_encode_query_functions(KMIP *ctx, const Functions* value)
 {
     CHECK_ENCODE_ARGS(ctx, value);
@@ -9331,6 +9547,36 @@ kmip_decode_attributes(KMIP *ctx, Attributes *value)
         CHECK_NEW_MEMORY(ctx, item->data, sizeof(Attribute), "Attribute");
 
         result = kmip_decode_attribute(ctx, (Attribute *)item->data);
+        CHECK_RESULT(ctx, result);
+
+        tag = kmip_peek_tag(ctx);
+    }
+
+    return(KMIP_OK);
+}
+
+int
+kmip_decode_attribute_names(KMIP *ctx, AttributeNames *value)
+{
+    CHECK_DECODE_ARGS(ctx, value);
+    CHECK_BUFFER_FULL(ctx, 8);
+
+    int result = 0;
+
+    value->name_list = ctx->calloc_func(ctx->state, 1, sizeof(LinkedList));
+    CHECK_NEW_MEMORY(ctx, value->name_list, sizeof(LinkedList), "LinkedList");
+
+    uint32 tag = kmip_peek_tag(ctx);
+    while(tag == KMIP_TAG_ATTRIBUTE_NAME)
+    {
+        LinkedListItem *item = ctx->calloc_func(ctx->state, 1, sizeof(LinkedListItem));
+        CHECK_NEW_MEMORY(ctx, item, sizeof(LinkedListItem), "LinkedListItem");
+        kmip_linked_list_enqueue(value->name_list, item);
+
+        item->data = ctx->calloc_func(ctx->state, 1, sizeof(TextString));
+        CHECK_NEW_MEMORY(ctx, item->data, sizeof(TextString), "Attribute Name text string");
+
+        result = kmip_decode_text_string(ctx, KMIP_TAG_ATTRIBUTE_NAME, item->data);
         CHECK_RESULT(ctx, result);
 
         tag = kmip_peek_tag(ctx);
