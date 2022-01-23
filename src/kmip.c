@@ -11759,6 +11759,8 @@ kmip_decode_locate_request_payload(KMIP* ctx, LocateRequestPayload *value)
     }
     if(kmip_is_tag_next(ctx, KMIP_TAG_OBJECT_GROUP_MEMBER))
     {
+        result = kmip_decode_enum(ctx, KMIP_TAG_OBJECT_GROUP_MEMBER, &value->group_member_option);
+        CHECK_RESULT(ctx, result);
     }
     uint32 tag = kmip_peek_tag(ctx);
     if (tag == KMIP_TAG_ATTRIBUTE)
