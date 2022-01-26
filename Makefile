@@ -23,6 +23,7 @@ VERSION = $(MAJOR).$(MINOR).$(MICRO)
 
 NAME      = libkmip
 CORE_NAME = $(NAME)-core
+SGX_NAME  = $(NAME)-sgx
 
 ARC_NAME       = $(NAME).a
 LINK_NAME      = $(NAME).so
@@ -34,7 +35,10 @@ LINK_CORE_NAME = $(CORE_NAME).so
 SO_CORE_NAME   = $(LINK_CORE_NAME).$(MAJOR)
 LIB_CORE_NAME  = $(LINK_CORE_NAME).$(VERSION)
 
-LIBS           = $(LIB_DIR)/$(LIB_NAME) $(LIB_DIR)/$(LIB_CORE_NAME) $(LIB_DIR)/$(ARC_NAME) $(LIB_DIR)/$(ARC_CORE_NAME)
+ARC_SGX_NAME   = $(SGX_NAME).a
+
+LIBS           = $(LIB_DIR)/$(LIB_NAME) $(LIB_DIR)/$(LIB_CORE_NAME) \
+                 $(LIB_DIR)/$(ARC_NAME) $(LIB_DIR)/$(ARC_CORE_NAME) $(LIB_DIR)/$(ARC_SGX_NAME)
 
 CC = cc
 AR = ar csrv
@@ -145,6 +149,8 @@ $(LIB_DIR)/$(ARC_NAME): $(SRC_O_FILES)
 	$(AR) $@ $(SRC_O_FILES)
 $(LIB_DIR)/$(ARC_CORE_NAME): $(SRC_O_CORE_FILES)
 	$(AR) $@ $(SRC_O_CORE_FILES)
+$(LIB_DIR)/$(ARC_SGX_NAME): $(SRC_LO_CORE_FILES)
+	$(AR) $@ $(SRC_LO_CORE_FILES)
 
 ## Target to run test suite
 test: tests
@@ -191,6 +197,7 @@ uninstall:
 	rm -r $(DEST_DIR)$(PREFIX)/lib/$(LINK_CORE_NAME)*
 	rm -r $(DEST_DIR)$(PREFIX)/lib/$(ARC_NAME)
 	rm -r $(DEST_DIR)$(PREFIX)/lib/$(ARC_CORE_NAME)
+	rm -r $(DEST_DIR)$(PREFIX)/lib/$(ARC_SGX_NAME)
 
 uninstall_html_docs:
 	rm -rf $(DEST_DIR)$(PREFIX)/share/doc/$(KMIP)/html
