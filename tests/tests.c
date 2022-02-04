@@ -12029,6 +12029,98 @@ test_decode_attribute_names(TestTracker *tracker)
 }
 
 int
+test_encode_attribute_contact_information(TestTracker *tracker)
+{
+    TRACK_TEST(tracker);
+
+    /* This encoding matches the following values:
+    *  Attribute
+    *      Attribute Name - Contact Information
+    *      Attribute Value - Foo
+    */
+    uint8 expected[56] = {
+        0x42, 0x00, 0x08, 0x01, 0x00, 0x00, 0x00, 0x30,
+        0x42, 0x00, 0x0A, 0x07, 0x00, 0x00, 0x00, 0x13,             // attr: contact
+        0x43, 0x6F, 0x6E, 0x74, 0x61, 0x63, 0x74, 0x20,
+        0x49, 0x6E, 0x66, 0x6F, 0x72, 0x6D, 0x61, 0x74,
+        0x69, 0x6F, 0x6E, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x42, 0x00, 0x0B, 0x07, 0x00, 0x00, 0x00, 0x03,             // Foo
+        0x46, 0x6F, 0x6F, 0x00, 0x00, 0x00, 0x00, 0x00,
+    };
+
+    uint8 observed[56] = {0};
+    KMIP ctx = {0};
+    kmip_init(&ctx, observed, ARRAY_LENGTH(observed), KMIP_1_0);
+
+    TextString contact = {0};
+    contact.value = "Foo";
+    contact.size = 3;
+
+    Attribute attr = {0};
+    kmip_init_attribute(&attr);
+
+    attr.type = KMIP_ATTR_CONTACT_INFORMATION;
+    attr.value = &contact;
+
+    int result = kmip_encode_attribute(&ctx, &attr);
+    result = report_encoding_test_result(
+        tracker,
+        &ctx,
+        expected,
+        observed,
+        result,
+        __func__);
+    kmip_destroy(&ctx);
+    return(result);
+}
+
+int
+test_decode_attribute_contact_information(TestTracker *tracker)
+{
+    TRACK_TEST(tracker);
+
+    /* This encoding matches the following values:
+    *  Attribute
+    *      Attribute Name - Contact Information
+    *      Attribute Value - Foo
+    */
+    uint8 encoding[56] = {
+        0x42, 0x00, 0x08, 0x01, 0x00, 0x00, 0x00, 0x30,
+        0x42, 0x00, 0x0A, 0x07, 0x00, 0x00, 0x00, 0x13,             // attr: contact
+        0x43, 0x6F, 0x6E, 0x74, 0x61, 0x63, 0x74, 0x20,
+        0x49, 0x6E, 0x66, 0x6F, 0x72, 0x6D, 0x61, 0x74,
+        0x69, 0x6F, 0x6E, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x42, 0x00, 0x0B, 0x07, 0x00, 0x00, 0x00, 0x03,             // Foo
+        0x46, 0x6F, 0x6F, 0x00, 0x00, 0x00, 0x00, 0x00,
+    };
+
+    struct kmip ctx = {0};
+    kmip_init(&ctx, encoding, ARRAY_LENGTH(encoding), KMIP_1_0);
+
+    struct text_string contact = {0};
+    contact.value = "Foo";
+    contact.size = 3;
+
+    struct attribute expected = {0};
+    kmip_init_attribute(&expected);
+    expected.type = KMIP_ATTR_CONTACT_INFORMATION;
+    expected.value = &contact;
+    struct attribute observed = {0};
+    kmip_init_attribute(&observed);
+
+    int result = kmip_decode_attribute(&ctx, &observed);
+    result = report_decoding_test_result(
+        tracker,
+        &ctx,
+        kmip_compare_attribute(&expected, &observed),
+        result,
+        __func__);
+    kmip_free_attribute(&ctx, &observed);
+    kmip_destroy(&ctx);
+    return(result);
+}
+
+int
 test_encode_get_attributes_request_payload(TestTracker *tracker)
 {
     TRACK_TEST(tracker);
@@ -12140,7 +12232,6 @@ test_decode_get_attributes_request_payload(TestTracker *tracker)
      0x65, 0x32, 0x2D, 0x39, 0x33, 0x61, 0x30, 0x2D,
      0x63, 0x34, 0x39, 0x34, 0x61, 0x31, 0x64, 0x34,
      0x61, 0x65, 0x34, 0x30, 0x00, 0x00, 0x00, 0x00,
-
      0x42, 0x00, 0x0A, 0x07, 0x00, 0x00, 0x00, 0x0C,             // attr: object group
      0x4F, 0x62, 0x6A, 0x65, 0x63, 0x74, 0x20, 0x47,
      0x72, 0x6F, 0x75, 0x70, 0x00, 0x00, 0x00, 0x00,
@@ -12213,6 +12304,211 @@ test_decode_get_attributes_request_payload(TestTracker *tracker)
         __func__);
     kmip_free_get_attributes_request_payload(&ctx, &observed);
 
+    kmip_destroy(&ctx);
+    return(result);
+}
+
+int
+test_decode_get_attributes_response_payload(TestTracker *tracker)
+{
+    TRACK_TEST(tracker);
+
+  /*  Tag: Unique Identifier (0x420094), Type: Text String (0x07), Data: b4faee10-aa2a-4446-8ad4-0881f3422959
+      Tag: Attribute (0x420008), Type: Structure (0x01), Data:
+        Tag: Attribute Name (0x42000A), Type: Text String (0x07), Data: Name
+        Tag: Attribute Value (0x42000B), Type: Structure (0x01), Data:
+          Tag: Name Value (0x420055), Type: Text String (0x07), Data: Key1
+          Tag: Name Type (0x420054), Type: Enumeration (0x05), Data: 0x00000001 (Uninterpreted Text String)
+      Tag: Attribute (0x420008), Type: Structure (0x01), Data:
+        Tag: Attribute Name (0x42000A), Type: Text String (0x07), Data: Contact Information
+        Tag: Attribute Value (0x42000B), Type: Text String (0x07), Data: Foo
+  */
+
+
+    uint8 encoded[] = {
+       0x42, 0x00, 0x7C, 0x01, 0x00, 0x00, 0x00, 0xA8,
+       0x42, 0x00, 0x94, 0x07, 0x00, 0x00, 0x00, 0x24,
+       0x62, 0x34, 0x66, 0x61, 0x65, 0x65, 0x31, 0x30,
+       0x2D, 0x61, 0x61, 0x32, 0x61, 0x2D, 0x34, 0x34,
+       0x34, 0x36, 0x2D, 0x38, 0x61, 0x64, 0x34, 0x2D,
+       0x30, 0x38, 0x38, 0x31, 0x66, 0x33, 0x34, 0x32,
+       0x32, 0x39, 0x35, 0x39, 0x00, 0x00, 0x00, 0x00,
+       0x42, 0x00, 0x08, 0x01, 0x00, 0x00, 0x00, 0x38,
+       0x42, 0x00, 0x0A, 0x07, 0x00, 0x00, 0x00, 0x04,
+       0x4E, 0x61, 0x6D, 0x65, 0x00, 0x00, 0x00, 0x00,
+       0x42, 0x00, 0x0B, 0x01, 0x00, 0x00, 0x00, 0x20,
+       0x42, 0x00, 0x55, 0x07, 0x00, 0x00, 0x00, 0x04,
+       0x4B, 0x65, 0x79, 0x31, 0x00, 0x00, 0x00, 0x00,
+       0x42, 0x00, 0x54, 0x05, 0x00, 0x00, 0x00, 0x04,
+       0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00,
+       0x42, 0x00, 0x08, 0x01, 0x00, 0x00, 0x00, 0x30,
+       0x42, 0x00, 0x0A, 0x07, 0x00, 0x00, 0x00, 0x13,
+       0x43, 0x6F, 0x6E, 0x74, 0x61, 0x63, 0x74, 0x20,
+       0x49, 0x6E, 0x66, 0x6F, 0x72, 0x6D, 0x61, 0x74,
+       0x69, 0x6F, 0x6E, 0x00, 0x00, 0x00, 0x00, 0x00,
+       0x42, 0x00, 0x0B, 0x07, 0x00, 0x00, 0x00, 0x03,
+       0x46, 0x6F, 0x6F, 0x00, 0x00, 0x00, 0x00, 0x00,
+    };
+
+    struct kmip ctx = {0};
+    kmip_init(&ctx, encoded, ARRAY_LENGTH(encoded), KMIP_1_0);
+
+    struct text_string uuid = {0};
+    uuid.value = "b4faee10-aa2a-4446-8ad4-0881f3422959";
+    uuid.size = 36;
+
+    struct attribute a[2] = {{0}};
+    for(int i = 0; i < 2; i++)
+    {
+        kmip_init_attribute(&a[i]);
+    }
+
+    struct text_string value = {0};
+    value.value = "Key1";
+    value.size = 4;
+
+    struct name name = {0};
+    name.value = &value;
+    name.type = KMIP_NAME_UNINTERPRETED_TEXT_STRING;
+    a[0].type = KMIP_ATTR_NAME;
+    a[0].value = &name;
+
+    struct text_string n = {0};
+    n.value = "Foo";
+    n.size = 3;
+
+    a[1].type = KMIP_ATTR_CONTACT_INFORMATION;
+    a[1].value = &n;
+
+    Attributes attributes = {0};
+    LinkedList list = {0};
+    LinkedListItem item_1 = {0};
+    item_1.data = &a[0];
+
+    LinkedListItem item_2 = {0};
+    item_2.data = &a[1];
+
+    kmip_linked_list_enqueue(&list, &item_1);
+    kmip_linked_list_enqueue(&list, &item_2);
+    attributes.attribute_list = &list;
+
+    GetAttributesResponsePayload expected = {0};
+    expected.unique_identifier = &uuid;
+    expected.attributes = &attributes;
+
+    GetAttributesResponsePayload observed = {0};
+
+    int result = kmip_decode_get_attributes_response_payload(&ctx, &observed);
+    result = report_decoding_test_result(
+        tracker,
+        &ctx,
+        kmip_compare_get_attributes_response_payload(&expected, &observed),
+        result,
+        __func__);
+    kmip_free_get_attributes_response_payload(&ctx, &observed);
+    kmip_destroy(&ctx);
+
+    return(result);
+
+}
+
+int
+test_encode_get_attributes_response_payload(TestTracker *tracker)
+{
+    TRACK_TEST(tracker);
+
+  /*  Tag: Unique Identifier (0x420094), Type: Text String (0x07), Data: b4faee10-aa2a-4446-8ad4-0881f3422959
+      Tag: Attribute (0x420008), Type: Structure (0x01), Data:
+        Tag: Attribute Name (0x42000A), Type: Text String (0x07), Data: Name
+        Tag: Attribute Value (0x42000B), Type: Structure (0x01), Data:
+          Tag: Name Value (0x420055), Type: Text String (0x07), Data: Key1
+          Tag: Name Type (0x420054), Type: Enumeration (0x05), Data: 0x00000001 (Uninterpreted Text String)
+      Tag: Attribute (0x420008), Type: Structure (0x01), Data:
+        Tag: Attribute Name (0x42000A), Type: Text String (0x07), Data: Contact Information
+        Tag: Attribute Value (0x42000B), Type: Text String (0x07), Data: Foo
+  */
+
+    uint8 expected[] = {
+       0x42, 0x00, 0x7C, 0x01, 0x00, 0x00, 0x00, 0xA8,
+       0x42, 0x00, 0x94, 0x07, 0x00, 0x00, 0x00, 0x24,
+       0x62, 0x34, 0x66, 0x61, 0x65, 0x65, 0x31, 0x30,
+       0x2D, 0x61, 0x61, 0x32, 0x61, 0x2D, 0x34, 0x34,
+       0x34, 0x36, 0x2D, 0x38, 0x61, 0x64, 0x34, 0x2D,
+       0x30, 0x38, 0x38, 0x31, 0x66, 0x33, 0x34, 0x32,
+       0x32, 0x39, 0x35, 0x39, 0x00, 0x00, 0x00, 0x00,
+       0x42, 0x00, 0x08, 0x01, 0x00, 0x00, 0x00, 0x38,
+       0x42, 0x00, 0x0A, 0x07, 0x00, 0x00, 0x00, 0x04,
+       0x4E, 0x61, 0x6D, 0x65, 0x00, 0x00, 0x00, 0x00,
+       0x42, 0x00, 0x0B, 0x01, 0x00, 0x00, 0x00, 0x20,
+       0x42, 0x00, 0x55, 0x07, 0x00, 0x00, 0x00, 0x04,
+       0x4B, 0x65, 0x79, 0x31, 0x00, 0x00, 0x00, 0x00,
+       0x42, 0x00, 0x54, 0x05, 0x00, 0x00, 0x00, 0x04,
+       0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00,
+       0x42, 0x00, 0x08, 0x01, 0x00, 0x00, 0x00, 0x30,
+       0x42, 0x00, 0x0A, 0x07, 0x00, 0x00, 0x00, 0x13,
+       0x43, 0x6F, 0x6E, 0x74, 0x61, 0x63, 0x74, 0x20,
+       0x49, 0x6E, 0x66, 0x6F, 0x72, 0x6D, 0x61, 0x74,
+       0x69, 0x6F, 0x6E, 0x00, 0x00, 0x00, 0x00, 0x00,
+       0x42, 0x00, 0x0B, 0x07, 0x00, 0x00, 0x00, 0x03,
+       0x46, 0x6F, 0x6F, 0x00, 0x00, 0x00, 0x00, 0x00,
+    };
+
+    uint8 observed[22*8] = {0};
+    struct kmip ctx = {0};
+    kmip_init(&ctx, observed, ARRAY_LENGTH(observed), KMIP_1_0);
+
+    struct text_string uuid = {0};
+    uuid.value = "b4faee10-aa2a-4446-8ad4-0881f3422959";
+    uuid.size = 36;
+
+    struct attribute a[2] = {{0}};
+    for(int i = 0; i < 2; i++)
+    {
+        kmip_init_attribute(&a[i]);
+    }
+
+    struct text_string value = {0};
+    value.value = "Key1";
+    value.size = 4;
+
+    struct name name = {0};
+    name.value = &value;
+    name.type = KMIP_NAME_UNINTERPRETED_TEXT_STRING;
+    a[0].type = KMIP_ATTR_NAME;
+    a[0].value = &name;
+
+    struct text_string n = {0};
+    n.value = "Foo";
+    n.size = 3;
+
+    a[1].type = KMIP_ATTR_CONTACT_INFORMATION;
+    a[1].value = &n;
+
+    Attributes attributes = {0};
+    LinkedList list = {0};
+    LinkedListItem item_1 = {0};
+    item_1.data = &a[0];
+
+    LinkedListItem item_2 = {0};
+    item_2.data = &a[1];
+
+    kmip_linked_list_enqueue(&list, &item_1);
+    kmip_linked_list_enqueue(&list, &item_2);
+    attributes.attribute_list = &list;
+
+
+    GetAttributesResponsePayload garp = {0};
+    garp.unique_identifier = &uuid;
+    garp.attributes = &attributes;
+
+    int result = kmip_encode_get_attributes_response_payload(&ctx, &garp);
+    result = report_encoding_test_result(
+        tracker,
+        &ctx,
+        expected,
+        observed,
+        result,
+        __func__);
     kmip_destroy(&ctx);
     return(result);
 }
@@ -13309,6 +13605,7 @@ run_tests(void)
     test_decode_attribute_process_start_date(&tracker);
     test_decode_attribute_protect_stop_date(&tracker);
     test_decode_attribute_cryptographic_parameters(&tracker);
+    test_decode_attribute_contact_information(&tracker);
     test_decode_template_attribute(&tracker);
     test_decode_protocol_version(&tracker);
     test_decode_key_material_byte_string(&tracker);
@@ -13341,13 +13638,14 @@ run_tests(void)
     test_decode_request_batch_item_get_payload(&tracker);
     test_decode_request_message_get(&tracker);
     test_decode_response_message_get(&tracker);
+    test_decode_attribute_names(&tracker);
+    test_decode_get_attributes_request_payload(&tracker);
+    test_decode_get_attributes_response_payload(&tracker);
     test_decode_query_functions(&tracker);
     test_decode_operations(&tracker);
     test_decode_object_types(&tracker);
     test_compare_query_functions(&tracker);
     test_decode_query_response_payload(&tracker);
-    test_decode_attribute_names(&tracker);
-    test_decode_get_attributes_request_payload(&tracker);
     
     printf("\n");
     test_encode_integer(&tracker);
@@ -13409,10 +13707,12 @@ run_tests(void)
     test_encode_request_message_get(&tracker);
     test_encode_response_message_get(&tracker);
     test_encode_template_attribute(&tracker);
+    test_encode_attribute_names(&tracker);
+    test_encode_attribute_contact_information(&tracker);
+    test_encode_get_attributes_request_payload(&tracker);
+    test_encode_get_attributes_response_payload(&tracker);
     test_encode_query_functions(&tracker);
     test_encode_query_request_payload(&tracker);
-    test_encode_attribute_names(&tracker);
-    test_encode_get_attributes_request_payload(&tracker);
 
     
     printf("\nKMIP 1.1 Feature Tests\n");

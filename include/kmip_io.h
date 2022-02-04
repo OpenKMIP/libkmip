@@ -91,10 +91,11 @@ void kmip_print_query_function_enum(FILE*, int, enum query_function);
 void kmip_print_query_functions(FILE*, int, Functions*);
 void kmip_print_operations(FILE*, int, Operations *);
 void kmip_print_object_types(FILE*, int, ObjectTypes*);
+void kmip_print_attribute_names(FILE*, int, AttributeNames*);
+void kmip_print_get_attributes_request_payload(FILE*, int, GetAttributesRequestPayload*);
+void kmip_print_get_attributes_response_payload(FILE*, int, GetAttributesResponsePayload*);
 void kmip_print_query_request_payload(FILE*, int, QueryRequestPayload *);
 void kmip_print_query_response_payload(FILE*, int, QueryResponsePayload *);
 void kmip_print_server_information(FILE*, int, ServerInformation*);
-void kmip_print_attribute_names(FILE*, int, AttributeNames*);
-void kmip_print_get_attributes_request_payload(FILE*, int, GetAttributesRequestPayload*);
 
 #endif  /* KMIP_IO_H */
