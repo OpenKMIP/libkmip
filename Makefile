@@ -42,7 +42,8 @@ CFLAGS  = -std=c11 -pedantic -g3 -Wall -Wextra
 LOFLAGS = -fPIC
 SOFLAGS = -shared -Wl,-soname,$(SO_NAME)
 SOCOREFLAGS = -shared -Wl,-soname,$(SO_CORE_NAME)
-LDFLAGS = -L/usr/local/lib64 -L/usr/local/lib
+#LDFLAGS = -L/usr/local/lib64 -L/usr/local/lib
+LDFLAGS = -L/usr/local/lib
 LDLIBS  = -lssl -lcrypto 
 
 INC_FLAGS = -I$(INC_DIR)

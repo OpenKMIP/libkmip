@@ -1565,8 +1565,6 @@ int kmip_bio_query_with_context(KMIP *ctx, BIO *bio, enum query_function queries
         return(result);
     }
 
-    kmip_free_query_request_payload(ctx, &qrp);
-
     if (response)
     {
         FILE* out = fopen( "/tmp/kmip_query.dat", "w" );
