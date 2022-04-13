@@ -148,6 +148,7 @@ int use_low_level_api(KMIP *ctx, BIO *bio, Attribute* attribs, size_t attrib_cou
     rh.batch_count = 1;
 
     // copy input array to list
+    Attributes attributes = {0};
     LinkedList *attribute_list = ctx->calloc_func(ctx->state, 1, sizeof(LinkedList));
     for(size_t i = 0; i < attrib_count; i++)
     {
@@ -155,13 +156,14 @@ int use_low_level_api(KMIP *ctx, BIO *bio, Attribute* attribs, size_t attrib_cou
         item->data = kmip_deep_copy_attribute(ctx, &attribs[i]);
         kmip_linked_list_enqueue(attribute_list, item);
     }
+    attributes.attribute_list = attribute_list;
 
     LocateRequestPayload lrp = {0};
     lrp.maximum_items = 12;
     lrp.offset_items = 0;
     lrp.storage_status_mask = 0;
     lrp.group_member_option = 0;
-    lrp.attributes = attribute_list;
+    lrp.attributes = &attributes;
 
     RequestBatchItem rbi = {0};
     kmip_init_request_batch_item(&rbi);
@@ -535,8 +537,13 @@ main(int argc, char **argv)
     /* Set up the TLS connection to the KMIP server. */
     SSL_CTX *ctx = NULL;
     SSL *ssl = NULL;
+    #if (OPENSSL_VERSION_NUMBER >= 0x10100000L)
     OPENSSL_init_ssl(0, NULL);
     ctx = SSL_CTX_new(TLS_client_method());
+    #else
+    SSL_library_init();
+    ctx = SSL_CTX_new(SSLv23_client_method());
+    #endif
 
     printf("\n");
     printf("Loading the client certificate: %s\n", client_certificate);

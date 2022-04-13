@@ -1297,6 +1297,12 @@ kmip_print_attribute_type_enum(FILE *f, enum attribute_type value)
         }
         break;
 
+        case KMIP_ATTR_CONTACT_INFORMATION:
+        {
+            fprintf(f, "Contact Information");
+        }
+        break;
+
         case KMIP_ATTR_ACTIVATION_DATE:
         {
             fprintf(f, "Activation Date");
@@ -2523,6 +2529,13 @@ kmip_print_attribute_value(FILE *f, int indent, enum attribute_type type, void *
         }
         break;
 
+        case KMIP_ATTR_CONTACT_INFORMATION:
+        {
+            fprintf(f, "\n");
+            kmip_print_text_string(f, indent + 2, "Contact Information", value);
+        }
+        break;
+
         case KMIP_ATTR_ACTIVATION_DATE:
         case KMIP_ATTR_DEACTIVATION_DATE:
         case KMIP_ATTR_PROCESS_START_DATE:
@@ -3272,6 +3285,54 @@ kmip_print_object_types(FILE* f, int indent, ObjectTypes* value)
 }
 
 void
+kmip_print_attribute_names(FILE* f, int indent, AttributeNames* value)
+{
+    fprintf(f, "%*sAttribute Names @ %p\n", indent, "", (void *)value);
+
+    if(value != NULL &&
+       value->name_list != NULL)
+    {
+        fprintf(f, "%*sNames: %zu\n", indent + 2, "", value->name_list->size);
+        LinkedListItem *curr = value->name_list->head;
+        size_t count = 1;
+        while(curr != NULL)
+        {
+            fprintf(f, "%*sName: %zu: ", indent + 4, "", count);
+            TextString* attrname = (TextString*)curr->data;
+            kmip_print_text_string(f, indent + 2, "Attribute Name", attrname);
+            fprintf(f, "\n");
+
+            curr = curr->next;
+            count++;
+        }
+    }
+}
+
+void
+kmip_print_get_attributes_request_payload(FILE* f, int indent, GetAttributesRequestPayload *value)
+{
+    fprintf(f,"%*sGet Attributes Request Payload @ %p\n", indent, "", (void *)value);
+
+    if(value != NULL)
+    {
+        kmip_print_text_string(f, indent + 2, "Unique Identifier", value->unique_identifier);
+        kmip_print_attribute_names(f, indent + 2, value->attribute_names);
+    }
+}
+
+void
+kmip_print_get_attributes_response_payload(FILE* f, int indent, GetAttributesResponsePayload *value)
+{
+    fprintf(f,"%*sGet Attributes Response Payload @ %p\n", indent, "", (void *)value);
+
+    if(value != NULL)
+    {
+        kmip_print_text_string(f, indent + 2, "Unique Identifier", value->unique_identifier);
+        kmip_print_attributes(f, indent + 2, value->attributes);
+    }
+}
+
+void
 kmip_print_alternative_endpoints(FILE* f, int indent, AltEndpoints* value)
 {
     fprintf(f, "%*sAlt Endpointss @ %p\n", indent, "", (void *)value);
@@ -3314,7 +3375,6 @@ kmip_print_server_information(FILE* f, int indent, ServerInformation* value)
         kmip_print_alternative_endpoints(f,indent+2, value->alternative_failover_endpoints);
     }
 }
-
 
 void
 kmip_print_query_response_payload(FILE* f, int indent, QueryResponsePayload *value)

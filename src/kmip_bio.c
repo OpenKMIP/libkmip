@@ -1565,8 +1565,6 @@ int kmip_bio_query_with_context(KMIP *ctx, BIO *bio, enum query_function queries
         return(result);
     }
 
-    kmip_free_query_request_payload(ctx, &qrp);
-
     if (response)
     {
         FILE* out = fopen( "/tmp/kmip_query.dat", "w" );
@@ -1656,6 +1654,7 @@ int kmip_bio_locate_with_context(KMIP *ctx, BIO *bio, Attribute* attribs, size_t
 
 
     // copy input array to list
+    Attributes attributes = {0};
     LinkedList *attribute_list = ctx->calloc_func(ctx->state, 1, sizeof(LinkedList));
     for(size_t i = 0; i < attrib_count; i++)
     {
@@ -1663,13 +1662,14 @@ int kmip_bio_locate_with_context(KMIP *ctx, BIO *bio, Attribute* attribs, size_t
         item->data = kmip_deep_copy_attribute(ctx, &attribs[i]);
         kmip_linked_list_enqueue(attribute_list, item);
     }
+    attributes.attribute_list = attribute_list;
 
     LocateRequestPayload lrp = {0};
     lrp.maximum_items = 12;
     lrp.offset_items = 0;
     lrp.storage_status_mask = 0;
     lrp.group_member_option = 0;
-    lrp.attributes = attribute_list;
+    lrp.attributes = &attributes;
 
     RequestBatchItem rbi = {0};
     kmip_init_request_batch_item(&rbi);

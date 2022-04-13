@@ -42,6 +42,8 @@ int kmip_bio_create_symmetric_key_with_context(KMIP *, BIO *, TemplateAttribute 
 int kmip_bio_get_symmetric_key_with_context(KMIP *, BIO *, char *, int, char **, int *);
 int kmip_bio_destroy_symmetric_key_with_context(KMIP *, BIO *, char *, int);
 
+int kmip_bio_get_attributes_with_context(KMIP *ctx, BIO *bio, Attribute* attribs, size_t attrib_count, LocateResponse* locate_result);
+
 int kmip_bio_query_with_context(KMIP *ctx, BIO *bio, enum query_function queries[], size_t query_count, QueryResponse* query_result);
 int kmip_bio_send_request_encoding(KMIP *, BIO *, char *, int, char **, int *);
 
