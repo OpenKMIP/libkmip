@@ -97,7 +97,59 @@ enum attribute_type
     KMIP_ATTR_DEACTIVATION_DATE                = 11,
     KMIP_ATTR_PROCESS_START_DATE               = 12,
     KMIP_ATTR_PROTECT_STOP_DATE                = 13,
-    KMIP_ATTR_CRYPTOGRAPHIC_PARAMETERS         = 14
+    KMIP_ATTR_CRYPTOGRAPHIC_PARAMETERS         = 14,
+
+    KMIP_ATTR_ARCHIVE_DATE                     ,
+    KMIP_ATTR_CERTIFICATE_IDENTIFIER           ,
+    KMIP_ATTR_CERTIFICATE_ISSUER               ,
+    KMIP_ATTR_CERTIFICATE_SUBJECT              ,
+    KMIP_ATTR_CERTIFICATE_TYPE                 ,
+    KMIP_ATTR_COMPROMISE_DATE                  ,
+    KMIP_ATTR_COMPROMISE_OCCURRENCE_DATE       ,
+    KMIP_ATTR_CONTACT_INFORMATION              ,
+    KMIP_ATTR_CRYPTOGRAPHIC_DOMAIN_PARAMETERS  ,
+    KMIP_ATTR_CUSTOM_ATTRIBUTE                 ,
+    KMIP_ATTR_DESTROY_DATE                     ,
+    KMIP_ATTR_DIGEST                           ,
+    KMIP_ATTR_INITIAL_DATE                     ,
+    KMIP_ATTR_LAST_CHANGE_DATE                 ,
+    KMIP_ATTR_LEASE_TIME                       ,
+    KMIP_ATTR_LINK                             ,
+    KMIP_ATTR_REVOCATION_REASON                ,
+    KMIP_ATTR_USAGE_LIMITS                     ,
+
+    //_KMIP_1.2
+    KMIP_ATTR_ALTERNATIVE_NAME                 ,
+    KMIP_ATTR_CERTIFICATE_LENGTH               ,
+    KMIP_ATTR_DIGITAL_SIGNATURE_ALGORITHM      ,
+    KMIP_ATTR_FRESH                            ,
+    KMIP_ATTR_KEY_VALUE_LOCATION               ,
+    KMIP_ATTR_KEY_VALUE_PRESENT                ,
+    KMIP_ATTR_ORIGINAL_CREATION_DATE           ,
+
+    //_KMIP_2.0
+    KMIP_ATTR_ALWAYS_SENSITIVE                 ,
+    KMIP_ATTR_CERTIFICATE_ATTRIBUTES           ,
+    KMIP_ATTR_COMMENT                          ,
+    KMIP_ATTR_DESCRIPTION                      ,
+    KMIP_ATTR_EXTRACTABLE                      ,
+    KMIP_ATTR_KEY_FORMAT_TYPE                  ,
+    KMIP_ATTR_NEVER_EXTRACTABLE                ,
+    KMIP_ATTR_NIST_KEY_TYPE                    ,
+    KMIP_ATTR_OPAQUE_DATA_TYPE                 ,
+    KMIP_ATTR_PKCS12_FRIENDLY_NAME             ,
+    KMIP_ATTR_PROTECTION_LEVEL                 ,
+    KMIP_ATTR_PROTECTION_PERIOD                ,
+    KMIP_ATTR_PROTECTION_STORAGE_MASK          ,
+    KMIP_ATTR_QUANTUM_SAFE                     ,
+    KMIP_ATTR_RANDOM_NUMBER_GENERATOR          ,
+    KMIP_ATTR_SENSITIVE                        ,
+    KMIP_ATTR_SHORT_UNIQUE_IDENTIFIER          ,
+    KMIP_ATTR_VENDOR_ATTRIBUTE                 ,
+    KMIP_ATTR_X509_CERTIFICATE_IDENTIFIER      ,
+    KMIP_ATTR_X509_CERTIFICATE_ISSUER          ,
+    KMIP_ATTR_X509_CERTIFICATE_SUBJECT         ,
+
 };
 
 enum batch_error_continuation_option
@@ -533,6 +585,13 @@ enum query_function
     KMIP_QUERY_STORAGE_PROTECTION_MASKS    = 0x000E
 };
 
+enum group_member_option
+{
+    group_member_fresh       =  0x00000001,
+    group_member_default     =  0x00000002
+};
+
+
 enum result_reason
 {
     /* KMIP 1.0 */
@@ -725,6 +784,7 @@ enum tag
     KMIP_TAG_MACHINE_IDENTIFIER               = 0x4200A9,
     KMIP_TAG_MEDIA_IDENTIFIER                 = 0x4200AA,
     KMIP_TAG_NETWORK_IDENTIFIER               = 0x4200AB,
+    KMIP_TAG_OBJECT_GROUP_MEMBER              = 0x4200AC,
     KMIP_TAG_DIGITAL_SIGNATURE_ALGORITHM      = 0x4200AE,
     KMIP_TAG_DEVICE_SERIAL_NUMBER             = 0x4200B0,
     /* KMIP 1.2 */
@@ -742,6 +802,8 @@ enum tag
     KMIP_TAG_INITIAL_COUNTER_VALUE            = 0x4200D1,
     KMIP_TAG_INVOCATION_FIELD_LENGTH          = 0x4200D2,
     KMIP_TAG_ATTESTATION_CAPABLE_INDICATOR    = 0x4200D3,
+    KMIP_TAG_OFFSET_ITEMS                     = 0x4200D4,
+    KMIP_TAG_LOCATED_ITEMS                    = 0x4200D5,
     /* KMIP 1.4 */
     KMIP_TAG_KEY_WRAP_TYPE                    = 0x4200F8,
     KMIP_TAG_SALT_LENGTH                      = 0x420100,
@@ -882,6 +944,11 @@ typedef struct attributes
 {
     LinkedList *attribute_list;
 } Attributes;
+
+typedef struct attribute_names
+{
+    LinkedList *name_list;
+} AttributeNames;
 
 typedef struct name
 {
@@ -1055,6 +1122,16 @@ typedef struct get_response_payload
     void *object;
 } GetResponsePayload;
 
+typedef struct activate_request_payload
+{
+    TextString *unique_identifier;
+} ActivateRequestPayload;
+
+typedef struct activate_response_payload
+{
+    TextString *unique_identifier;
+} ActivateResponsePayload;
+
 typedef struct destroy_request_payload
 {
     TextString *unique_identifier;
@@ -1226,6 +1303,17 @@ typedef struct application_namespaces
     LinkedList *app_namespace_list;
 } ApplicationNamespaces;
 */
+typedef struct get_attributes_request_payload
+{
+    TextString *unique_identifier;
+    AttributeNames *attribute_names;
+} GetAttributesRequestPayload;
+
+typedef struct get_attributes_response_payload
+{
+    TextString *unique_identifier;
+    Attributes *attributes;
+} GetAttributesResponsePayload;
 
 typedef struct query_request_payload
 {
@@ -1272,6 +1360,39 @@ typedef struct query_response
     char             build_date[MAX_QUERY_LEN];
     char             cluster_info[MAX_QUERY_LEN];
 } QueryResponse;
+
+
+typedef struct locate_request_payload
+{
+    int32  maximum_items;      // An Integer object that indicates the maximum number of object identifiers the server MAY return.
+    int32  offset_items;       // An Integer object that indicates the number of object identifiers to skip that satisfy the identification criteria specified in the request.
+    int32  storage_status_mask; // An Integer object (used as a bit mask) that indicates whether only on-line objects, only archived objects, destroyed objects or any combination of these, are to be searched. If omitted, then only on-line objects SHALL be returned.
+    enum   group_member_option group_member_option; // An Enumeration object that indicates the object group member type.
+    Attributes *attributes;     // Specifies an attribute and its value(s) that are REQUIRED to match those in a candidate object (according to the matching rules defined above).
+} LocateRequestPayload;
+
+
+typedef struct unique_identifiers
+{
+    LinkedList *unique_identifier_list;
+} UniqueIdentifiers;
+
+typedef struct locate_response_payload
+{
+    int32 located_items;      // KMIP 1.3+, Optional; Note that this may not equal the number of object identifiers returned in this payload
+    UniqueIdentifiers* unique_ids;
+} LocateResponsePayload;
+
+
+#define MAX_LOCATE_IDS   32
+#define MAX_LOCATE_LEN   128
+
+typedef struct locate_response
+{
+    int              located_items;    // KMIP 1.3+, optional
+    size_t           ids_size;
+    char             ids[MAX_LOCATE_IDS][MAX_LOCATE_LEN];
+} LocateResponse;
 
 /*
 Macros
@@ -1512,6 +1633,8 @@ void kmip_free_create_request_payload(KMIP *, CreateRequestPayload *);
 void kmip_free_create_response_payload(KMIP *, CreateResponsePayload *);
 void kmip_free_get_request_payload(KMIP *, GetRequestPayload *);
 void kmip_free_get_response_payload(KMIP *, GetResponsePayload *);
+void kmip_free_activate_request_payload(KMIP *, ActivateRequestPayload *);
+void kmip_free_activate_response_payload(KMIP *, ActivateResponsePayload *);
 void kmip_free_destroy_request_payload(KMIP *, DestroyRequestPayload *);
 void kmip_free_destroy_response_payload(KMIP *, DestroyResponsePayload *);
 void kmip_free_request_batch_item(KMIP *, RequestBatchItem *);
@@ -1527,12 +1650,18 @@ void kmip_free_request_header(KMIP *, RequestHeader *);
 void kmip_free_response_header(KMIP *, ResponseHeader *);
 void kmip_free_request_message(KMIP *, RequestMessage *);
 void kmip_free_response_message(KMIP *, ResponseMessage *);
+void kmip_free_attribute_names(KMIP *, AttributeNames*);
+void kmip_free_get_attributes_request_payload(KMIP *, GetAttributesRequestPayload*);
+void kmip_free_get_attributes_response_payload(KMIP *, GetAttributesResponsePayload*);
 void kmip_free_query_functions(KMIP *ctx, Functions*);
 void kmip_free_query_request_payload(KMIP *, QueryRequestPayload *);
 void kmip_free_query_response_payload(KMIP *, QueryResponsePayload *);
-void kmip_free_operations(KMIP *ctx, Operations *value);
-void kmip_free_objects(KMIP *ctx, ObjectTypes* value);
-void kmip_free_server_information(KMIP* ctx, ServerInformation* value);
+void kmip_free_operations(KMIP *ctx, Operations *);
+void kmip_free_objects(KMIP *ctx, ObjectTypes*);
+void kmip_free_server_information(KMIP* ctx, ServerInformation*);
+void kmip_free_locate_request_payload(KMIP *, LocateRequestPayload *);
+void kmip_free_locate_response_payload(KMIP *, LocateResponsePayload *);
+void kmip_free_unique_identifiers(KMIP *ctx, UniqueIdentifiers*);
 
 /*
 Copying Functions
@@ -1550,6 +1679,7 @@ char* kmip_copy_textstring(char* dest, TextString* src, size_t size);
 void kmip_copy_objects(int objs[], size_t* objs_size, ObjectTypes *value, unsigned max_objs);
 void kmip_copy_operations(int ops[], size_t* ops_size, Operations *value, unsigned max_ops);
 void kmip_copy_query_result(QueryResponse* query_result, QueryResponsePayload *pld);
+void kmip_copy_locate_result(LocateResponse* locate_result, LocateResponsePayload *pld);
 
 /*
 Comparison Functions
@@ -1580,6 +1710,8 @@ int kmip_compare_create_request_payload(const CreateRequestPayload *, const Crea
 int kmip_compare_create_response_payload(const CreateResponsePayload *, const CreateResponsePayload *);
 int kmip_compare_get_request_payload(const GetRequestPayload *, const GetRequestPayload *);
 int kmip_compare_get_response_payload(const GetResponsePayload *, const GetResponsePayload *);
+int kmip_compare_activate_request_payload(const ActivateRequestPayload *, const ActivateRequestPayload *);
+int kmip_compare_activate_response_payload(const ActivateResponsePayload *, const ActivateResponsePayload *);
 int kmip_compare_destroy_request_payload(const DestroyRequestPayload *, const DestroyRequestPayload *);
 int kmip_compare_destroy_response_payload(const DestroyResponsePayload *, const DestroyResponsePayload *);
 int kmip_compare_request_batch_item(const RequestBatchItem *, const RequestBatchItem *);
@@ -1598,10 +1730,16 @@ int kmip_compare_response_message(const ResponseMessage *, const ResponseMessage
 int kmip_compare_query_functions(const Functions *, const Functions *);
 int kmip_compare_operations(const Operations *, const Operations *);
 int kmip_compare_objects(const ObjectTypes *, const ObjectTypes *);
+int kmip_compare_attribute_names(const AttributeNames*, const AttributeNames*);
+int kmip_compare_get_attributes_request_payload(const GetAttributesRequestPayload*, const GetAttributesRequestPayload*);
+int kmip_compare_get_attributes_response_payload(const GetAttributesResponsePayload*, const GetAttributesResponsePayload*);
 int kmip_compare_server_information(const ServerInformation *a, const ServerInformation *b);
 int kmip_compare_alternative_endpoints(const AltEndpoints* a, const AltEndpoints* b);
 int kmip_compare_query_request_payload(const QueryRequestPayload *, const QueryRequestPayload *);
 int kmip_compare_query_response_payload(const QueryResponsePayload *, const QueryResponsePayload *);
+int kmip_compare_unique_identifiers(const UniqueIdentifiers*, const UniqueIdentifiers*);
+int kmip_compare_locate_request_payload(const LocateRequestPayload *, const LocateRequestPayload *);
+int kmip_compare_locate_response_payload(const LocateResponsePayload *, const LocateResponsePayload *);
 
 /*
 Encoding Functions
@@ -1625,6 +1763,8 @@ int kmip_encode_attribute_v1(KMIP *, const Attribute *);
 int kmip_encode_attribute_v2(KMIP *, const Attribute *);
 int kmip_encode_attribute(KMIP *, const Attribute *);
 int kmip_encode_attributes(KMIP *, const Attributes *);
+int kmip_encode_attribute_list(KMIP *, const LinkedList*);
+int kmip_encode_attribute_names(KMIP *, const AttributeNames*);
 int kmip_encode_template_attribute(KMIP *, const TemplateAttribute *);
 int kmip_encode_protocol_version(KMIP *, const ProtocolVersion *);
 int kmip_encode_protection_storage_masks(KMIP *, const ProtectionStorageMasks *);
@@ -1645,6 +1785,8 @@ int kmip_encode_create_request_payload(KMIP *, const CreateRequestPayload *);
 int kmip_encode_create_response_payload(KMIP *, const CreateResponsePayload *);
 int kmip_encode_get_request_payload(KMIP *, const GetRequestPayload *);
 int kmip_encode_get_response_payload(KMIP *, const GetResponsePayload *);
+int kmip_encode_activate_request_payload(KMIP *, const ActivateRequestPayload *);
+int kmip_encode_activate_response_payload(KMIP *, const ActivateResponsePayload *);
 int kmip_encode_destroy_request_payload(KMIP *, const DestroyRequestPayload *);
 int kmip_encode_destroy_response_payload(KMIP *, const DestroyResponsePayload *);
 int kmip_encode_nonce(KMIP *, const Nonce *);
@@ -1660,9 +1802,14 @@ int kmip_encode_request_batch_item(KMIP *, const RequestBatchItem *);
 int kmip_encode_response_batch_item(KMIP *, const ResponseBatchItem *);
 int kmip_encode_request_message(KMIP *, const RequestMessage *);
 int kmip_encode_response_message(KMIP *, const ResponseMessage *);
+int kmip_encode_get_attributes_request_payload(KMIP *ctx, const GetAttributesRequestPayload *);
+int kmip_encode_get_attributes_response_payload(KMIP *ctx, const GetAttributesResponsePayload *);
 int kmip_encode_query_functions(KMIP *ctx, const Functions*);
 int kmip_encode_query_request_payload(KMIP *, const QueryRequestPayload *);
 int kmip_encode_query_response_payload(KMIP *, const QueryResponsePayload *);
+int kmip_encode_locate_request_payload(KMIP *, const LocateRequestPayload *);
+int kmip_encode_locate_response_payload(KMIP *, const LocateResponsePayload *);
+int kmip_encode_unique_identifiers(KMIP *, const UniqueIdentifiers*);
 
 /*
 Decoding Functions
@@ -1671,6 +1818,7 @@ Decoding Functions
 int kmip_decode_int8_be(KMIP *, void *);
 int kmip_decode_int32_be(KMIP *, void *);
 int kmip_decode_int64_be(KMIP *, void *);
+int kmip_decode_length(KMIP *, uint32 *);
 int kmip_decode_integer(KMIP *, enum tag, int32 *);
 int kmip_decode_long(KMIP *, enum tag, int64 *);
 int kmip_decode_enum(KMIP *, enum tag, void *);
@@ -1685,6 +1833,7 @@ int kmip_decode_attribute_v1(KMIP *, Attribute *);
 int kmip_decode_attribute_v2(KMIP *, Attribute *);
 int kmip_decode_attribute(KMIP *, Attribute *);
 int kmip_decode_attributes(KMIP *, Attributes *);
+int kmip_decode_attribute_names(KMIP *ctx, AttributeNames*);
 int kmip_decode_template_attribute(KMIP *, TemplateAttribute *);
 int kmip_decode_protocol_version(KMIP *, ProtocolVersion *);
 int kmip_decode_transparent_symmetric_key(KMIP *, TransparentSymmetricKey *);
@@ -1705,6 +1854,8 @@ int kmip_decode_create_request_payload(KMIP *, CreateRequestPayload *);
 int kmip_decode_create_response_payload(KMIP *, CreateResponsePayload *);
 int kmip_decode_get_request_payload(KMIP *, GetRequestPayload *);
 int kmip_decode_get_response_payload(KMIP *, GetResponsePayload *);
+int kmip_decode_activate_request_payload(KMIP *, ActivateRequestPayload *);
+int kmip_decode_activate_response_payload(KMIP *, ActivateResponsePayload *);
 int kmip_decode_destroy_request_payload(KMIP *, DestroyRequestPayload *);
 int kmip_decode_destroy_response_payload(KMIP *, DestroyResponsePayload *);
 int kmip_decode_request_batch_item(KMIP *, RequestBatchItem *);
@@ -1723,9 +1874,14 @@ int kmip_decode_response_message(KMIP *, ResponseMessage *);
 int kmip_decode_query_functions(KMIP *ctx, Functions*);
 int kmip_decode_operations(KMIP *, Operations *);
 int kmip_decode_object_types(KMIP *, ObjectTypes *);
+int kmip_decode_get_attributes_request_payload(KMIP *ctx, GetAttributesRequestPayload *);
+int kmip_decode_get_attributes_response_payload(KMIP *ctx, GetAttributesResponsePayload *);
 int kmip_decode_query_request_payload(KMIP *, QueryRequestPayload *);
 int kmip_decode_query_response_payload(KMIP *, QueryResponsePayload *);
 int kmip_decode_server_information(KMIP *ctx, ServerInformation *);
+int kmip_decode_locate_request_payload(KMIP *, LocateRequestPayload *);
+int kmip_decode_locate_response_payload(KMIP *, LocateResponsePayload *);
+int kmip_decode_unique_identifiers(KMIP* ctx, UniqueIdentifiers* value);
 
 
 #endif  /* KMIP_H */

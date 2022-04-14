@@ -28,12 +28,18 @@ print_help(const char *app)
     printf("-k path : path to client key file\n");
     printf("-p port : the port number of the KMIP server\n");
     printf("-r path : path to CA certificate file\n");
+    printf("-A      : send Activation Date\n");
+    printf("-n name : name of new key\n");
+    printf("-g group : name of object group\n");
 }
 
 int
 parse_arguments(int argc, char **argv,
                 char **server_address, char **server_port,
                 char **client_certificate, char **client_key, char **ca_certificate,
+                int*  activate,
+                char** key_name,
+                char **group,
                 int *print_usage)
 {
     if(argc <= 1)
@@ -56,6 +62,12 @@ parse_arguments(int argc, char **argv,
             *server_port = argv[++i];
         else if(strncmp(argv[i], "-r", 2) == 0)
             *ca_certificate = argv[++i];
+        else if(strncmp(argv[i], "-A", 2) == 0)
+            *activate = 1;
+        else if(strncmp(argv[i], "-n", 2) == 0)
+            *key_name = argv[++i];
+        else if(strncmp(argv[i], "-g", 2) == 0)
+            *group = argv[++i];
         else
         {
             printf("Invalid option: '%s'\n", argv[i]);
@@ -72,14 +84,22 @@ use_low_level_api(const char *server_address,
                   const char *server_port,
                   const char *client_certificate,
                   const char *client_key,
-                  const char *ca_certificate)
+                  const char *ca_certificate,
+                  int activate,
+                  const char *key_name,
+                  const char * group)
 {
     /* Set up the TLS connection to the KMIP server. */
     SSL_CTX *ctx = NULL;
     SSL *ssl = NULL;
+    #if (OPENSSL_VERSION_NUMBER >= 0x10100000L)
     OPENSSL_init_ssl(0, NULL);
     ctx = SSL_CTX_new(TLS_client_method());
-    
+    #else
+    SSL_library_init();
+    ctx = SSL_CTX_new(SSLv23_client_method());
+    #endif
+
     printf("\n");
     printf("Loading the client certificate: %s\n", client_certificate);
     if(SSL_CTX_use_certificate_file(ctx, client_certificate, SSL_FILETYPE_PEM) != 1)
@@ -89,7 +109,7 @@ use_low_level_api(const char *server_address,
         SSL_CTX_free(ctx);
         return(-1);
     }
-    
+
     printf("Loading the client key: %s\n", client_key);
     if(SSL_CTX_use_PrivateKey_file(ctx, client_key, SSL_FILETYPE_PEM) != 1)
     {
@@ -98,7 +118,7 @@ use_low_level_api(const char *server_address,
         SSL_CTX_free(ctx);
         return(-1);
     }
-    
+
     printf("Loading the CA certificate: %s\n", ca_certificate);
     if(SSL_CTX_load_verify_locations(ctx, ca_certificate, NULL) != 1)
     {
@@ -107,7 +127,7 @@ use_low_level_api(const char *server_address,
         SSL_CTX_free(ctx);
         return(-1);
     }
-    
+
     BIO *bio = NULL;
     bio = BIO_new_ssl_connect(ctx);
     if(bio == NULL)
@@ -117,7 +137,7 @@ use_low_level_api(const char *server_address,
         SSL_CTX_free(ctx);
         return(-1);
     }
-    
+
     BIO_get_ssl(bio, &ssl);
     SSL_set_mode(ssl, SSL_MODE_AUTO_RETRY);
     BIO_set_conn_hostname(bio, server_address);
@@ -130,9 +150,9 @@ use_low_level_api(const char *server_address,
         SSL_CTX_free(ctx);
         return(-1);
     }
-    
+
     printf("\n");
-    
+
     /* Set up the KMIP context and the initial encoding buffer. */
     KMIP kmip_context = {0};
     kmip_init(&kmip_context, NULL, 0, KMIP_1_0);
@@ -152,8 +172,8 @@ use_low_level_api(const char *server_address,
     kmip_set_buffer(&kmip_context, encoding, buffer_total_size);
     
     /* Build the request message. */
-    Attribute a[3] = {0};
-    for(int i = 0; i < 3; i++)
+    Attribute a[6] = {{0}};
+    for(int i = 0; i < 6; i++)
         kmip_init_attribute(&a[i]);
     
     enum cryptographic_algorithm algorithm = KMIP_CRYPTOALG_AES;
@@ -167,10 +187,56 @@ use_low_level_api(const char *server_address,
     int32 mask = KMIP_CRYPTOMASK_ENCRYPT | KMIP_CRYPTOMASK_DECRYPT;
     a[2].type = KMIP_ATTR_CRYPTOGRAPHIC_USAGE_MASK;
     a[2].value = &mask;
+
+    int idx = 3;
+
+    if (activate)
+    {
+        // the key will be left in 'preactive' state without this
+        int64 date_time = 1641772563;  // init with a known date in case time() does not work
+        time_t now = time(NULL);
+        if(now != (time_t)(-1))
+            date_time = now - 24*3600;      // set activation date in the past to create the key in the Active state
+
+        a[idx].type = KMIP_ATTR_ACTIVATION_DATE;
+        a[idx].value = &date_time;
+
+        idx++;
+    }
+
+    TextString g = { 0 };
+    if (group)
+    {
+        g.value = (char*) group;
+        g.size = kmip_strnlen_s(group, 50);
+
+        a[idx].type = KMIP_ATTR_OBJECT_GROUP;
+        a[idx].value = &g;
+
+        idx++;
+    }
+
+    TextString s = { 0 };
+    Name n = { 0 };
+    if (key_name)
+    {
+        s.value = (char*) key_name;
+        s.size = kmip_strnlen_s(key_name, 50);
+
+        n.value = &s;
+        n.type = KMIP_NAME_UNINTERPRETED_TEXT_STRING;
+
+        a[idx].type = KMIP_ATTR_NAME;
+        a[idx].value = &n;
+
+        idx++;
+    }
+
+    int attrib_count = idx;
     
     TemplateAttribute ta = {0};
     ta.attributes = a;
-    ta.attribute_count = ARRAY_LENGTH(a);
+    ta.attribute_count = attrib_count;
     
     ProtocolVersion pv = {0};
     kmip_init_protocol_version(&pv, kmip_context.version);
@@ -255,7 +321,7 @@ use_low_level_api(const char *server_address,
     
     BIO_free_all(bio);
     SSL_CTX_free(ctx);
-    
+
     printf("\n");
     if(result < 0)
     {
@@ -322,9 +388,18 @@ use_low_level_api(const char *server_address,
     
     printf("The KMIP operation was executed with no errors.\n");
     printf("Result: ");
-    kmip_print_result_status_enum(stdout, result);
-    printf(" (%d)\n\n", result);
-    
+    kmip_print_result_status_enum(stdout, result_status);
+    printf(" (%d)\n\n", result_status);
+
+    if (result_status != KMIP_STATUS_SUCCESS)
+    {
+        printf("Result Reason: ");
+        kmip_print_result_reason_enum(stdout, req.result_reason);
+        printf("\n");
+
+        kmip_print_text_string(stdout, 0, "Result Message", req.result_message);
+    }
+
     if(result == KMIP_STATUS_SUCCESS)
     {
         CreateResponsePayload *pld = (CreateResponsePayload *)req.response_payload;
@@ -356,9 +431,12 @@ main(int argc, char **argv)
     char *client_certificate = NULL;
     char *client_key = NULL;
     char *ca_certificate = NULL;
+    char *key_name = NULL;
+    char *group = NULL;
+    int activate = 0;
     int help = 0;
     
-    int error = parse_arguments(argc, argv, &server_address, &server_port, &client_certificate, &client_key, &ca_certificate, &help);
+    int error = parse_arguments(argc, argv, &server_address, &server_port, &client_certificate, &client_key, &ca_certificate, &activate, &key_name, &group, &help);
     if(error)
         return(error);
     if(help)
@@ -367,6 +445,6 @@ main(int argc, char **argv)
         return(0);
     }
     
-    use_low_level_api(server_address, server_port, client_certificate, client_key, ca_certificate);
+    use_low_level_api(server_address, server_port, client_certificate, client_key, ca_certificate, activate, key_name, group);
     return(0);
 }

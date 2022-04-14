@@ -71,6 +71,8 @@ void kmip_print_create_request_payload(FILE *, int, CreateRequestPayload *);
 void kmip_print_create_response_payload(FILE *, int, CreateResponsePayload *);
 void kmip_print_get_request_payload(FILE *, int, GetRequestPayload *);
 void kmip_print_get_response_payload(FILE *, int, GetResponsePayload *);
+void kmip_print_activate_request_payload(FILE *, int, ActivateRequestPayload *);
+void kmip_print_activate_response_payload(FILE *, int, ActivateResponsePayload *);
 void kmip_print_destroy_request_payload(FILE *, int, DestroyRequestPayload *);
 void kmip_print_destroy_response_payload(FILE *, int, DestroyResponsePayload *);
 void kmip_print_request_payload(FILE *, int, enum operation, void *);
@@ -91,8 +93,14 @@ void kmip_print_query_function_enum(FILE*, int, enum query_function);
 void kmip_print_query_functions(FILE*, int, Functions*);
 void kmip_print_operations(FILE*, int, Operations *);
 void kmip_print_object_types(FILE*, int, ObjectTypes*);
+void kmip_print_attribute_names(FILE*, int, AttributeNames*);
+void kmip_print_get_attributes_request_payload(FILE*, int, GetAttributesRequestPayload*);
+void kmip_print_get_attributes_response_payload(FILE*, int, GetAttributesResponsePayload*);
 void kmip_print_query_request_payload(FILE*, int, QueryRequestPayload *);
 void kmip_print_query_response_payload(FILE*, int, QueryResponsePayload *);
 void kmip_print_server_information(FILE*, int, ServerInformation*);
+void kmip_print_locate_request_payload(FILE*, int, LocateRequestPayload *);
+void kmip_print_locate_response_payload(FILE*, int, LocateResponsePayload *);
+void kmip_print_unique_identifiers(FILE*, int indent, UniqueIdentifiers* value);
 
 #endif  /* KMIP_IO_H */

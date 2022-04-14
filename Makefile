@@ -46,7 +46,8 @@ CFLAGS  = -std=c11 -pedantic -g3 -Wall -Wextra
 LOFLAGS = -fPIC
 SOFLAGS = -shared -Wl,-soname,$(SO_NAME)
 SOCOREFLAGS = -shared -Wl,-soname,$(SO_CORE_NAME)
-LDFLAGS = -L/usr/local/lib64 -L/usr/local/lib
+#LDFLAGS = -L/usr/local/lib64 -L/usr/local/lib
+LDFLAGS = -L/usr/local/lib
 LDLIBS  = -lssl -lcrypto 
 
 INC_FLAGS = -I$(INC_DIR)
@@ -70,6 +71,8 @@ DEMO_O_FILES = $(OBJ_DIR)/demo_get.o
 DEMO_O_FILES += $(OBJ_DIR)/demo_create.o
 DEMO_O_FILES += $(OBJ_DIR)/demo_destroy.o
 DEMO_O_FILES += $(OBJ_DIR)/demo_query.o
+DEMO_O_FILES += $(OBJ_DIR)/demo_activate.o
+DEMO_O_FILES += $(OBJ_DIR)/demo_locate.o
 
 TEST_O_FILES = $(OBJ_DIR)/tests.o
 
@@ -86,7 +89,9 @@ demos: objs \
        $(BIN_DIR)/demo_get \
        $(BIN_DIR)/demo_create \
        $(BIN_DIR)/demo_destroy \
-       $(BIN_DIR)/demo_query
+       $(BIN_DIR)/demo_query \
+       $(BIN_DIR)/demo_activate \
+       $(BIN_DIR)/demo_locate
 
 tests: objs \
        $(TEST_O_FILES) \
@@ -103,6 +108,10 @@ $(BIN_DIR)/demo_create: $(OBJ_DIR)/demo_create.o $(SRC_O_FILES)
 $(BIN_DIR)/demo_destroy: $(OBJ_DIR)/demo_destroy.o $(SRC_O_FILES)
 	$(CC) $(LDFLAGS) -o $@ $^ $(LDLIBS)
 $(BIN_DIR)/demo_query: $(OBJ_DIR)/demo_query.o $(SRC_O_FILES)
+	$(CC) $(LDFLAGS) -o $@ $^ $(LDLIBS)
+$(BIN_DIR)/demo_activate: $(OBJ_DIR)/demo_activate.o $(SRC_O_FILES)
+	$(CC) $(LDFLAGS) -o $@ $^ $(LDLIBS)
+$(BIN_DIR)/demo_locate: $(OBJ_DIR)/demo_locate.o $(SRC_O_FILES)
 	$(CC) $(LDFLAGS) -o $@ $^ $(LDLIBS)
 
 $(BIN_DIR)/tests: $(TEST_O_FILES) $(OBJ_DIR)/kmip.o $(OBJ_DIR)/kmip_io.o $(OBJ_DIR)/kmip_memset.o
@@ -125,6 +134,10 @@ $(OBJ_DIR)/demo_create.o: $(DEMO_DIR)/demo_create.c $(H_FILES)
 $(OBJ_DIR)/demo_destroy.o: $(DEMO_DIR)/demo_destroy.c $(H_FILES)
 	$(CC) $(CFLAGS) $(INC_FLAGS) -c $< -o $@
 $(OBJ_DIR)/demo_query.o: $(DEMO_DIR)/demo_query.c $(H_FILES)
+	$(CC) $(CFLAGS) $(INC_FLAGS) -c $< -o $@
+$(OBJ_DIR)/demo_activate.o: $(DEMO_DIR)/demo_activate.c $(H_FILES)
+	$(CC) $(CFLAGS) $(INC_FLAGS) -c $< -o $@
+$(OBJ_DIR)/demo_locate.o: $(DEMO_DIR)/demo_locate.c $(H_FILES)
 	$(CC) $(CFLAGS) $(INC_FLAGS) -c $< -o $@
 
 $(OBJ_DIR)/tests.o: $(TEST_DIR)/tests.c $(INC_DIR)/kmip.h $(INC_DIR)/kmip_io.h $(INC_DIR)/kmip_memset.h
@@ -175,6 +188,8 @@ install: all
 	cp $(BIN_DIR)/demo_get $(DEST_DIR)$(PREFIX)/bin/$(KMIP)
 	cp $(BIN_DIR)/demo_destroy $(DEST_DIR)$(PREFIX)/bin/$(KMIP)
 	cp $(BIN_DIR)/demo_query $(DEST_DIR)$(PREFIX)/bin/$(KMIP)
+	cp $(BIN_DIR)/demo_activate $(DEST_DIR)$(PREFIX)/bin/$(KMIP)
+	cp $(BIN_DIR)/demo_locate $(DEST_DIR)$(PREFIX)/bin/$(KMIP)
 	cp -r $(DOCS_DIR)/source/. $(DEST_DIR)$(PREFIX)/share/doc/$(KMIP)/src
 	cp $(SRC_DIR)/*.c $(DEST_DIR)$(PREFIX)/src/$(KMIP)
 	cp $(INC_DIR)/*.h $(DEST_DIR)$(PREFIX)/include/$(KMIP)

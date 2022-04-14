@@ -24,7 +24,7 @@ print_help(const char *app)
     printf("-a addr : the IP address of the KMIP server\n");
     printf("-c path : path to client certificate file\n");
     printf("-h      : print this help info\n");
-    printf("-i id   : the ID of the symmetric key to destroy\n");
+    printf("-i id   : the ID of the symmetric key to activate\n");
     printf("-k path : path to client key file\n");
     printf("-p port : the port number of the KMIP server\n");
     printf("-r path : path to CA certificate file\n");
@@ -85,86 +85,17 @@ parse_arguments(int argc, char **argv,
 }
 
 int
-use_high_level_api(const char *server_address,
-                   const char *server_port,
-                   const char *client_certificate,
-                   const char *client_key,
-                   const char *ca_certificate,
+use_high_level_api(BIO* bio,
                    char *id)
 {
-    /* Set up the TLS connection to the KMIP server. */
-    SSL_CTX *ctx = NULL;
-    SSL *ssl = NULL;
-    #if (OPENSSL_VERSION_NUMBER >= 0x10100000L)
-    OPENSSL_init_ssl(0, NULL);
-    ctx = SSL_CTX_new(TLS_client_method());
-    #else
-    SSL_library_init();
-    ctx = SSL_CTX_new(SSLv23_client_method());
-    #endif
-    
-    printf("\n");
-    printf("Loading the client certificate: %s\n", client_certificate);
-    if(SSL_CTX_use_certificate_file(ctx, client_certificate, SSL_FILETYPE_PEM) != 1)
-    {
-        fprintf(stderr, "Loading the client certificate failed\n");
-        ERR_print_errors_fp(stderr);
-        SSL_CTX_free(ctx);
-        return(-1);
-    }
-    
-    printf("Loading the client key: %s\n", client_key);
-    if(SSL_CTX_use_PrivateKey_file(ctx, client_key, SSL_FILETYPE_PEM) != 1)
-    {
-        fprintf(stderr, "Loading the client key failed\n");
-        ERR_print_errors_fp(stderr);
-        SSL_CTX_free(ctx);
-        return(-1);
-    }
-    
-    printf("Loading the CA certificate: %s\n", ca_certificate);
-    if(SSL_CTX_load_verify_locations(ctx, ca_certificate, NULL) != 1)
-    {
-        fprintf(stderr, "Loading the CA file failed\n");
-        ERR_print_errors_fp(stderr);
-        SSL_CTX_free(ctx);
-        return(-1);
-    }
-    
-    BIO *bio = NULL;
-    bio = BIO_new_ssl_connect(ctx);
-    if(bio == NULL)
-    {
-        fprintf(stderr, "BIO_new_ssl_connect failed\n");
-        ERR_print_errors_fp(stderr);
-        SSL_CTX_free(ctx);
-        return(-1);
-    }
-    
-    BIO_get_ssl(bio, &ssl);
-    SSL_set_mode(ssl, SSL_MODE_AUTO_RETRY);
-    BIO_set_conn_hostname(bio, server_address);
-    BIO_set_conn_port(bio, server_port);
-    if(BIO_do_connect(bio) != 1)
-    {
-        fprintf(stderr, "BIO_do_connect failed\n");
-        ERR_print_errors_fp(stderr);
-        BIO_free_all(bio);
-        SSL_CTX_free(ctx);
-        return(-1);
-    }
-    
     /* Send the request message. */
-    int result = kmip_bio_destroy_symmetric_key(bio, id, kmip_strnlen_s(id, 50));
-    
-    BIO_free_all(bio);
-    SSL_CTX_free(ctx);
+    int result = kmip_bio_activate_symmetric_key(bio, id, kmip_strnlen_s(id, 128));
     
     /* Handle the response results. */
     printf("\n");
     if(result < 0)
     {
-        printf("An error occurred while deleting object: %s\n", id);
+        printf("An error occurred while activating object: %s\n", id);
         printf("Error Code: %d\n", result);
     }
     else
@@ -200,6 +131,72 @@ main(int argc, char **argv)
         return(0);
     }
     
-    int result = use_high_level_api(server_address, server_port, client_certificate, client_key, ca_certificate, id);
+    /* Set up the TLS connection to the KMIP server. */
+    SSL_CTX *ctx = NULL;
+    SSL *ssl = NULL;
+    #if (OPENSSL_VERSION_NUMBER >= 0x10100000L)
+    OPENSSL_init_ssl(0, NULL);
+    ctx = SSL_CTX_new(TLS_client_method());
+    #else
+    SSL_library_init();
+    ctx = SSL_CTX_new(SSLv23_client_method());
+    #endif
+
+    printf("\n");
+    printf("Loading the client certificate: %s\n", client_certificate);
+    if(SSL_CTX_use_certificate_file(ctx, client_certificate, SSL_FILETYPE_PEM) != 1)
+    {
+        fprintf(stderr, "Loading the client certificate failed\n");
+        ERR_print_errors_fp(stderr);
+        SSL_CTX_free(ctx);
+        return(-1);
+    }
+
+    printf("Loading the client key: %s\n", client_key);
+    if(SSL_CTX_use_PrivateKey_file(ctx, client_key, SSL_FILETYPE_PEM) != 1)
+    {
+        fprintf(stderr, "Loading the client key failed\n");
+        ERR_print_errors_fp(stderr);
+        SSL_CTX_free(ctx);
+        return(-1);
+    }
+
+    printf("Loading the CA certificate: %s\n", ca_certificate);
+    if(SSL_CTX_load_verify_locations(ctx, ca_certificate, NULL) != 1)
+    {
+        fprintf(stderr, "Loading the CA file failed\n");
+        ERR_print_errors_fp(stderr);
+        SSL_CTX_free(ctx);
+        return(-1);
+    }
+
+    BIO *bio = NULL;
+    bio = BIO_new_ssl_connect(ctx);
+    if(bio == NULL)
+    {
+        fprintf(stderr, "BIO_new_ssl_connect failed\n");
+        ERR_print_errors_fp(stderr);
+        SSL_CTX_free(ctx);
+        return(-1);
+    }
+
+    BIO_get_ssl(bio, &ssl);
+    SSL_set_mode(ssl, SSL_MODE_AUTO_RETRY);
+    BIO_set_conn_hostname(bio, server_address);
+    BIO_set_conn_port(bio, server_port);
+    if(BIO_do_connect(bio) != 1)
+    {
+        fprintf(stderr, "BIO_do_connect failed\n");
+        ERR_print_errors_fp(stderr);
+        BIO_free_all(bio);
+        SSL_CTX_free(ctx);
+        return(-1);
+    }
+
+    int result = use_high_level_api(bio, id);
+
+    BIO_free_all(bio);
+    SSL_CTX_free(ctx);
+
     return(result);
 }
