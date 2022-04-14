@@ -1122,6 +1122,16 @@ typedef struct get_response_payload
     void *object;
 } GetResponsePayload;
 
+typedef struct activate_request_payload
+{
+    TextString *unique_identifier;
+} ActivateRequestPayload;
+
+typedef struct activate_response_payload
+{
+    TextString *unique_identifier;
+} ActivateResponsePayload;
+
 typedef struct destroy_request_payload
 {
     TextString *unique_identifier;
@@ -1623,6 +1633,8 @@ void kmip_free_create_request_payload(KMIP *, CreateRequestPayload *);
 void kmip_free_create_response_payload(KMIP *, CreateResponsePayload *);
 void kmip_free_get_request_payload(KMIP *, GetRequestPayload *);
 void kmip_free_get_response_payload(KMIP *, GetResponsePayload *);
+void kmip_free_activate_request_payload(KMIP *, ActivateRequestPayload *);
+void kmip_free_activate_response_payload(KMIP *, ActivateResponsePayload *);
 void kmip_free_destroy_request_payload(KMIP *, DestroyRequestPayload *);
 void kmip_free_destroy_response_payload(KMIP *, DestroyResponsePayload *);
 void kmip_free_request_batch_item(KMIP *, RequestBatchItem *);
@@ -1698,6 +1710,8 @@ int kmip_compare_create_request_payload(const CreateRequestPayload *, const Crea
 int kmip_compare_create_response_payload(const CreateResponsePayload *, const CreateResponsePayload *);
 int kmip_compare_get_request_payload(const GetRequestPayload *, const GetRequestPayload *);
 int kmip_compare_get_response_payload(const GetResponsePayload *, const GetResponsePayload *);
+int kmip_compare_activate_request_payload(const ActivateRequestPayload *, const ActivateRequestPayload *);
+int kmip_compare_activate_response_payload(const ActivateResponsePayload *, const ActivateResponsePayload *);
 int kmip_compare_destroy_request_payload(const DestroyRequestPayload *, const DestroyRequestPayload *);
 int kmip_compare_destroy_response_payload(const DestroyResponsePayload *, const DestroyResponsePayload *);
 int kmip_compare_request_batch_item(const RequestBatchItem *, const RequestBatchItem *);
@@ -1771,6 +1785,8 @@ int kmip_encode_create_request_payload(KMIP *, const CreateRequestPayload *);
 int kmip_encode_create_response_payload(KMIP *, const CreateResponsePayload *);
 int kmip_encode_get_request_payload(KMIP *, const GetRequestPayload *);
 int kmip_encode_get_response_payload(KMIP *, const GetResponsePayload *);
+int kmip_encode_activate_request_payload(KMIP *, const ActivateRequestPayload *);
+int kmip_encode_activate_response_payload(KMIP *, const ActivateResponsePayload *);
 int kmip_encode_destroy_request_payload(KMIP *, const DestroyRequestPayload *);
 int kmip_encode_destroy_response_payload(KMIP *, const DestroyResponsePayload *);
 int kmip_encode_nonce(KMIP *, const Nonce *);
@@ -1838,6 +1854,8 @@ int kmip_decode_create_request_payload(KMIP *, CreateRequestPayload *);
 int kmip_decode_create_response_payload(KMIP *, CreateResponsePayload *);
 int kmip_decode_get_request_payload(KMIP *, GetRequestPayload *);
 int kmip_decode_get_response_payload(KMIP *, GetResponsePayload *);
+int kmip_decode_activate_request_payload(KMIP *, ActivateRequestPayload *);
+int kmip_decode_activate_response_payload(KMIP *, ActivateResponsePayload *);
 int kmip_decode_destroy_request_payload(KMIP *, DestroyRequestPayload *);
 int kmip_decode_destroy_response_payload(KMIP *, DestroyResponsePayload *);
 int kmip_decode_request_batch_item(KMIP *, RequestBatchItem *);

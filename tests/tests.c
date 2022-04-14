@@ -7288,6 +7288,167 @@ test_decode_destroy_response_payload(TestTracker *tracker)
 }
 
 int
+test_encode_activate_request_payload(TestTracker *tracker)
+{
+    TRACK_TEST(tracker);
+
+ //   Tag: Request Payload (0x420079), Type: Structure (0x01), Data:
+ //     Tag: Unique Identifier (0x420094), Type: Text String (0x07), Data: 668eff89-3010-4258-bc0e-8c402309c746
+
+    uint8 expected[56] = {
+        0x42, 0x00, 0x79, 0x01, 0x00, 0x00, 0x00, 0x30,
+        0x42, 0x00, 0x94, 0x07, 0x00, 0x00, 0x00, 0x24,
+        0x36, 0x36, 0x38, 0x65, 0x66, 0x66, 0x38, 0x39,
+        0x2D, 0x33, 0x30, 0x31, 0x30, 0x2D, 0x34, 0x32,
+        0x35, 0x38, 0x2D, 0x62, 0x63, 0x30, 0x65, 0x2D,
+        0x38, 0x63, 0x34, 0x30, 0x32, 0x33, 0x30, 0x39,
+        0x63, 0x37, 0x34, 0x36, 0x00, 0x00, 0x00, 0x00, 
+    };
+
+    uint8 observed[56] = {0};
+    struct kmip ctx = {0};
+    kmip_init(&ctx, observed, ARRAY_LENGTH(observed), KMIP_1_0);
+
+    struct text_string uuid = {0};
+    uuid.value = "668eff89-3010-4258-bc0e-8c402309c746";
+    uuid.size = 36;
+
+    struct activate_request_payload arp = {0};
+    arp.unique_identifier = &uuid;
+
+    int result = kmip_encode_activate_request_payload(&ctx, &arp);
+    result = report_encoding_test_result(
+        tracker,
+        &ctx,
+        expected,
+        observed,
+        result,
+        __func__);
+    kmip_destroy(&ctx);
+    return(result);
+}
+
+int
+test_decode_activate_request_payload(TestTracker *tracker)
+{
+    TRACK_TEST(tracker);
+
+    uint8 encoding[56] = {
+        0x42, 0x00, 0x79, 0x01, 0x00, 0x00, 0x00, 0x30,
+        0x42, 0x00, 0x94, 0x07, 0x00, 0x00, 0x00, 0x24,
+        0x36, 0x36, 0x38, 0x65, 0x66, 0x66, 0x38, 0x39,
+        0x2D, 0x33, 0x30, 0x31, 0x30, 0x2D, 0x34, 0x32,
+        0x35, 0x38, 0x2D, 0x62, 0x63, 0x30, 0x65, 0x2D,
+        0x38, 0x63, 0x34, 0x30, 0x32, 0x33, 0x30, 0x39,
+        0x63, 0x37, 0x34, 0x36, 0x00, 0x00, 0x00, 0x00,
+    };
+
+    struct kmip ctx = {0};
+    kmip_init(&ctx, encoding, ARRAY_LENGTH(encoding), KMIP_1_0);
+
+    struct text_string uuid = {0};
+    uuid.value = "668eff89-3010-4258-bc0e-8c402309c746";
+    uuid.size = 36;
+
+    struct activate_request_payload expected = {0};
+    expected.unique_identifier = &uuid;
+
+    struct activate_request_payload observed = {0};
+
+    int result = kmip_decode_activate_request_payload(&ctx, &observed);
+    result = report_decoding_test_result(
+        tracker,
+        &ctx,
+        kmip_compare_activate_request_payload(&expected, &observed),
+        result,
+        __func__);
+    kmip_free_activate_request_payload(&ctx, &observed);
+    kmip_destroy(&ctx);
+    return(result);
+}
+
+int
+test_encode_activate_response_payload(TestTracker *tracker)
+{
+    TRACK_TEST(tracker);
+
+    // Tag: Response Payload (0x42007C), Type: Structure (0x01), Data:
+    // Tag: Unique Identifier (0x420094), Type: Text String (0x07), Data: 668eff89-3010-4258-bc0e-8c402309c746
+
+    uint8 expected[56] = {
+        0x42, 0x00, 0x7C, 0x01, 0x00, 0x00, 0x00, 0x30,
+        0x42, 0x00, 0x94, 0x07, 0x00, 0x00, 0x00, 0x24,
+        0x36, 0x36, 0x38, 0x65, 0x66, 0x66, 0x38, 0x39,
+        0x2D, 0x33, 0x30, 0x31, 0x30, 0x2D, 0x34, 0x32,
+        0x35, 0x38, 0x2D, 0x62, 0x63, 0x30, 0x65, 0x2D,
+        0x38, 0x63, 0x34, 0x30, 0x32, 0x33, 0x30, 0x39,
+        0x63, 0x37, 0x34, 0x36, 0x00, 0x00, 0x00, 0x00,
+    };
+
+    uint8 observed[56] = {0};
+    struct kmip ctx = {0};
+    kmip_init(&ctx, observed, ARRAY_LENGTH(observed), KMIP_1_0);
+
+    struct text_string uuid = {0};
+    uuid.value = "668eff89-3010-4258-bc0e-8c402309c746";
+    uuid.size = 36;
+
+    struct activate_response_payload drp = {0};
+    drp.unique_identifier = &uuid;
+
+    int result = kmip_encode_activate_response_payload(&ctx, &drp);
+    result = report_encoding_test_result(
+        tracker,
+        &ctx,
+        expected,
+        observed,
+        result,
+        __func__);
+    kmip_destroy(&ctx);
+    return(result);
+}
+
+int
+test_decode_activate_response_payload(TestTracker *tracker)
+{
+    TRACK_TEST(tracker);
+
+    uint8 encoding[56] = {
+        0x42, 0x00, 0x7C, 0x01, 0x00, 0x00, 0x00, 0x30,
+        0x42, 0x00, 0x94, 0x07, 0x00, 0x00, 0x00, 0x24,
+        0x36, 0x36, 0x38, 0x65, 0x66, 0x66, 0x38, 0x39,
+        0x2D, 0x33, 0x30, 0x31, 0x30, 0x2D, 0x34, 0x32,
+        0x35, 0x38, 0x2D, 0x62, 0x63, 0x30, 0x65, 0x2D,
+        0x38, 0x63, 0x34, 0x30, 0x32, 0x33, 0x30, 0x39,
+        0x63, 0x37, 0x34, 0x36, 0x00, 0x00, 0x00, 0x00,
+    };
+
+    struct kmip ctx = {0};
+    kmip_init(&ctx, encoding, ARRAY_LENGTH(encoding), KMIP_1_0);
+
+    struct text_string uuid = {0};
+    uuid.value = "668eff89-3010-4258-bc0e-8c402309c746";
+    uuid.size = 36;
+
+    struct activate_response_payload expected = {0};
+    expected.unique_identifier = &uuid;
+
+    struct activate_response_payload observed = {0};
+
+    int result = kmip_decode_activate_response_payload(&ctx, &observed);
+    result = report_decoding_test_result(
+        tracker,
+        &ctx,
+        kmip_compare_activate_response_payload(&expected, &observed),
+        result,
+        __func__);
+    kmip_free_activate_response_payload(&ctx, &observed);
+    kmip_destroy(&ctx);
+    return(result);
+}
+
+
+int
 test_encode_username_password_credential(TestTracker *tracker)
 {
     TRACK_TEST(tracker);
@@ -14232,6 +14393,8 @@ run_tests(void)
     test_decode_create_response_payload_with_template_attribute(&tracker);
     test_decode_get_request_payload(&tracker);
     test_decode_get_response_payload(&tracker);
+    test_decode_activate_request_payload(&tracker);
+    test_decode_activate_response_payload(&tracker);
     test_decode_destroy_request_payload(&tracker);
     test_decode_destroy_response_payload(&tracker);
     test_decode_response_batch_item_get_payload(&tracker);
@@ -14304,6 +14467,8 @@ run_tests(void)
     test_encode_get_request_payload_with_format_compression(&tracker);
     test_encode_get_request_payload_with_wrapping_spec(&tracker);
     test_encode_get_response_payload(&tracker);
+    test_encode_activate_response_payload(&tracker);
+    test_encode_activate_request_payload(&tracker);
     test_encode_destroy_request_payload(&tracker);
     test_encode_destroy_response_payload(&tracker);
     test_encode_username_password_credential(&tracker);

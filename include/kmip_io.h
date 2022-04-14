@@ -71,6 +71,8 @@ void kmip_print_create_request_payload(FILE *, int, CreateRequestPayload *);
 void kmip_print_create_response_payload(FILE *, int, CreateResponsePayload *);
 void kmip_print_get_request_payload(FILE *, int, GetRequestPayload *);
 void kmip_print_get_response_payload(FILE *, int, GetResponsePayload *);
+void kmip_print_activate_request_payload(FILE *, int, ActivateRequestPayload *);
+void kmip_print_activate_response_payload(FILE *, int, ActivateResponsePayload *);
 void kmip_print_destroy_request_payload(FILE *, int, DestroyRequestPayload *);
 void kmip_print_destroy_response_payload(FILE *, int, DestroyResponsePayload *);
 void kmip_print_request_payload(FILE *, int, enum operation, void *);
